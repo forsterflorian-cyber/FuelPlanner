@@ -351,18 +351,6 @@ class FuelModel {
     function getCarbFractionPct()   as Number  { return _carbFractionPct; }
     function isCaloriesAvailable()  as Boolean { return _caloriesAvailable; }
 
-    //! Returns current estimated burn rate label for display
-    function getTargetRateLabel() as String {
-        if (_reminderMode == MODE_CALORIE_AUTO) {
-            if (_caloriesAvailable) {
-                return "auto " + _carbFractionPct.format("%d") + "% carbs";
-            } else {
-                return "auto (no cal data)";
-            }
-        }
-        return "target " + _carbsTargetGph.format("%d") + " g/h";
-    }
-
     function getAverageGph() as Float {
         if (_elapsedActiveHours < 0.01f) { return 0.0f; }
         return _consumedTotalG.toFloat() / _elapsedActiveHours;

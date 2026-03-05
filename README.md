@@ -1,157 +1,132 @@
-# FuelPlanner - Garmin Connect IQ Data Field
+# FuelPlanner — Garmin Connect IQ
 
-A fuel/carbohydrate intake tracker for endurance activities on Garmin watches.
+Carbohydrate intake tracker for endurance activities. Available as a **Data Field** and a companion **Settings Widget**.
+
+Supported languages: English, Deutsch
+
+---
 
 ## Features
 
 - **Real-time tracking** of carbohydrate intake during activities
-- **Auto mode**: Reminders based on deficit reaching your gel/dose size
-- **Fixed interval mode**: Reminders at set intervals (e.g., every 20 min)
-- **Calorie Auto mode**: Uses watch calorie/energy data — no fixed g/h rate needed
-- **Vibration alerts** when it's time to fuel
-- **Pause-aware**: Paused time doesn't count toward targets
-- **Session persistence**: Data survives watch restarts
+- **Auto mode**: reminder fires when your deficit reaches one gel/dose size
+- **Fixed interval mode**: reminder at fixed intervals (e.g. every 20 min)
+- **Calorie Auto mode**: uses watch calorie/energy data — target adapts to actual effort
+- **Vibration + backlight alerts** when it's time to fuel
+- **Pause-aware**: timer-stall detection, paused time excluded from targets
+- **Session persistence**: survives watch restarts and app switches
+- **On-watch settings widget**: change all settings without touching your phone
+
+---
 
 ## Supported Devices
 
-- Forerunner 955 / 955 Solar
-- Forerunner 965
-- Fenix 7 / 7S / 7X
-- Epix (Gen 2)
+All touchscreen devices running Connect IQ 4.2+:
 
-Requires Connect IQ 5.2.0 or higher.
+Forerunner 165 / 255 / 265 / 955 / 965 · Fenix 7 / 7S / 7X / 7 Pro / 8 Solar · Epix Gen 2 (42/47/51mm) · Venu 2 / 2S / 2 Plus / 3 / 3S · Vivoactive 5 · Venue Sq2 · D2 Air X10 / Mach1 · Enduro 3 · MARQ2 · FR255S/SM
+
+---
 
 ## Installation
 
 ### From Connect IQ Store
-1. Search for "FuelPlanner" in the Connect IQ Store
-2. Install to your device
+Search for **FuelPlanner** (Data Field) and **FuelPlanner Settings** (Widget).
 
 ### Manual Build
-1. Install [Connect IQ SDK](https://developer.garmin.com/connect-iq/sdk/)
+1. Install the [Connect IQ SDK](https://developer.garmin.com/connect-iq/sdk/)
 2. Clone this repository
-3. Build **Data Field**:
-   ```bash
-   monkeyc -f monkey.jungle -o FuelPlanner.prg -d fr955 -y developer_key.der
-   ```
-4. Build **Widget (Settings app)**:
-   ```bash
-   monkeyc -f monkey-widget.jungle -o FuelPlanner-Widget.prg -d fr955 -y developer_key.der
-   ```
+3. Run `build.ps1` — builds both `.iq` files automatically
 
-**VS Code:** To run the widget, set `monkeyC.jungleFiles` to `monkey-widget.jungle` in project settings, then use "Run Widget (Settings)" launch config.
+Or build individually:
+```
+monkeyc -f monkey.jungle        -o FuelPlanner-DataField.iq -d fr965 -y developer_key.der -e
+monkeyc -f monkey-widget.jungle -o FuelPlanner-Widget.iq    -d fr965 -y developer_key.der -e
+```
 
-   Configuration
-Settings (via Garmin Connect Mobile or Express)
+---
+
+## Configuration
+
+Settings are accessible via the **Settings Widget** on the watch or via **Garmin Connect** (synced to the watch).
+
 | Setting | Default | Range | Description |
 |---------|---------|-------|-------------|
-| Carbs Target | 60 g/h | 20–120 | Target carbohydrate intake rate (Auto mode) |
-| Gel Size | 25 g | 5–100 | Size of one gel/dose for quick logging |
-| Reminder Mode | Auto | Auto / Fixed / Calorie Auto | How reminders are triggered |
+| Carbs Target | 60 g/h | 20–120 | Target carb rate (Auto mode) |
+| Gel Size | 25 g | 5–60 | Size of one gel/dose |
+| Reminder Mode | Auto | Auto / Fixed / Calorie Auto | How reminders trigger |
 | Fixed Interval | 20 min | 5–60 | Interval for Fixed mode |
 | Start Delay | 15 min | 0–30 | Delay before first reminder |
-| Snooze Time | 5 min | 1–10 | Time between repeated reminders |
+| Snooze Time | 5 min | 1–10 | Minimum gap between repeated reminders |
 | Carb % of kcal | 60 % | 40–80 | Carb fraction used in Calorie Auto mode |
-Sport Presets
-Run: 60 g/h, 25g gel
-Bike: 90 g/h, 30g gel
-Hike: 40 g/h, 20g gel
-Usage During Activity
-Adding as Data Field
-On your watch, go to activity settings
-Select "Data Screens"
-Add a custom data screen
-Select "FuelPlanner" as the data field
-Display Layout
-text
-┌─────────────────────┐
-│     Next 07:30      │  ← Time until next intake
-│                     │
-│       Carbs         │
-│     35 / 60g        │  ← Consumed / Target
-│   target 60 g/h     │
-│                     │
-│    Deficit 12g      │  ← Or "Ahead Xg"
-│                     │
-│  45m | 2 intakes    │  ← Status bar
-└─────────────────────┘
-Button Controls
-Button	Action
-START/LAP	Record gel intake (default dose)
-UP	Snooze current reminder
-DOWN	Toggle manual pause
-Touch Controls (touchscreen devices)
-Area	Action
-Top third	Snooze
-Middle	Record intake
-Swipe Up	Record 40g
-Swipe Down	Record 10g
-Long press	Intake options (future)
-Indicators
-"FUEL NOW" (flashing): Time to eat!
-"PAUSED": Activity paused, timer stopped
-"DUE": Intake is overdue
-Red deficit: You're behind target
-Green "Ahead": You're ahead of target
-How It Works
-### Auto Mode (Default)
-Calculates your target based on elapsed active time × target rate. When the deficit reaches your gel size, it reminds you. Example: at 60 g/h with 25 g gels, first reminder ~25 min in.
 
-### Fixed Mode
-Triggers reminder at fixed intervals from activity start. First reminder after start delay; subsequent reminders every N minutes from last intake.
+**Sport Presets** (apply via widget menu):
 
-### Calorie Auto Mode
-Uses the watch's own calorie/energy expenditure data (HR-based). Target carbs = `calories_burned × carb_fraction / 4`. No fixed g/h rate needed — adapts to your actual effort level.
-Test Plan
-Basic Functionality
-Start an activity (Run/Bike)
-Verify data field shows "Waiting..." then activates
-After start_delay minutes, verify reminder triggers
-Press START to log intake
-Verify consumed increases, deficit decreases
-Verify next due time recalculates
-Pause Handling
-During activity, pause (STOP button)
-Verify "PAUSED" displays
-Wait 2 minutes
-Resume activity
-Verify elapsed time doesn't include pause
-Edge Cases
-Start activity, immediately pause
-Very long activity (3+ hours)
-Multiple quick intakes
-Device restart during activity
-Technical Notes
-Data Persistence
-Session data stored in Application.Storage
-Intake log limited to 50 entries (rolling)
-Settings persist across app restarts
-Battery Considerations
-Compute runs at 1 Hz (standard for data fields)
-Minimal UI redraws
-No background processing
-Known Limitations
-Pause detection is heuristic (timer-based)
-Limited button access in data field mode
-Cannot show custom picker dialogs during activity
-Troubleshooting
-Reminder not vibrating?
+| Preset | Target | Gel Size |
+|--------|--------|----------|
+| Running | 60 g/h | 25 g |
+| Cycling | 90 g/h | 30 g |
+| Hiking | 40 g/h | 20 g |
 
-Check watch vibration settings (not on silent)
-Verify activity is not paused
-Data not persisting?
+---
 
-Ensure activity ends normally (Save, not Discard)
-Check storage isn't full
-Wrong target showing?
+## Data Field Layout
 
-Settings sync may take a moment
-Force sync via Garmin Connect app
-Version History
-### v1.0.0 (MVP)
-- Initial release
-- Auto, Fixed, and Calorie Auto reminder modes
-- Basic session tracking
-- Vibration alerts
-- On-watch settings widget
-License
+```
+┌─────────────────────────┐
+│     Nächste 07:30       │  ← Status: time until next intake
+│                         │
+│       35 / 60g          │  ← Consumed / Target (large number font)
+│                         │
+│     Ziel 60 g/h         │  ← Rate label (dim)
+│      Hinter 12g         │  ← Deficit or "Ahead Xg" / "Im Ziel"
+│                         │
+│      45m | 2x           │  ← Elapsed time | intake count
+│   12g / 25g / 50g       │  ← Tap zone hint
+└─────────────────────────┘
+```
+
+Status row colors: green = on track · yellow = due soon (< 3 min) · red = due now · yellow = paused
+
+---
+
+## Touch Controls
+
+| Tap zone | Normal state | Reminder active |
+|----------|-------------|-----------------|
+| Top 25% | Half dose (≥5g) | Snooze |
+| Middle 50% | Default dose | Default dose |
+| Bottom 25% | Double dose | Double dose |
+
+---
+
+## Reminder Modes
+
+**Auto (deficit-based)** — calculates `elapsed_hours × target_g/h`. When the deficit ≥ gel size, the reminder fires. After eating, the clock resets.
+
+**Fixed interval** — first reminder after start delay + one full interval; subsequent reminders every N minutes from last intake.
+
+**Calorie Auto** — uses the watch's calorie burn data. Target carbs = `calories_burned × carb_fraction% / 4 kcal/g`. Adapts in real time to your actual effort.
+
+---
+
+## Troubleshooting
+
+**Settings not applying on watch?**
+Open the Settings Widget, change a value and change it back — this forces a write to the shared property store. Both apps use the same app ID and share storage.
+
+**Reminder not vibrating?**
+Check that vibration is enabled in the watch system settings (not on silent).
+
+**Session reset unexpectedly?**
+The data field auto-detects a new activity when the timer resets to 0. Starting a new activity always begins a fresh session.
+
+---
+
+## Version History
+
+### v1.0.0
+- Initial release: Auto, Fixed, and Calorie Auto reminder modes
+- Session persistence, intake log (rolling 50 entries)
+- Vibration + backlight alerts with snooze
+- On-watch settings widget (EN + DE)
+- Sport presets
