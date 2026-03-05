@@ -14,6 +14,7 @@ class StorageManager {
     private const KEY_LAST_INTAKE_TS = "last_int";
     private const KEY_INTAKE_LOG = "int_log";
     private const KEY_IS_PAUSED = "is_paused";
+    private const KEY_ELAPSED_SEC = "elapsed_s";
     
     // Defaults
     public const DEFAULT_CARBS_TARGET_GPH   = 60;
@@ -205,7 +206,19 @@ class StorageManager {
     function setIsPaused(value as Boolean) as Void {
         Storage.setValue(KEY_IS_PAUSED, value);
     }
-    
+
+    function getElapsedActiveSec() as Number {
+        var value = Storage.getValue(KEY_ELAPSED_SEC);
+        if (value instanceof Number) {
+            return value;
+        }
+        return 0;
+    }
+
+    function setElapsedActiveSec(value as Number) as Void {
+        Storage.setValue(KEY_ELAPSED_SEC, value);
+    }
+
     // ========== Intake Log ==========
     
     function getIntakeLog() as Array {
@@ -248,6 +261,7 @@ class StorageManager {
         Storage.deleteValue(KEY_LAST_INTAKE_TS);
         Storage.deleteValue(KEY_INTAKE_LOG);
         Storage.deleteValue(KEY_IS_PAUSED);
+        Storage.deleteValue(KEY_ELAPSED_SEC);
     }
     
     function hasActiveSession() as Boolean {

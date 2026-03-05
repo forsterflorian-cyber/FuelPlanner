@@ -81,6 +81,7 @@ class FuelModel {
                 _lastIntakeTimestamp = (lastIntake != null) ? lastIntake : _startTimestamp;
 
                 _isPaused            = _storage.getIsPaused();
+                _elapsedActiveSec    = _storage.getElapsedActiveSec();
                 _sessionActive = true;
             }
         }
@@ -94,6 +95,7 @@ class FuelModel {
             _storage.setConsumedTotal(_consumedTotalG);
             _storage.setLastIntakeTimestamp(_lastIntakeTimestamp);
             _storage.setIsPaused(_isPaused);
+            _storage.setElapsedActiveSec(_elapsedActiveSec);
         }
     }
 
