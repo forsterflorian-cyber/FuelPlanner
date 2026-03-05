@@ -13,9 +13,7 @@ class StorageManager {
     private const KEY_CONSUMED_TOTAL = "consumed";
     private const KEY_LAST_INTAKE_TS = "last_int";
     private const KEY_INTAKE_LOG = "int_log";
-    private const KEY_PAUSED_DURATION = "pause_dur";
     private const KEY_IS_PAUSED = "is_paused";
-    private const KEY_PAUSE_START = "pause_st";
     
     // Defaults
     public const DEFAULT_CARBS_TARGET_GPH   = 60;
@@ -196,18 +194,6 @@ class StorageManager {
         Storage.setValue(KEY_LAST_INTAKE_TS, value);
     }
     
-    function getPausedDuration() as Number {
-        var value = Storage.getValue(KEY_PAUSED_DURATION);
-        if (value instanceof Number) {
-            return value;
-        }
-        return 0;
-    }
-    
-    function setPausedDuration(value as Number) as Void {
-        Storage.setValue(KEY_PAUSED_DURATION, value);
-    }
-    
     function getIsPaused() as Boolean {
         var value = Storage.getValue(KEY_IS_PAUSED);
         if (value instanceof Boolean) {
@@ -218,22 +204,6 @@ class StorageManager {
     
     function setIsPaused(value as Boolean) as Void {
         Storage.setValue(KEY_IS_PAUSED, value);
-    }
-    
-    function getPauseStartTimestamp() as Number? {
-        var value = Storage.getValue(KEY_PAUSE_START);
-        if (value instanceof Number) {
-            return value;
-        }
-        return null;
-    }
-    
-    function setPauseStartTimestamp(value as Number?) as Void {
-        if (value != null) {
-            Storage.setValue(KEY_PAUSE_START, value);
-        } else {
-            Storage.deleteValue(KEY_PAUSE_START);
-        }
     }
     
     // ========== Intake Log ==========
@@ -277,9 +247,7 @@ class StorageManager {
         Storage.deleteValue(KEY_CONSUMED_TOTAL);
         Storage.deleteValue(KEY_LAST_INTAKE_TS);
         Storage.deleteValue(KEY_INTAKE_LOG);
-        Storage.deleteValue(KEY_PAUSED_DURATION);
         Storage.deleteValue(KEY_IS_PAUSED);
-        Storage.deleteValue(KEY_PAUSE_START);
     }
     
     function hasActiveSession() as Boolean {

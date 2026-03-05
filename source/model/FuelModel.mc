@@ -17,9 +17,7 @@ class FuelModel {
     private var _startTimestamp       as Number  = 0;
     private var _consumedTotalG       as Number  = 0;
     private var _lastIntakeTimestamp  as Number  = 0;
-    private var _pausedDurationSec    as Number  = 0;
     private var _isPaused             as Boolean = false;
-    private var _pauseStartTimestamp  as Number  = 0;
     private var _sessionId            as Number  = 0;
 
     // Cached settings
@@ -82,12 +80,7 @@ class FuelModel {
                 var lastIntake       = _storage.getLastIntakeTimestamp();
                 _lastIntakeTimestamp = (lastIntake != null) ? lastIntake : _startTimestamp;
 
-                _pausedDurationSec   = _storage.getPausedDuration();
                 _isPaused            = _storage.getIsPaused();
-
-                var pauseStart       = _storage.getPauseStartTimestamp();
-                _pauseStartTimestamp = (pauseStart != null) ? pauseStart : 0;
-
                 _sessionActive = true;
             }
         }
@@ -100,13 +93,7 @@ class FuelModel {
             _storage.setStartTimestamp(_startTimestamp);
             _storage.setConsumedTotal(_consumedTotalG);
             _storage.setLastIntakeTimestamp(_lastIntakeTimestamp);
-            _storage.setPausedDuration(_pausedDurationSec);
             _storage.setIsPaused(_isPaused);
-            if (_isPaused && _pauseStartTimestamp > 0) {
-                _storage.setPauseStartTimestamp(_pauseStartTimestamp);
-            } else {
-                _storage.setPauseStartTimestamp(null);
-            }
         }
     }
 
@@ -117,9 +104,7 @@ class FuelModel {
         _startTimestamp      = now;
         _consumedTotalG      = 0;
         _lastIntakeTimestamp = now;
-        _pausedDurationSec   = 0;
         _isPaused            = false;
-        _pauseStartTimestamp = 0;
         _lastReminderTimestamp = 0;
         _sessionActive       = true;
         _lastTimerTime       = 0;
@@ -350,6 +335,7 @@ class FuelModel {
     function getReminderMode()      as Number  { return _reminderMode; }
     function getCarbFractionPct()   as Number  { return _carbFractionPct; }
     function isCaloriesAvailable()  as Boolean { return _caloriesAvailable; }
+    function isCalorieModeActive()  as Boolean { return _reminderMode == MODE_CALORIE_AUTO; }
 
     function getAverageGph() as Float {
         if (_elapsedActiveHours < 0.01f) { return 0.0f; }

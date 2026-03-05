@@ -48,8 +48,8 @@ SETTINGS (via Garmin Connect app or companion widget)
 • Gel Size: 5–100 g (default 25)
 • Reminder Mode: Auto / Fixed Interval / Calorie Auto
 • Fixed Interval: 5–60 min (default 20)
-• Start Delay: 0–30 min (default 15)
-• Snooze Time: 1–10 min (default 5)
+• Start Delay: 0–60 min (default 15)
+• Snooze Time: 1–15 min (default 5)
 • Carb % of kcal: 40–80 % (default 60, used in Calorie Auto mode)
 
 COMPANION WIDGET
@@ -115,8 +115,8 @@ EINSTELLUNGEN (über Garmin Connect App oder Companion-Widget)
 • Gel-Größe: 5–100 g (Standard 25)
 • Erinnerungs-Modus: Auto / Festes Intervall / Kalorien-Auto
 • Festes Intervall: 5–60 min (Standard 20)
-• Startverzögerung: 0–30 min (Standard 15)
-• Schlummer-Zeit: 1–10 min (Standard 5)
+• Startverzögerung: 0–60 min (Standard 15)
+• Schlummer-Zeit: 1–15 min (Standard 5)
 • KH-Anteil: 40–80 % (Standard 60, für Kalorien-Auto-Modus)
 
 COMPANION-WIDGET
@@ -168,7 +168,7 @@ HOW TO USE
 Open the widget from your watch's widget loop. Navigate with UP/DOWN, confirm with SELECT, go back with BACK.
 
 NOTE
-This widget requires the FuelPlanner data field to also be installed. Settings are stored on the watch and automatically synced to Garmin Connect.
+This widget requires the FuelPlanner data field to also be installed. Settings are stored on the watch and synced from Garmin Connect when changed via the app.
 
 Requires Connect IQ 4.2.0+.
 ```
@@ -214,7 +214,7 @@ BEDIENUNG
 Widget aus der Widget-Schleife öffnen. Mit HOCH/RUNTER navigieren, mit SELECT bestätigen, mit ZURÜCK zurückgehen.
 
 HINWEIS
-Dieses Widget setzt das installierte FuelPlanner-Datenfeld voraus. Einstellungen werden auf der Uhr gespeichert und automatisch mit Garmin Connect synchronisiert.
+Dieses Widget setzt das installierte FuelPlanner-Datenfeld voraus. Einstellungen werden auf der Uhr gespeichert und können über die Garmin Connect App synchronisiert werden.
 
 Erfordert Connect IQ 4.2.0+.
 ```

@@ -34,7 +34,7 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
                 break;
 
             case :doseSize:
-                pushNumberPicker("Gel Size (g)", _storage.getDoseG(), 5, 60, 5,
+                pushNumberPicker("Gel Size (g)", _storage.getDoseG(), 5, 100, 5,
                     new NumberPickerDelegate(_fuelMenu.doseItem,
                         new Lang.Method(_storage, :setDoseG), " g"));
                 break;
@@ -58,13 +58,13 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
                 break;
 
             case :startDelay:
-                pushNumberPicker("Delay (min)", _storage.getStartDelayMin(), 0, 30, 5,
+                pushNumberPicker("Delay (min)", _storage.getStartDelayMin(), 0, 60, 5,
                     new NumberPickerDelegate(_fuelMenu.delayItem,
                         new Lang.Method(_storage, :setStartDelayMin), " min"));
                 break;
 
             case :snoozeTime:
-                pushNumberPicker("Snooze (min)", _storage.getMaxSnoozeMin(), 1, 10, 1,
+                pushNumberPicker("Snooze (min)", _storage.getMaxSnoozeMin(), 1, 15, 1,
                     new NumberPickerDelegate(_fuelMenu.snoozeItem,
                         new Lang.Method(_storage, :setMaxSnoozeMin), " min"));
                 break;

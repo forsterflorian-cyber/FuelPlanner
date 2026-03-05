@@ -233,8 +233,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
 
     //! Build localized rate label from model state
     private function buildRateLabel() as String {
-        var mode = _model.getReminderMode();
-        if (mode == 2) {  // MODE_CALORIE_AUTO
+        if (_model.isCalorieModeActive()) {
             if (_model.isCaloriesAvailable()) {
                 return "auto " + _model.getCarbFractionPct().format("%d") +
                        (WatchUi.loadResource(Rez.Strings.LabelRateAutoCarbsSuffix) as String);

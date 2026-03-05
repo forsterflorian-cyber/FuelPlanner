@@ -52,11 +52,11 @@ Settings are accessible via the **Settings Widget** on the watch or via **Garmin
 | Setting | Default | Range | Description |
 |---------|---------|-------|-------------|
 | Carbs Target | 60 g/h | 20–120 | Target carb rate (Auto mode) |
-| Gel Size | 25 g | 5–60 | Size of one gel/dose |
+| Gel Size | 25 g | 5–100 | Size of one gel/dose |
 | Reminder Mode | Auto | Auto / Fixed / Calorie Auto | How reminders trigger |
 | Fixed Interval | 20 min | 5–60 | Interval for Fixed mode |
-| Start Delay | 15 min | 0–30 | Delay before first reminder |
-| Snooze Time | 5 min | 1–10 | Minimum gap between repeated reminders |
+| Start Delay | 15 min | 0–60 | Delay before first reminder |
+| Snooze Time | 5 min | 1–15 | Minimum gap between repeated reminders |
 | Carb % of kcal | 60 % | 40–80 | Carb fraction used in Calorie Auto mode |
 
 **Sport Presets** (apply via widget menu):
@@ -73,12 +73,12 @@ Settings are accessible via the **Settings Widget** on the watch or via **Garmin
 
 ```
 ┌─────────────────────────┐
-│     Nächste 07:30       │  ← Status: time until next intake
+│      Next 07:30         │  ← Status: time until next intake
 │                         │
 │       35 / 60g          │  ← Consumed / Target (large number font)
 │                         │
-│     Ziel 60 g/h         │  ← Rate label (dim)
-│      Hinter 12g         │  ← Deficit or "Ahead Xg" / "Im Ziel"
+│     Target 60 g/h       │  ← Rate label (dim)
+│      Behind 12g         │  ← Deficit or "Ahead Xg" / "On Target"
 │                         │
 │      45m | 2x           │  ← Elapsed time | intake count
 │   12g / 25g / 50g       │  ← Tap zone hint
