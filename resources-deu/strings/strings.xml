@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<strings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
+    <string id="AppName">FuelPlanner</string>
+    <string id="WidgetName">FuelPlanner Einstellungen</string>
+    
+    <!-- Settings Labels -->
+    <string id="SettingCarbsTarget">Kohlenhydrat-Ziel (g/h)</string>
+    <string id="SettingDoseSize">Gel-Größe (g)</string>
+    <string id="SettingReminderMode">Erinnerungs-Modus</string>
+    <string id="SettingFixedInterval">Festes Intervall (min)</string>
+    <string id="SettingStartDelay">Startverzögerung (min)</string>
+    <string id="SettingSnoozeTime">Schlummer-Zeit (min)</string>
+    <string id="SettingSportPreset">Sport-Vorlage</string>
+    
+    <!-- Modes -->
+    <string id="ModeAuto">Auto (defizitbasiert)</string>
+    <string id="ModeFixed">Festes Intervall</string>
+    
+    <!-- Presets -->
+    <string id="PresetRun">Laufen</string>
+    <string id="PresetBike">Radfahren</string>
+    <string id="PresetHike">Wandern</string>
+    
+    <!-- UI Labels -->
+    <string id="LabelNext">Nächste</string>
+    <string id="LabelDue">FÄLLIG</string>
+    <string id="LabelFuelNow">JETZT ESSEN</string>
+    <string id="LabelCarbs">Kohlenhydrate</string>
+    <string id="LabelDeficit">Defizit</string>
+    <string id="LabelAhead">Voraus</string>
+    <string id="LabelOnTarget">Im Ziel</string>
+    <string id="LabelPaused">PAUSIERT</string>
+    <string id="LabelWaiting">Warte auf Aktivität</string>
+    <string id="LabelNoSession">Keine aktive Sitzung</string>
+    
+    <!-- Units -->
+    <string id="UnitGrams">g</string>
+    <string id="UnitGramsPerHour">g/h</string>
+    <string id="UnitMinutes">min</string>
+</strings>

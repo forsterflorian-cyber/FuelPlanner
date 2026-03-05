@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<properties>
+    <property id="carbsTargetGph" type="number">60</property>
+    <property id="doseG" type="number">25</property>
+    <property id="reminderMode" type="number">0</property>
+    <property id="fixedIntervalMin" type="number">20</property>
+    <property id="startDelayMin" type="number">15</property>
+    <property id="maxSnoozeMin" type="number">5</property>
+    <property id="carbFractionPct" type="number">60</property>
+</properties>

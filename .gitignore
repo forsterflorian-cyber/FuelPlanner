@@ -1,0 +1,14 @@
+# Garmin Connect IQ build output
+bin/
+
+# Screenshots / temp files
+*.png
+*.jpg
+*.jpeg
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Editor
+.vscode/settings.json

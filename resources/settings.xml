@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<settings>
+    <setting propertyKey="@Properties.carbsTargetGph" title="Carbs Target (g/h)">
+        <settingConfig type="numeric" min="20" max="120" />
+    </setting>
+    
+    <setting propertyKey="@Properties.doseG" title="Gel Size (g)">
+        <settingConfig type="numeric" min="5" max="100" />
+    </setting>
+    
+    <setting propertyKey="@Properties.reminderMode" title="Reminder Mode">
+        <settingConfig type="list">
+            <listEntry value="0">Auto (deficit-based)</listEntry>
+            <listEntry value="1">Fixed Interval</listEntry>
+            <listEntry value="2">Calorie Auto (watch data)</listEntry>
+        </settingConfig>
+    </setting>
+    
+    <setting propertyKey="@Properties.fixedIntervalMin" title="Fixed Interval (min)">
+        <settingConfig type="numeric" min="5" max="60" />
+    </setting>
+    
+    <setting propertyKey="@Properties.startDelayMin" title="Start Delay (min)">
+        <settingConfig type="numeric" min="0" max="60" />
+    </setting>
+    
+    <setting propertyKey="@Properties.maxSnoozeMin" title="Snooze Time (min)">
+        <settingConfig type="numeric" min="1" max="15" />
+    </setting>
+
+    <setting propertyKey="@Properties.carbFractionPct" title="Carb % of calories">
+        <settingConfig type="numeric" min="40" max="80" />
+    </setting>
+</settings>
