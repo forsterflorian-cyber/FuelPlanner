@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <iq:manifest xmlns:iq="http://www.garmin.com/xml/connectiq" version="5">
-    <iq:application id="0cd55639-0b92-451c-8833-e968a853734e" type="datafield" name="@Strings.AppName" entry="FuelPlannerApp" launcherIcon="@Drawables.LauncherIcon" minApiLevel="4.2.0">
+    <iq:application id="0cd55639-0b92-451c-8833-e968a853734e" type="datafield" name="@Strings.AppName" entry="FuelPlannerApp" launcherIcon="@Drawables.LauncherIcon" minApiLevel="3.3.0">
         <iq:products>
             <iq:product id="d2airx10"/>
             <iq:product id="d2mach1"/>
@@ -9,6 +9,7 @@
             <iq:product id="epix2pro42mm"/>
             <iq:product id="epix2pro47mm"/>
             <iq:product id="epix2pro51mm"/>
+            <iq:product id="fenix6xpro"/>
             <iq:product id="fenix7"/>
             <iq:product id="fenix7pro"/>
             <iq:product id="fenix7pronowifi"/>

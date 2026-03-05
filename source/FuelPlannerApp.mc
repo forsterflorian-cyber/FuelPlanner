@@ -3,37 +3,46 @@ import Toybox.Lang;
 import Toybox.WatchUi;
 
 class FuelPlannerApp extends Application.AppBase {
-    
-    private var _model as FuelModel?;
-    private var _storage as StorageManager?;
-    private var _reminder as ReminderManager?;
-    
-    function initialize() {
+
+    private var _model;
+    private var _storage;
+    private var _reminder;
+
+    public function initialize() {
         AppBase.initialize();
     }
-    
-    function onStart(state as Dictionary?) as Void {
+
+    public function onStart(state as Dictionary?) as Void {
         _storage = new StorageManager();
         _model = new FuelModel(_storage);
         _reminder = new ReminderManager();
-        _model.loadSession();
+        (_model as FuelModel).loadSession();
     }
-    
-    function onStop(state as Dictionary?) as Void {
+
+    public function onStop(state as Dictionary?) as Void {
         if (_model != null) {
-            _model.saveSession();
+            (_model as FuelModel).saveSession();
         }
     }
-    
-    function getInitialView() as [Views] or [Views, InputDelegates] {
+
+    public function getInitialView() as [Views] or [Views, InputDelegates] {
         if (_model == null || _storage == null || _reminder == null) {
             _storage = new StorageManager();
             _model = new FuelModel(_storage);
             _reminder = new ReminderManager();
         }
-        
-        var view = new FuelPlannerFieldView(_model, _reminder);
-        var delegate = new FuelPlannerFieldDelegate(_model, _reminder);
+
+        var model = _model as FuelModel;
+        var reminder = _reminder as ReminderManager;
+        var view = new FuelPlannerFieldView(model, reminder);
+        var delegate = new FuelPlannerFieldDelegate(model, reminder, view);
         return [view, delegate];
+    }
+
+    public function getSettingsView() as [Views] or [Views, InputDelegates] or Null {
+        var storage = new StorageManager();
+        var menu = new FuelPlannerMenu(storage);
+        var delegate = new FuelPlannerMenuDelegate(storage, menu);
+        return [menu, delegate];
     }
 }

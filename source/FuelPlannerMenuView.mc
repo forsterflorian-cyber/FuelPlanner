@@ -19,13 +19,13 @@ class FuelPlannerMenu extends WatchUi.Menu2 {
 
         carbsItem = new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.SettingCarbsTarget) as String,
-            storage.getCarbsTargetGph().format("%d") + " g/h",
+            storage.getCarbsTargetGph().format("%d") + " " + (WatchUi.loadResource(Rez.Strings.UnitGramsPerHour) as String),
             :carbsTarget, {});
         addItem(carbsItem);
 
         doseItem = new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.SettingDoseSize) as String,
-            storage.getDoseG().format("%d") + " g",
+            storage.getDoseG().format("%d") + " " + (WatchUi.loadResource(Rez.Strings.UnitGrams) as String),
             :doseSize, {});
         addItem(doseItem);
 
@@ -44,19 +44,19 @@ class FuelPlannerMenu extends WatchUi.Menu2 {
 
         intervalItem = new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.SettingFixedInterval) as String,
-            storage.getFixedIntervalMin().format("%d") + " min",
+            storage.getFixedIntervalMin().format("%d") + " " + (WatchUi.loadResource(Rez.Strings.UnitMinutes) as String),
             :fixedInterval, {});
         addItem(intervalItem);
 
         delayItem = new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.SettingStartDelay) as String,
-            storage.getStartDelayMin().format("%d") + " min",
+            storage.getStartDelayMin().format("%d") + " " + (WatchUi.loadResource(Rez.Strings.UnitMinutes) as String),
             :startDelay, {});
         addItem(delayItem);
 
         snoozeItem = new WatchUi.MenuItem(
             WatchUi.loadResource(Rez.Strings.SettingSnoozeTime) as String,
-            storage.getMaxSnoozeMin().format("%d") + " min",
+            storage.getMaxSnoozeMin().format("%d") + " " + (WatchUi.loadResource(Rez.Strings.UnitMinutes) as String),
             :snoozeTime, {});
         addItem(snoozeItem);
 

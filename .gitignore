@@ -12,3 +12,7 @@ Thumbs.db
 
 # Editor
 .vscode/settings.json
+
+# Local signing keys
+developer_key
+developer_key.der

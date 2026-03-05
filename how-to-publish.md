@@ -2,26 +2,25 @@
 
 ## Overview
 
-This project produces **two separate apps** that must be published independently:
+This project produces one app:
 
 | App | Type | Jungle file | Store listing |
 |-----|------|-------------|---------------|
-| FuelPlanner | Data Field | `monkey.jungle` | Separate listing |
-| FuelPlanner Settings | Widget | `monkey-widget.jungle` | Separate listing |
+| FuelPlanner | Data Field | `monkey.jungle` | One listing |
 
 ---
 
 ## Prerequisites
 
-1. **Garmin Connect IQ SDK** — install the latest from https://developer.garmin.com/connect-iq/sdk/
-2. **Developer key** — generate once at https://developer.garmin.com/connect-iq/
-   - Save as `%USERPROFILE%\developer_key.der`
-3. **Java** in PATH (bundled with the SDK or install separately)
-4. **Garmin developer account** at https://apps.garmin.com/
+1. Install the Garmin Connect IQ SDK from https://developer.garmin.com/connect-iq/sdk/
+2. Generate a developer key at https://developer.garmin.com/connect-iq/
+3. Keep the key as `%USERPROFILE%\developer_key.der` or pass an explicit `-KeyPath`
+4. Ensure Java is in `PATH`
+5. Use a Garmin developer account at https://apps.garmin.com/
 
 ---
 
-## Step 1 — Build the .iq files
+## Step 1 - Build the .iq File
 
 Run the build script from the project root:
 
@@ -29,45 +28,31 @@ Run the build script from the project root:
 .\build.ps1
 ```
 
-This auto-detects the newest installed SDK and produces:
-- `bin\FuelPlanner-DataField.iq`
-- `bin\FuelPlanner-Widget.iq`
+This auto-detects the newest installed SDK and produces `bin\FuelPlanner-DataField.iq`.
 
-**Custom SDK or key path:**
+Custom SDK or key path:
+
 ```powershell
 .\build.ps1 -SdkPath "C:\MySDKs" -KeyPath "C:\keys\my_key.der"
 ```
 
 ---
 
-## Step 2 — Publish the Data Field
+## Step 2 - Publish the Data Field
 
-1. Go to https://apps.garmin.com/ and sign in
-2. Click **Create App** → Type: **Data Field**
-3. Fill in:
-   - **Name (EN):** `FuelPlanner`
-   - **Name (DE):** `FuelPlanner`
-   - **Description (EN):** copy from `garmin.md` → *DATA FIELD — English → Full Description*
-   - **Description (DE):** copy from `garmin.md` → *DATA FIELD — Deutsch → Vollständige Beschreibung*
-   - **Short Description (EN/DE):** from `garmin.md`
-   - **Changelog:** from `garmin.md`
-4. Upload `bin\FuelPlanner-DataField.iq`
-5. Set minimum API level: `4.2.0`
-6. Add launcher icon (see Icon Requirements below)
-7. Submit for review
-
----
-
-## Step 3 — Publish the Widget
-
-1. Click **Create App** → Type: **Widget**
-2. Fill in:
-   - **Name (EN):** `FuelPlanner Settings`
-   - **Name (DE):** `FuelPlanner Einstellungen`
-   - **Description (EN/DE):** from `garmin.md` → *WIDGET* sections
-3. Upload `bin\FuelPlanner-Widget.iq`
-4. In the description, link to the Data Field listing so users know they need both
-5. Submit for review
+1. Go to https://apps.garmin.com/ and sign in.
+2. Click `Create App` and choose `Data Field`.
+3. Fill in the store fields:
+   - Name (EN): `FuelPlanner`
+   - Name (DE): `FuelPlanner`
+   - Description (EN): copy from `garmin.md`, `DATA FIELD - English`, `Full Description`
+   - Description (DE): copy from `garmin.md`, `DATA FIELD - Deutsch`, `Vollstandige Beschreibung`
+   - Short Description (EN/DE): from `garmin.md`
+   - Changelog: from `garmin.md`
+4. Upload `bin\FuelPlanner-DataField.iq`.
+5. Set minimum API level to match `manifest.xml`: `3.3.0`.
+6. Add the launcher icon.
+7. Submit for review.
 
 ---
 
@@ -77,35 +62,29 @@ The launcher icon is defined in `resources/drawables/drawables.xml` as `launcher
 
 | Use | Size |
 |-----|------|
-| Watch display | 24×24 px minimum (SVG scales up) |
-| Store listing | 80×80 px PNG recommended |
-| Store banner | 480×270 px PNG recommended |
+| Watch display | 24x24 px minimum |
+| Store listing | 80x80 px PNG recommended |
+| Store banner | 480x270 px PNG recommended |
 
-The SDK will scale the SVG automatically per device, but the store listing needs separate PNG uploads.
+The SDK scales the SVG for devices, but the store listing still needs separate PNG uploads.
 
 ---
 
 ## Debugging in VS Code
 
-Both apps are in one project. Use the debug dropdown to switch:
+Use the `Run Data Field` launch configuration in `.vscode/launch.json`.
 
-| F5 config | Builds | Jungle used |
-|-----------|--------|-------------|
-| **Run Data Field** | Data field for simulator | `monkey.jungle` |
-| **Run Widget (Settings)** | Widget for simulator | `monkey-widget.jungle` |
+Recommended test devices: `epix2pro47mm` or `fr965`.
 
-Both configs are self-contained in `.vscode/launch.json` — no need to change `settings.json`.
-
-The device used for both is selected via the **Garmin device picker** in VS Code (bottom status bar or `${command:GetTargetDevice}`).
-
-**Tip:** Use `epix2pro47mm` or `fr965` as your default test device — both support glance views, touch, and all features.
+Do not use `Run Tests` when you intend to launch the data field simulator.
 
 ---
 
 ## Version Bumps
 
 Before each release:
-1. Bump `minApiLevel` in both manifest files if needed
-2. Add a new changelog entry in `garmin.md`
-3. Run `.\build.ps1` to produce new `.iq` files
-4. Upload to the store and update the changelog field
+
+1. Update `manifest.xml` if `minApiLevel` changes.
+2. Add a changelog entry in `garmin.md`.
+3. Run `.\build.ps1` to produce a new `.iq`.
+4. Upload to the store and update the changelog field.

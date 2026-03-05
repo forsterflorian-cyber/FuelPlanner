@@ -1,6 +1,5 @@
 <strings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
     <string id="AppName">FuelPlanner</string>
-    <string id="WidgetName">FuelPlanner Settings</string>
 
     <!-- Settings Labels (Garmin Connect settings page) -->
     <string id="SettingCarbsTarget">Carbs Target (g/h)</string>
@@ -29,6 +28,9 @@
     <string id="LabelPaused">PAUSED</string>
     <string id="LabelFuelNow">FUEL NOW!</string>
     <string id="LabelTapPrefix">TAP +</string>
+    <string id="LabelHoldPrefix">DOWN +</string>
+    <string id="LabelLapUndoHint">LAP hold undo</string>
+    <string id="LabelLapUndoShort">LAP undo</string>
     <string id="LabelNext">Next</string>
 
     <!-- Field View: deficit row -->
@@ -44,16 +46,7 @@
     <!-- Field View: idle screen -->
     <string id="LabelWaiting">Start activity to begin</string>
 
-    <!-- Widget View: row labels -->
-    <string id="LabelModeRow">Mode:</string>
-    <string id="LabelTargetRow">Target:</string>
-    <string id="LabelCarbPctRow">Carb %:</string>
-    <string id="LabelGelRow">Gel:</string>
-    <string id="LabelDelayRow">Delay:</string>
-    <string id="LabelSnoozeRow">Snooze:</string>
-    <string id="LabelSelectConfig">SELECT to configure</string>
-
-    <!-- Menu -->
+    
     <string id="LabelMenuTitle">Settings</string>
     <string id="LabelClearSession">Clear Session</string>
     <string id="LabelClearSessionSub">Reset tracking data</string>

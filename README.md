@@ -1,6 +1,6 @@
-# FuelPlanner — Garmin Connect IQ
+# FuelPlanner - Garmin Connect IQ
 
-Carbohydrate intake tracker for endurance activities. Available as a **Data Field** and a companion **Settings Widget**.
+Carbohydrate intake tracker for endurance activities. FuelPlanner is a data-field-only app with an on-watch settings menu.
 
 Supported languages: English, Deutsch
 
@@ -8,58 +8,65 @@ Supported languages: English, Deutsch
 
 ## Features
 
-- **Real-time tracking** of carbohydrate intake during activities
-- **Auto mode**: reminder fires when your deficit reaches one gel/dose size
-- **Fixed interval mode**: reminder at fixed intervals (e.g. every 20 min)
-- **Calorie Auto mode**: uses watch calorie/energy data — target adapts to actual effort
-- **Vibration + backlight alerts** when it's time to fuel
-- **Pause-aware**: timer-stall detection, paused time excluded from targets
-- **Session persistence**: survives watch restarts and app switches
-- **On-watch settings widget**: change all settings without touching your phone
+- Real-time tracking of carbohydrate intake during activities
+- Auto mode: reminder fires when your deficit reaches one gel or dose
+- Fixed interval mode: reminder at fixed intervals
+- Calorie Auto mode: uses watch calorie or energy data and adapts to actual effort
+- Vibration and backlight alerts when it is time to fuel
+- Pause-aware session logic
+- Session persistence across watch restarts and app switches
+- On-watch settings menu plus Garmin Connect settings sync
 
 ---
 
 ## Supported Devices
 
-All touchscreen devices running Connect IQ 4.2+:
+Touch and button devices running Connect IQ 3.3.0 or later.
 
-Forerunner 165 / 255 / 265 / 955 / 965 · Fenix 7 / 7S / 7X / 7 Pro / 8 Solar · Epix Gen 2 (42/47/51mm) · Venu 2 / 2S / 2 Plus / 3 / 3S · Vivoactive 5 · Venue Sq2 · D2 Air X10 / Mach1 · Enduro 3 · MARQ2 · FR255S/SM
+Current manifest targets:
+Forerunner 165 / 165 Music / 255 / 255 Music / 255S / 255S Music / 265 / 265S / 955 / 965,
+Fenix 6X Pro / 7 / 7S / 7X / 7 Pro / 7S Pro / 7X Pro / 8 Solar 47 mm / 8 Solar 51 mm,
+Epix Gen 2 / Epix Pro 42 mm / 47 mm / 51 mm,
+Venu 2 / 2S / 2 Plus / 3 / 3S / Venu Sq 2 / Venu Sq 2 Music / Vivoactive 5,
+D2 Air X10 / D2 Mach 1, Enduro 3, MARQ 2 / MARQ 2 Aviator.
 
 ---
 
 ## Installation
 
 ### From Connect IQ Store
-Search for **FuelPlanner** (Data Field) and **FuelPlanner Settings** (Widget).
+
+Search for `FuelPlanner` in the data field category.
 
 ### Manual Build
-1. Install the [Connect IQ SDK](https://developer.garmin.com/connect-iq/sdk/)
-2. Clone this repository
-3. Run `build.ps1` — builds both `.iq` files automatically
 
-Or build individually:
-```
-monkeyc -f monkey.jungle        -o FuelPlanner-DataField.iq -d fr965 -y developer_key.der -e
-monkeyc -f monkey-widget.jungle -o FuelPlanner-Widget.iq    -d fr965 -y developer_key.der -e
+1. Install the [Connect IQ SDK](https://developer.garmin.com/connect-iq/sdk/).
+2. Clone this repository.
+3. Run `.\build.ps1`.
+
+Or build manually:
+
+```text
+monkeyc -f monkey.jungle -o FuelPlanner-DataField.iq -d fr965 -y developer_key -e
 ```
 
 ---
 
 ## Configuration
 
-Settings are accessible via the **Settings Widget** on the watch or via **Garmin Connect** (synced to the watch).
+Settings are available from the activity data field settings menu or through Garmin Connect.
 
 | Setting | Default | Range | Description |
 |---------|---------|-------|-------------|
-| Carbs Target | 60 g/h | 20–120 | Target carb rate (Auto mode) |
-| Gel Size | 25 g | 5–100 | Size of one gel/dose |
-| Reminder Mode | Auto | Auto / Fixed / Calorie Auto | How reminders trigger |
-| Fixed Interval | 20 min | 5–60 | Interval for Fixed mode |
-| Start Delay | 15 min | 0–60 | Delay before first reminder |
-| Snooze Time | 5 min | 1–15 | Minimum gap between repeated reminders |
-| Carb % of kcal | 60 % | 40–80 | Carb fraction used in Calorie Auto mode |
+| Carbs Target | 60 g/h | 20-120 | Target carb rate in Auto mode |
+| Gel Size | 25 g | 5-100 | Size of one gel or dose |
+| Reminder Mode | Auto | Auto / Fixed / Calorie Auto | Reminder logic |
+| Fixed Interval | 20 min | 5-60 | Interval for Fixed mode |
+| Start Delay | 15 min | 0-60 | Delay before first reminder |
+| Snooze Time | 5 min | 1-15 | Minimum gap between reminders |
+| Carb % of kcal | 60 % | 40-80 | Carb fraction used in Calorie Auto mode |
 
-**Sport Presets** (apply via widget menu):
+Sport presets available on-watch:
 
 | Preset | Target | Gel Size |
 |--------|--------|----------|
@@ -69,64 +76,53 @@ Settings are accessible via the **Settings Widget** on the watch or via **Garmin
 
 ---
 
-## Data Field Layout
+## Controls
 
-```
-┌─────────────────────────┐
-│      Next 07:30         │  ← Status: time until next intake
-│                         │
-│       35 / 60g          │  ← Consumed / Target (large number font)
-│                         │
-│     Target 60 g/h       │  ← Rate label (dim)
-│      Behind 12g         │  ← Deficit or "Ahead Xg" / "On Target"
-│                         │
-│      45m | 2x           │  ← Elapsed time | intake count
-│   12g / 25g / 50g       │  ← Tap zone hint
-└─────────────────────────┘
-```
-
-Status row colors: green = on track · yellow = due soon (< 3 min) · red = due now · yellow = paused
-
----
-
-## Touch Controls
+Touch input:
 
 | Tap zone | Normal state | Reminder active |
-|----------|-------------|-----------------|
-| Top 25% | Half dose (≥5g) | Snooze |
+|----------|--------------|-----------------|
+| Top 25% | Half dose (minimum 5 g) | Snooze |
 | Middle 50% | Default dose | Default dose |
 | Bottom 25% | Double dose | Double dose |
+
+Button input:
+
+On any device that emits key events, hold `DOWN` while the FuelPlanner data field is visible to log the default gel or dose.
+This provides a fallback when touch interaction is locked during an activity.
+Short `LAP` remains the normal lap action; hold `LAP` for about one second to undo the last logged intake.
 
 ---
 
 ## Reminder Modes
 
-**Auto (deficit-based)** — calculates `elapsed_hours × target_g/h`. When the deficit ≥ gel size, the reminder fires. After eating, the clock resets.
+Auto mode calculates `elapsed_hours * target_g_per_hour`. When the deficit reaches gel size, the reminder fires.
 
-**Fixed interval** — first reminder after start delay + one full interval; subsequent reminders every N minutes from last intake.
+Fixed interval mode reminds after start delay plus one interval, then repeats from the last intake.
 
-**Calorie Auto** — uses the watch's calorie burn data. Target carbs = `calories_burned × carb_fraction% / 4 kcal/g`. Adapts in real time to your actual effort.
+Calorie Auto mode uses watch calorie or energy data. Target carbs = `calories_burned * carb_fraction / 4`.
 
 ---
 
 ## Troubleshooting
 
-**Settings not applying on watch?**
-Open the Settings Widget, change a value and change it back — this forces a write to the shared property store. Both apps use the same app ID and share storage.
+Settings not applying on watch:
+Configure the data field on-watch through `FuelPlanner -> Settings` or through Garmin Connect, then sync.
 
-**Reminder not vibrating?**
-Check that vibration is enabled in the watch system settings (not on silent).
+Reminder not vibrating:
+Check that vibration is enabled in the watch system settings.
 
-**Session reset unexpectedly?**
-The data field auto-detects a new activity when the timer resets to 0. Starting a new activity always begins a fresh session.
+Session reset unexpectedly:
+The data field starts a fresh session when it detects a timer reset or backtrack.
 
 ---
 
 ## Version History
 
 ### v1.0.0
-- Initial release: Auto, Fixed, and Calorie Auto reminder modes
-- Session persistence, intake log (rolling 50 entries)
-- Vibration + backlight alerts with snooze
-- On-watch settings widget (EN + DE)
+
+- Initial release with Auto, Fixed, and Calorie Auto reminder modes
+- Session persistence and rolling intake log
+- Vibration and backlight alerts with snooze
+- On-watch settings menu
 - Sport presets

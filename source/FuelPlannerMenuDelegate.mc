@@ -18,7 +18,7 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
         if (mode == 0) { return WatchUi.loadResource(Rez.Strings.ModeAuto) as String; }
         if (mode == 1) {
             return (WatchUi.loadResource(Rez.Strings.ModeFixed) as String) + " " +
-                   intervalMin.format("%d") + "min";
+                   intervalMin.format("%d") + " " + (WatchUi.loadResource(Rez.Strings.UnitMinutes) as String);
         }
         return WatchUi.loadResource(Rez.Strings.ModeCalorieAuto) as String;
     }
@@ -28,15 +28,15 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
 
         switch (id) {
             case :carbsTarget:
-                pushNumberPicker("Carbs (g/h)", _storage.getCarbsTargetGph(), 20, 120, 10,
+                pushNumberPicker(WatchUi.loadResource(Rez.Strings.SettingCarbsTarget) as String, _storage.getCarbsTargetGph(), 20, 120, 10,
                     new NumberPickerDelegate(_fuelMenu.carbsItem,
-                        new Lang.Method(_storage, :setCarbsTargetGph), " g/h"));
+                        new Lang.Method(_storage, :setCarbsTargetGph), " " + (WatchUi.loadResource(Rez.Strings.UnitGramsPerHour) as String)));
                 break;
 
             case :doseSize:
-                pushNumberPicker("Gel Size (g)", _storage.getDoseG(), 5, 100, 5,
+                pushNumberPicker(WatchUi.loadResource(Rez.Strings.SettingDoseSize) as String, _storage.getDoseG(), 5, 100, 5,
                     new NumberPickerDelegate(_fuelMenu.doseItem,
-                        new Lang.Method(_storage, :setDoseG), " g"));
+                        new Lang.Method(_storage, :setDoseG), " " + (WatchUi.loadResource(Rez.Strings.UnitGrams) as String)));
                 break;
 
             case :reminderMode:
@@ -46,27 +46,27 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
                 break;
 
             case :carbFraction:
-                pushNumberPicker("Carb % of kcal", _storage.getCarbFractionPct(), 40, 80, 5,
+                pushNumberPicker(WatchUi.loadResource(Rez.Strings.SettingCarbFraction) as String, _storage.getCarbFractionPct(), 40, 80, 5,
                     new NumberPickerDelegate(_fuelMenu.carbFracItem,
                         new Lang.Method(_storage, :setCarbFractionPct), "%"));
                 break;
 
             case :fixedInterval:
-                pushNumberPicker("Interval (min)", _storage.getFixedIntervalMin(), 5, 60, 5,
+                pushNumberPicker(WatchUi.loadResource(Rez.Strings.SettingFixedInterval) as String, _storage.getFixedIntervalMin(), 5, 60, 5,
                     new FixedIntervalDelegate(_storage, _fuelMenu.intervalItem,
                                              _fuelMenu.modeItem));
                 break;
 
             case :startDelay:
-                pushNumberPicker("Delay (min)", _storage.getStartDelayMin(), 0, 60, 5,
+                pushNumberPicker(WatchUi.loadResource(Rez.Strings.SettingStartDelay) as String, _storage.getStartDelayMin(), 0, 60, 5,
                     new NumberPickerDelegate(_fuelMenu.delayItem,
-                        new Lang.Method(_storage, :setStartDelayMin), " min"));
+                        new Lang.Method(_storage, :setStartDelayMin), " " + (WatchUi.loadResource(Rez.Strings.UnitMinutes) as String)));
                 break;
 
             case :snoozeTime:
-                pushNumberPicker("Snooze (min)", _storage.getMaxSnoozeMin(), 1, 15, 1,
+                pushNumberPicker(WatchUi.loadResource(Rez.Strings.SettingSnoozeTime) as String, _storage.getMaxSnoozeMin(), 1, 15, 1,
                     new NumberPickerDelegate(_fuelMenu.snoozeItem,
-                        new Lang.Method(_storage, :setMaxSnoozeMin), " min"));
+                        new Lang.Method(_storage, :setMaxSnoozeMin), " " + (WatchUi.loadResource(Rez.Strings.UnitMinutes) as String)));
                 break;
 
             case :presetRun:
@@ -85,7 +85,7 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
                 break;
 
             case :clearSession:
-                var confirm = new WatchUi.Confirmation("Clear session?");
+                var confirm = new WatchUi.Confirmation(WatchUi.loadResource(Rez.Strings.LabelConfirmClear) as String);
                 WatchUi.pushView(confirm, new ClearConfirmDelegate(_storage), WatchUi.SLIDE_UP);
                 break;
 
@@ -107,10 +107,10 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
         _storage.setReminderMode(0);
         _storage.setStartDelayMin(15);
         // Refresh affected items
-        _fuelMenu.carbsItem.setSubLabel(carbsGph.format("%d") + " g/h");
-        _fuelMenu.doseItem.setSubLabel(doseG.format("%d") + " g");
+        _fuelMenu.carbsItem.setSubLabel(carbsGph.format("%d") + " " + (WatchUi.loadResource(Rez.Strings.UnitGramsPerHour) as String));
+        _fuelMenu.doseItem.setSubLabel(doseG.format("%d") + " " + (WatchUi.loadResource(Rez.Strings.UnitGrams) as String));
         _fuelMenu.modeItem.setSubLabel(modeLabel(0, _storage.getFixedIntervalMin()));
-        _fuelMenu.delayItem.setSubLabel("15 min");
+        _fuelMenu.delayItem.setSubLabel("15 " + (WatchUi.loadResource(Rez.Strings.UnitMinutes) as String));
     }
 
     function onBack() as Void {
@@ -162,7 +162,7 @@ class FixedIntervalDelegate extends WatchUi.Menu2InputDelegate {
     function onSelect(item as WatchUi.MenuItem) as Void {
         var value = item.getId() as Number;
         _storage.setFixedIntervalMin(value);
-        _item.setSubLabel(value.format("%d") + " min");
+        _item.setSubLabel(value.format("%d") + " " + (WatchUi.loadResource(Rez.Strings.UnitMinutes) as String));
         _modeItem.setSubLabel(FuelPlannerMenuDelegate.modeLabel(
             _storage.getReminderMode(), value));
         WatchUi.popView(WatchUi.SLIDE_RIGHT);

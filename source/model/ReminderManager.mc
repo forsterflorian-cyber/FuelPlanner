@@ -23,13 +23,21 @@ class ReminderManager {
     
     //! Check device capabilities
     private function checkCapabilities() as Void {
+        _hasVibration = false;
+
         // Check for vibration support
         if (Attention has :vibrate) {
-            var deviceSettings = System.getDeviceSettings();
-            if (deviceSettings has :vibrateOn) {
-                _hasVibration = deviceSettings.vibrateOn;
-            } else {
-                _hasVibration = true; // Assume available if we can't check
+            try {
+                var deviceSettings = System.getDeviceSettings();
+                if (deviceSettings != null &&
+                    deviceSettings has :vibrateOn &&
+                    deviceSettings.vibrateOn instanceof Boolean) {
+                    _hasVibration = deviceSettings.vibrateOn;
+                } else {
+                    _hasVibration = true; // Assume available if we cannot query the setting
+                }
+            } catch (e) {
+                _hasVibration = true;
             }
         } else {
             _hasVibration = false;
@@ -98,6 +106,7 @@ class ReminderManager {
         } catch (e instanceof Lang.Exception) {
             // Vibration failed, continue silently
             System.println("Vibration failed: " + e.getErrorMessage());
+        } catch (e) {
         }
         return false;
     }
@@ -110,6 +119,7 @@ class ReminderManager {
             }
         } catch (e instanceof Lang.Exception) {
             // Backlight failed, continue silently
+        } catch (e) {
         }
     }
     
