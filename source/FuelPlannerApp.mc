@@ -16,13 +16,30 @@ class FuelPlannerApp extends Application.AppBase {
         _storage = new StorageManager();
         _model = new FuelModel(_storage);
         _reminder = new ReminderManager();
-        (_model as FuelModel).loadSession();
+        var model = _model as FuelModel;
+        model.loadSession();
     }
 
     public function onStop(state as Dictionary?) as Void {
         if (_model != null) {
-            (_model as FuelModel).saveSession();
+            var model = _model as FuelModel;
+            model.saveSession();
         }
+    }
+
+    public function onSettingsChanged() as Void {
+        if (_storage == null) {
+            _storage = new StorageManager();
+        }
+        if (_model == null) {
+            _model = new FuelModel(_storage);
+            var model = _model as FuelModel;
+            model.loadSession();
+        }
+
+        var activeModel = _model as FuelModel;
+        activeModel.onSettingsChanged();
+        WatchUi.requestUpdate();
     }
 
     public function getInitialView() as [Views] or [Views, InputDelegates] {
@@ -35,14 +52,15 @@ class FuelPlannerApp extends Application.AppBase {
         var model = _model as FuelModel;
         var reminder = _reminder as ReminderManager;
         var view = new FuelPlannerFieldView(model, reminder);
-        var delegate = new FuelPlannerFieldDelegate(model, reminder, view);
-        return [view, delegate];
+        var inputDelegate = new FuelPlannerFieldDelegate(model, reminder, view);
+        return [view, inputDelegate];
     }
 
     public function getSettingsView() as [Views] or [Views, InputDelegates] or Null {
         var storage = new StorageManager();
         var menu = new FuelPlannerMenu(storage);
-        var delegate = new FuelPlannerMenuDelegate(storage, menu);
-        return [menu, delegate];
+        var inputDelegate = new FuelPlannerMenuDelegate(storage, menu);
+        return [menu, inputDelegate];
     }
+
 }

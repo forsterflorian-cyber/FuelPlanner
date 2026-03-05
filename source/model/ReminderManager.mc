@@ -15,10 +15,34 @@ class ReminderManager {
     private var _hasBacklight as Boolean = false;
     private var _lastVibeTime as Number = 0;
     private var _minVibInterval as Number = 2000; // Minimum 2 seconds between vibes
+    private var _intakeReminderPattern as Array<Attention.VibeProfile>? = null;
+    private var _confirmationPattern as Array<Attention.VibeProfile>? = null;
+    private var _snoozePattern as Array<Attention.VibeProfile>? = null;
     
     //! Constructor
     function initialize() {
+        buildPatterns();
         checkCapabilities();
+    }
+
+    private function buildPatterns() as Void {
+        _intakeReminderPattern = [
+            new Attention.VibeProfile(100, VIBE_LONG),
+            new Attention.VibeProfile(0, VIBE_PAUSE),
+            new Attention.VibeProfile(100, VIBE_MEDIUM),
+            new Attention.VibeProfile(0, VIBE_PAUSE),
+            new Attention.VibeProfile(100, VIBE_LONG)
+        ] as Array<Attention.VibeProfile>;
+
+        _confirmationPattern = [
+            new Attention.VibeProfile(50, VIBE_SHORT),
+            new Attention.VibeProfile(0, 50),
+            new Attention.VibeProfile(50, VIBE_SHORT)
+        ] as Array<Attention.VibeProfile>;
+
+        _snoozePattern = [
+            new Attention.VibeProfile(25, VIBE_MEDIUM)
+        ] as Array<Attention.VibeProfile>;
     }
     
     //! Check device capabilities
@@ -62,8 +86,8 @@ class ReminderManager {
         var success = false;
         
         // Try vibration
-        if (_hasVibration) {
-            success = vibratePattern(getIntakeReminderPattern());
+        if (_hasVibration && _intakeReminderPattern != null) {
+            success = vibratePattern(_intakeReminderPattern as Array<Attention.VibeProfile>);
         }
         
         // Also flash backlight if available
@@ -80,20 +104,20 @@ class ReminderManager {
     
     //! Trigger confirmation vibration (after intake recorded)
     function triggerConfirmation() as Boolean {
-        if (!_hasVibration) {
+        if (!_hasVibration || _confirmationPattern == null) {
             return false;
         }
         
-        return vibratePattern(getConfirmationPattern());
+        return vibratePattern(_confirmationPattern as Array<Attention.VibeProfile>);
     }
     
     //! Trigger snooze confirmation
     function triggerSnooze() as Boolean {
-        if (!_hasVibration) {
+        if (!_hasVibration || _snoozePattern == null) {
             return false;
         }
         
-        return vibratePattern(getSnoozePattern());
+        return vibratePattern(_snoozePattern as Array<Attention.VibeProfile>);
     }
     
     //! Execute vibration pattern
@@ -121,33 +145,6 @@ class ReminderManager {
             // Backlight failed, continue silently
         } catch (e) {
         }
-    }
-    
-    //! Get intake reminder vibration pattern (attention-grabbing)
-    private function getIntakeReminderPattern() as Array<Attention.VibeProfile> {
-        return [
-            new Attention.VibeProfile(100, VIBE_LONG),
-            new Attention.VibeProfile(0, VIBE_PAUSE),
-            new Attention.VibeProfile(100, VIBE_MEDIUM),
-            new Attention.VibeProfile(0, VIBE_PAUSE),
-            new Attention.VibeProfile(100, VIBE_LONG)
-        ] as Array<Attention.VibeProfile>;
-    }
-
-    //! Get confirmation vibration pattern (short positive feedback)
-    private function getConfirmationPattern() as Array<Attention.VibeProfile> {
-        return [
-            new Attention.VibeProfile(50, VIBE_SHORT),
-            new Attention.VibeProfile(0, 50),
-            new Attention.VibeProfile(50, VIBE_SHORT)
-        ] as Array<Attention.VibeProfile>;
-    }
-
-    //! Get snooze vibration pattern (single short pulse)
-    private function getSnoozePattern() as Array<Attention.VibeProfile> {
-        return [
-            new Attention.VibeProfile(25, VIBE_MEDIUM)
-        ] as Array<Attention.VibeProfile>;
     }
     
     //! Check if vibration is available

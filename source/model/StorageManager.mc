@@ -11,8 +11,10 @@ class StorageManager {
     private const KEY_START_TIMESTAMP = "start_ts";
     private const KEY_START_TS_CONFIRMED = "start_ts_ok";
     private const KEY_CONSUMED_TOTAL = "consumed";
+    private const KEY_CONSUMED_TOTAL_G10 = "consum10";
     private const KEY_LAST_INTAKE_TS = "last_int";
     private const KEY_INTAKE_LOG = "int_log";
+    private const KEY_INTAKE_COUNT = "int_cnt";
     private const KEY_IS_PAUSED = "is_paused";
     private const KEY_ELAPSED_SEC = "elapsed_s";
 
@@ -201,6 +203,21 @@ class StorageManager {
         Storage.setValue(KEY_CONSUMED_TOTAL, value);
     }
 
+    function getConsumedTotalG10() as Number {
+        var value = Storage.getValue(KEY_CONSUMED_TOTAL_G10);
+        if (value instanceof Number) {
+            return value;
+        }
+        // Backward compatibility for older versions that stored grams.
+        return getConsumedTotal() * 10;
+    }
+
+    function setConsumedTotalG10(value as Number) as Void {
+        Storage.setValue(KEY_CONSUMED_TOTAL_G10, value);
+        // Keep legacy key in sync for downgrade compatibility.
+        Storage.setValue(KEY_CONSUMED_TOTAL, value / 10);
+    }
+
     function getLastIntakeTimestamp() as Number? {
         var value = Storage.getValue(KEY_LAST_INTAKE_TS);
         if (value instanceof Number) {
@@ -247,6 +264,14 @@ class StorageManager {
         return [];
     }
 
+    function getIntakeCount() as Number {
+        var value = Storage.getValue(KEY_INTAKE_COUNT);
+        if (value instanceof Number) {
+            return value;
+        }
+        return 0;
+    }
+
     function addIntakeEntry(timestamp as Number, grams as Number, intakeType as String) as Void {
         var log = getIntakeLog();
 
@@ -260,10 +285,11 @@ class StorageManager {
 
         // Cap at MAX entries (rolling)
         while (log.size() > MAX_INTAKE_LOG_ENTRIES) {
-            log = log.slice(1, log.size());
+            log.remove(0);
         }
 
         Storage.setValue(KEY_INTAKE_LOG, log);
+        Storage.setValue(KEY_INTAKE_COUNT, log.size());
     }
 
     function removeLastIntakeEntry() as Boolean {
@@ -273,17 +299,19 @@ class StorageManager {
             return false;
         }
 
-        if (count == 1) {
-            Storage.setValue(KEY_INTAKE_LOG, []);
-            return true;
+        log.remove(count - 1);
+        if (log.size() > 0) {
+            Storage.setValue(KEY_INTAKE_LOG, log);
+        } else {
+            Storage.deleteValue(KEY_INTAKE_LOG);
         }
-
-        Storage.setValue(KEY_INTAKE_LOG, log.slice(0, count - 1));
+        Storage.setValue(KEY_INTAKE_COUNT, log.size());
         return true;
     }
 
     function clearIntakeLog() as Void {
-        Storage.setValue(KEY_INTAKE_LOG, []);
+        Storage.deleteValue(KEY_INTAKE_LOG);
+        Storage.setValue(KEY_INTAKE_COUNT, 0);
     }
 
     // ========== Session Management ==========
@@ -293,8 +321,10 @@ class StorageManager {
         Storage.deleteValue(KEY_START_TIMESTAMP);
         Storage.deleteValue(KEY_START_TS_CONFIRMED);
         Storage.deleteValue(KEY_CONSUMED_TOTAL);
+        Storage.deleteValue(KEY_CONSUMED_TOTAL_G10);
         Storage.deleteValue(KEY_LAST_INTAKE_TS);
         Storage.deleteValue(KEY_INTAKE_LOG);
+        Storage.deleteValue(KEY_INTAKE_COUNT);
         Storage.deleteValue(KEY_IS_PAUSED);
         Storage.deleteValue(KEY_ELAPSED_SEC);
     }
