@@ -15,53 +15,71 @@ class FuelPlannerMenu extends WatchUi.Menu2 {
     var snoozeItem  as WatchUi.MenuItem;
 
     function initialize(storage as StorageManager) {
-        Menu2.initialize({:title => "Settings"});
+        Menu2.initialize({:title => WatchUi.loadResource(Rez.Strings.LabelMenuTitle) as String});
 
         carbsItem = new WatchUi.MenuItem(
-            "Carbs Target", storage.getCarbsTargetGph().format("%d") + " g/h",
+            WatchUi.loadResource(Rez.Strings.SettingCarbsTarget) as String,
+            storage.getCarbsTargetGph().format("%d") + " g/h",
             :carbsTarget, {});
         addItem(carbsItem);
 
         doseItem = new WatchUi.MenuItem(
-            "Gel Size", storage.getDoseG().format("%d") + " g",
+            WatchUi.loadResource(Rez.Strings.SettingDoseSize) as String,
+            storage.getDoseG().format("%d") + " g",
             :doseSize, {});
         addItem(doseItem);
 
         modeItem = new WatchUi.MenuItem(
-            "Reminder Mode",
+            WatchUi.loadResource(Rez.Strings.SettingReminderMode) as String,
             FuelPlannerMenuDelegate.modeLabel(storage.getReminderMode(),
                                               storage.getFixedIntervalMin()),
             :reminderMode, {});
         addItem(modeItem);
 
         carbFracItem = new WatchUi.MenuItem(
-            "Carb % of kcal", storage.getCarbFractionPct().format("%d") + "%",
+            WatchUi.loadResource(Rez.Strings.SettingCarbFraction) as String,
+            storage.getCarbFractionPct().format("%d") + "%",
             :carbFraction, {});
         addItem(carbFracItem);
 
         intervalItem = new WatchUi.MenuItem(
-            "Fixed Interval", storage.getFixedIntervalMin().format("%d") + " min",
+            WatchUi.loadResource(Rez.Strings.SettingFixedInterval) as String,
+            storage.getFixedIntervalMin().format("%d") + " min",
             :fixedInterval, {});
         addItem(intervalItem);
 
         delayItem = new WatchUi.MenuItem(
-            "Start Delay", storage.getStartDelayMin().format("%d") + " min",
+            WatchUi.loadResource(Rez.Strings.SettingStartDelay) as String,
+            storage.getStartDelayMin().format("%d") + " min",
             :startDelay, {});
         addItem(delayItem);
 
         snoozeItem = new WatchUi.MenuItem(
-            "Snooze Time", storage.getMaxSnoozeMin().format("%d") + " min",
+            WatchUi.loadResource(Rez.Strings.SettingSnoozeTime) as String,
+            storage.getMaxSnoozeMin().format("%d") + " min",
             :snoozeTime, {});
         addItem(snoozeItem);
 
-        addItem(new WatchUi.MenuItem("--- Presets ---", "", :separator, {}));
-        addItem(new WatchUi.MenuItem("Running", "60g/h, 25g gel", :presetRun,  {}));
-        addItem(new WatchUi.MenuItem("Cycling", "90g/h, 30g gel", :presetBike, {}));
-        addItem(new WatchUi.MenuItem("Hiking",  "40g/h, 20g gel", :presetHike, {}));
+        addItem(new WatchUi.MenuItem(
+            WatchUi.loadResource(Rez.Strings.LabelPresets) as String, "", :separator, {}));
+        addItem(new WatchUi.MenuItem(
+            WatchUi.loadResource(Rez.Strings.PresetRun) as String,
+            WatchUi.loadResource(Rez.Strings.PresetRunSub) as String,
+            :presetRun, {}));
+        addItem(new WatchUi.MenuItem(
+            WatchUi.loadResource(Rez.Strings.PresetBike) as String,
+            WatchUi.loadResource(Rez.Strings.PresetBikeSub) as String,
+            :presetBike, {}));
+        addItem(new WatchUi.MenuItem(
+            WatchUi.loadResource(Rez.Strings.PresetHike) as String,
+            WatchUi.loadResource(Rez.Strings.PresetHikeSub) as String,
+            :presetHike, {}));
 
         if (storage.hasActiveSession()) {
             addItem(new WatchUi.MenuItem(
-                "Clear Session", "Reset tracking data", :clearSession, {}));
+                WatchUi.loadResource(Rez.Strings.LabelClearSession) as String,
+                WatchUi.loadResource(Rez.Strings.LabelClearSessionSub) as String,
+                :clearSession, {}));
         }
     }
 }

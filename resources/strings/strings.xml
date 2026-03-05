@@ -2,35 +2,63 @@
     <string id="AppName">FuelPlanner</string>
     <string id="WidgetName">FuelPlanner Settings</string>
 
-    <!-- Settings Labels -->
+    <!-- Settings Labels (Garmin Connect settings page) -->
     <string id="SettingCarbsTarget">Carbs Target (g/h)</string>
     <string id="SettingDoseSize">Gel/Dose Size (g)</string>
     <string id="SettingReminderMode">Reminder Mode</string>
     <string id="SettingFixedInterval">Fixed Interval (min)</string>
     <string id="SettingStartDelay">Start Delay (min)</string>
     <string id="SettingSnoozeTime">Snooze Time (min)</string>
+    <string id="SettingCarbFraction">Carb % of kcal</string>
     <string id="SettingSportPreset">Sport Preset</string>
 
-    <!-- Modes -->
-    <string id="ModeAuto">Auto (deficit-based)</string>
-    <string id="ModeFixed">Fixed Interval</string>
+    <!-- Reminder Modes -->
+    <string id="ModeAuto">Auto (deficit)</string>
+    <string id="ModeFixed">Fixed</string>
+    <string id="ModeCalorieAuto">Calorie Auto</string>
 
     <!-- Presets -->
     <string id="PresetRun">Running</string>
+    <string id="PresetRunSub">60g/h, 25g gel</string>
     <string id="PresetBike">Cycling</string>
+    <string id="PresetBikeSub">90g/h, 30g gel</string>
     <string id="PresetHike">Hiking</string>
+    <string id="PresetHikeSub">40g/h, 20g gel</string>
 
-    <!-- UI Labels -->
+    <!-- Field View: status row -->
+    <string id="LabelPaused">PAUSED</string>
+    <string id="LabelFuelNow">FUEL NOW!</string>
+    <string id="LabelTapPrefix">TAP +</string>
     <string id="LabelNext">Next</string>
-    <string id="LabelDue">DUE</string>
-    <string id="LabelFuelNow">FUEL NOW</string>
-    <string id="LabelCarbs">Carbs</string>
-    <string id="LabelDeficit">Deficit</string>
+
+    <!-- Field View: deficit row -->
+    <string id="LabelBehind">Behind</string>
     <string id="LabelAhead">Ahead</string>
     <string id="LabelOnTarget">On Target</string>
-    <string id="LabelPaused">PAUSED</string>
-    <string id="LabelWaiting">Waiting for activity</string>
-    <string id="LabelNoSession">No active session</string>
+
+    <!-- Field View: rate label row -->
+    <string id="LabelRateTargetPrefix">target</string>
+    <string id="LabelRateAutoCarbsSuffix">% carbs</string>
+    <string id="LabelRateAutoNoData">auto (no cal data)</string>
+
+    <!-- Field View: idle screen -->
+    <string id="LabelWaiting">Start activity to begin</string>
+
+    <!-- Widget View: row labels -->
+    <string id="LabelModeRow">Mode:</string>
+    <string id="LabelTargetRow">Target:</string>
+    <string id="LabelCarbPctRow">Carb %:</string>
+    <string id="LabelGelRow">Gel:</string>
+    <string id="LabelDelayRow">Delay:</string>
+    <string id="LabelSnoozeRow">Snooze:</string>
+    <string id="LabelSelectConfig">SELECT to configure</string>
+
+    <!-- Menu -->
+    <string id="LabelMenuTitle">Settings</string>
+    <string id="LabelClearSession">Clear Session</string>
+    <string id="LabelClearSessionSub">Reset tracking data</string>
+    <string id="LabelConfirmClear">Clear session?</string>
+    <string id="LabelPresets">--- Presets ---</string>
 
     <!-- Units -->
     <string id="UnitGrams">g</string>

@@ -2,37 +2,65 @@
 <strings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
     <string id="AppName">FuelPlanner</string>
     <string id="WidgetName">FuelPlanner Einstellungen</string>
-    
-    <!-- Settings Labels -->
+
+    <!-- Settings Labels (Garmin Connect settings page) -->
     <string id="SettingCarbsTarget">Kohlenhydrat-Ziel (g/h)</string>
     <string id="SettingDoseSize">Gel-Größe (g)</string>
     <string id="SettingReminderMode">Erinnerungs-Modus</string>
     <string id="SettingFixedInterval">Festes Intervall (min)</string>
     <string id="SettingStartDelay">Startverzögerung (min)</string>
     <string id="SettingSnoozeTime">Schlummer-Zeit (min)</string>
+    <string id="SettingCarbFraction">KH % der kcal</string>
     <string id="SettingSportPreset">Sport-Vorlage</string>
-    
-    <!-- Modes -->
-    <string id="ModeAuto">Auto (defizitbasiert)</string>
-    <string id="ModeFixed">Festes Intervall</string>
-    
+
+    <!-- Reminder Modes -->
+    <string id="ModeAuto">Auto (Defizit)</string>
+    <string id="ModeFixed">Fest</string>
+    <string id="ModeCalorieAuto">Kalorie-Auto</string>
+
     <!-- Presets -->
     <string id="PresetRun">Laufen</string>
+    <string id="PresetRunSub">60g/h, 25g Gel</string>
     <string id="PresetBike">Radfahren</string>
+    <string id="PresetBikeSub">90g/h, 30g Gel</string>
     <string id="PresetHike">Wandern</string>
-    
-    <!-- UI Labels -->
+    <string id="PresetHikeSub">40g/h, 20g Gel</string>
+
+    <!-- Field View: status row -->
+    <string id="LabelPaused">PAUSIERT</string>
+    <string id="LabelFuelNow">JETZT ESSEN!</string>
+    <string id="LabelTapPrefix">TIPPEN +</string>
     <string id="LabelNext">Nächste</string>
-    <string id="LabelDue">FÄLLIG</string>
-    <string id="LabelFuelNow">JETZT ESSEN</string>
-    <string id="LabelCarbs">Kohlenhydrate</string>
-    <string id="LabelDeficit">Defizit</string>
+
+    <!-- Field View: deficit row -->
+    <string id="LabelBehind">Hinter</string>
     <string id="LabelAhead">Voraus</string>
     <string id="LabelOnTarget">Im Ziel</string>
-    <string id="LabelPaused">PAUSIERT</string>
-    <string id="LabelWaiting">Warte auf Aktivität</string>
-    <string id="LabelNoSession">Keine aktive Sitzung</string>
-    
+
+    <!-- Field View: rate label row -->
+    <string id="LabelRateTargetPrefix">Ziel</string>
+    <string id="LabelRateAutoCarbsSuffix">% KH</string>
+    <string id="LabelRateAutoNoData">auto (keine KH-Daten)</string>
+
+    <!-- Field View: idle screen -->
+    <string id="LabelWaiting">Aktivität starten</string>
+
+    <!-- Widget View: row labels -->
+    <string id="LabelModeRow">Modus:</string>
+    <string id="LabelTargetRow">Ziel:</string>
+    <string id="LabelCarbPctRow">KH %:</string>
+    <string id="LabelGelRow">Gel:</string>
+    <string id="LabelDelayRow">Verzög.:</string>
+    <string id="LabelSnoozeRow">Schlummer:</string>
+    <string id="LabelSelectConfig">SELECT zum Ändern</string>
+
+    <!-- Menu -->
+    <string id="LabelMenuTitle">Einstellungen</string>
+    <string id="LabelClearSession">Sitzung löschen</string>
+    <string id="LabelClearSessionSub">Tracking zurücksetzen</string>
+    <string id="LabelConfirmClear">Sitzung löschen?</string>
+    <string id="LabelPresets">--- Vorlagen ---</string>
+
     <!-- Units -->
     <string id="UnitGrams">g</string>
     <string id="UnitGramsPerHour">g/h</string>

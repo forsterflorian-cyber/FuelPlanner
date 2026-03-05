@@ -13,11 +13,14 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
         _fuelMenu = menu;
     }
 
-    //! Returns the display label for a reminder mode value
+    //! Returns the localized display label for a reminder mode value
     static function modeLabel(mode as Number, intervalMin as Number) as String {
-        if (mode == 0) { return "Auto (deficit)"; }
-        if (mode == 1) { return "Fixed " + intervalMin.format("%d") + "min"; }
-        return "Calorie Auto";
+        if (mode == 0) { return WatchUi.loadResource(Rez.Strings.ModeAuto) as String; }
+        if (mode == 1) {
+            return (WatchUi.loadResource(Rez.Strings.ModeFixed) as String) + " " +
+                   intervalMin.format("%d") + "min";
+        }
+        return WatchUi.loadResource(Rez.Strings.ModeCalorieAuto) as String;
     }
 
     function onSelect(item as WatchUi.MenuItem) as Void {

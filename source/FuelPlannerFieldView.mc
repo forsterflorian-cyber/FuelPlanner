@@ -74,10 +74,12 @@ class FuelPlannerFieldView extends WatchUi.DataField {
                                    textColor as Number, dimColor as Number) as Void {
         dc.setColor(textColor, Graphics.COLOR_TRANSPARENT);
         dc.drawText(cx, h / 2 - h / 13, Graphics.FONT_MEDIUM,
-                    "FuelPlanner", Graphics.TEXT_JUSTIFY_CENTER);
+                    WatchUi.loadResource(Rez.Strings.AppName) as String,
+                    Graphics.TEXT_JUSTIFY_CENTER);
         dc.setColor(dimColor, Graphics.COLOR_TRANSPARENT);
         dc.drawText(cx, h / 2 + h / 20, Graphics.FONT_TINY,
-                    "Start activity to begin", Graphics.TEXT_JUSTIFY_CENTER);
+                    WatchUi.loadResource(Rez.Strings.LabelWaiting) as String,
+                    Graphics.TEXT_JUSTIFY_CENTER);
     }
 
     //! Main layout — all positions relative to field height/width
@@ -113,13 +115,15 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             fontHint   = Graphics.FONT_XTINY;
         }
 
-        // Row positions as fractions of height (tuned for 5 visible rows)
-        var y1 = (h * 0.05).toNumber();   // status row
-        var y2 = (h * 0.22).toNumber();   // big number row
+        // Row positions as fractions of height.
+        // y1 at 9% (not 5%) keeps status text clear of the circular bezel on round watches —
+        // at 5% the usable chord width is ~120px; at 9% it opens to ~160px.
+        var y1 = (h * 0.09).toNumber();   // status row
+        var y2 = (h * 0.24).toNumber();   // big number row
         var y3 = (h * 0.57).toNumber();   // target rate label
         var y4 = (h * 0.66).toNumber();   // deficit/ahead
-        var y5 = (h * 0.80).toNumber();   // time | intakes
-        var y6 = (h * 0.90).toNumber();   // tap hint
+        var y5 = (h * 0.79).toNumber();   // time | intakes
+        var y6 = (h * 0.88).toNumber();   // tap hint
 
         // Shrink layout for small fields — skip bottom rows
         var showHint  = (h >= 130);
@@ -131,13 +135,15 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         var statusColor;
 
         if (isPaused) {
-            statusText  = "PAUSED";
+            statusText  = WatchUi.loadResource(Rez.Strings.LabelPaused) as String;
             statusColor = COLOR_WARNING;
         } else if (isReminderDue || nextDueSec <= 0) {
-            statusText  = _blinkState ? "FUEL NOW!" : "TAP +" + _model.getDoseG() + "g";
+            statusText  = _blinkState
+                ? WatchUi.loadResource(Rez.Strings.LabelFuelNow) as String
+                : (WatchUi.loadResource(Rez.Strings.LabelTapPrefix) as String) + _model.getDoseG() + "g";
             statusColor = COLOR_ALERT;
         } else {
-            statusText  = "Next " + formatDuration(nextDueSec);
+            statusText  = (WatchUi.loadResource(Rez.Strings.LabelNext) as String) + " " + formatDuration(nextDueSec);
             if (nextDueSec < 60) {
                 statusColor = COLOR_ALERT;
             } else if (nextDueSec < 180) {
@@ -173,7 +179,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         if (showLabel) {
             dc.setColor(dimColor, Graphics.COLOR_TRANSPARENT);
             dc.drawText(cx, y3, fontLabel,
-                        _model.getTargetRateLabel(),
+                        buildRateLabel(),
                         Graphics.TEXT_JUSTIFY_CENTER);
         }
 
@@ -183,13 +189,13 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         var deficitColor;
 
         if (deficit > 0.5f) {
-            deficitText  = "Behind " + deficit.toNumber().format("%d") + "g";
+            deficitText  = (WatchUi.loadResource(Rez.Strings.LabelBehind) as String) + " " + deficit.toNumber().format("%d") + "g";
             deficitColor = (deficit > _model.getDoseG().toFloat()) ? COLOR_ALERT : COLOR_WARNING;
         } else if (deficit < -0.5f) {
-            deficitText  = "Ahead " + (-deficit).toNumber().format("%d") + "g";
+            deficitText  = (WatchUi.loadResource(Rez.Strings.LabelAhead) as String) + " " + (-deficit).toNumber().format("%d") + "g";
             deficitColor = COLOR_GOOD;
         } else {
-            deficitText  = "On Target";
+            deficitText  = WatchUi.loadResource(Rez.Strings.LabelOnTarget) as String;
             deficitColor = COLOR_GOOD;
         }
 
@@ -223,6 +229,20 @@ class FuelPlannerFieldView extends WatchUi.DataField {
                         half.format("%d") + "g / " + dose.format("%d") + "g / " + (dose * 2).format("%d") + "g",
                         Graphics.TEXT_JUSTIFY_CENTER);
         }
+    }
+
+    //! Build localized rate label from model state
+    private function buildRateLabel() as String {
+        var mode = _model.getReminderMode();
+        if (mode == 2) {  // MODE_CALORIE_AUTO
+            if (_model.isCaloriesAvailable()) {
+                return "auto " + _model.getCarbFractionPct().format("%d") +
+                       (WatchUi.loadResource(Rez.Strings.LabelRateAutoCarbsSuffix) as String);
+            }
+            return WatchUi.loadResource(Rez.Strings.LabelRateAutoNoData) as String;
+        }
+        return (WatchUi.loadResource(Rez.Strings.LabelRateTargetPrefix) as String) + " " +
+               _model.getCarbsTargetGph().format("%d") + " g/h";
     }
 
     //! Format seconds as m:ss or Xh:mm
