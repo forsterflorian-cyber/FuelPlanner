@@ -143,6 +143,8 @@ class FuelModel {
 
     //! Main compute function — call every tick (1 Hz)
     function compute(info as Activity.Info?) as Void {
+        // Reload settings every tick so changes made in the companion widget
+        // are picked up immediately without requiring an app restart.
         loadSettings();
 
         if (info == null) {

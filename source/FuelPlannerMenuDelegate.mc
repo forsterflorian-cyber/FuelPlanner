@@ -26,12 +26,14 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
         switch (id) {
             case :carbsTarget:
                 pushNumberPicker("Carbs (g/h)", _storage.getCarbsTargetGph(), 20, 120, 10,
-                    new CarbsTargetDelegate(_storage, _fuelMenu.carbsItem));
+                    new NumberPickerDelegate(_fuelMenu.carbsItem,
+                        new Lang.Method(_storage, :setCarbsTargetGph), " g/h"));
                 break;
 
             case :doseSize:
                 pushNumberPicker("Gel Size (g)", _storage.getDoseG(), 5, 60, 5,
-                    new DoseSizeDelegate(_storage, _fuelMenu.doseItem));
+                    new NumberPickerDelegate(_fuelMenu.doseItem,
+                        new Lang.Method(_storage, :setDoseG), " g"));
                 break;
 
             case :reminderMode:
@@ -42,7 +44,8 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
 
             case :carbFraction:
                 pushNumberPicker("Carb % of kcal", _storage.getCarbFractionPct(), 40, 80, 5,
-                    new CarbFractionDelegate(_storage, _fuelMenu.carbFracItem));
+                    new NumberPickerDelegate(_fuelMenu.carbFracItem,
+                        new Lang.Method(_storage, :setCarbFractionPct), "%"));
                 break;
 
             case :fixedInterval:
@@ -53,12 +56,14 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
 
             case :startDelay:
                 pushNumberPicker("Delay (min)", _storage.getStartDelayMin(), 0, 30, 5,
-                    new StartDelayDelegate(_storage, _fuelMenu.delayItem));
+                    new NumberPickerDelegate(_fuelMenu.delayItem,
+                        new Lang.Method(_storage, :setStartDelayMin), " min"));
                 break;
 
             case :snoozeTime:
                 pushNumberPicker("Snooze (min)", _storage.getMaxSnoozeMin(), 1, 10, 1,
-                    new SnoozeTimeDelegate(_storage, _fuelMenu.snoozeItem));
+                    new NumberPickerDelegate(_fuelMenu.snoozeItem,
+                        new Lang.Method(_storage, :setMaxSnoozeMin), " min"));
                 break;
 
             case :presetRun:
@@ -110,21 +115,25 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
     }
 }
 
-//! Carbs target picker delegate
-class CarbsTargetDelegate extends WatchUi.Menu2InputDelegate {
-    private var _storage as StorageManager;
-    private var _item as WatchUi.MenuItem;
+//! Generic number picker delegate — handles all simple setting pickers
+class NumberPickerDelegate extends WatchUi.Menu2InputDelegate {
+    private var _item   as WatchUi.MenuItem;
+    private var _setter as Lang.Method;
+    private var _suffix as String;
 
-    function initialize(storage as StorageManager, item as WatchUi.MenuItem) {
+    function initialize(item as WatchUi.MenuItem,
+                        setter as Lang.Method,
+                        suffix as String) {
         Menu2InputDelegate.initialize();
-        _storage = storage;
-        _item = item;
+        _item   = item;
+        _setter = setter;
+        _suffix = suffix;
     }
 
     function onSelect(item as WatchUi.MenuItem) as Void {
         var value = item.getId() as Number;
-        _storage.setCarbsTargetGph(value);
-        _item.setSubLabel(value.format("%d") + " g/h");
+        _setter.invoke(value);
+        _item.setSubLabel(value.format("%d") + _suffix);
         WatchUi.popView(WatchUi.SLIDE_RIGHT);
     }
 
@@ -133,40 +142,17 @@ class CarbsTargetDelegate extends WatchUi.Menu2InputDelegate {
     }
 }
 
-//! Dose size picker delegate
-class DoseSizeDelegate extends WatchUi.Menu2InputDelegate {
-    private var _storage as StorageManager;
-    private var _item as WatchUi.MenuItem;
-
-    function initialize(storage as StorageManager, item as WatchUi.MenuItem) {
-        Menu2InputDelegate.initialize();
-        _storage = storage;
-        _item = item;
-    }
-
-    function onSelect(item as WatchUi.MenuItem) as Void {
-        var value = item.getId() as Number;
-        _storage.setDoseG(value);
-        _item.setSubLabel(value.format("%d") + " g");
-        WatchUi.popView(WatchUi.SLIDE_RIGHT);
-    }
-
-    function onBack() as Void {
-        WatchUi.popView(WatchUi.SLIDE_RIGHT);
-    }
-}
-
-//! Fixed interval picker delegate
+//! Fixed interval picker — also refreshes the mode label (which embeds the interval)
 class FixedIntervalDelegate extends WatchUi.Menu2InputDelegate {
-    private var _storage as StorageManager;
-    private var _item as WatchUi.MenuItem;
+    private var _storage  as StorageManager;
+    private var _item     as WatchUi.MenuItem;
     private var _modeItem as WatchUi.MenuItem;
 
     function initialize(storage as StorageManager, item as WatchUi.MenuItem,
                         modeItem as WatchUi.MenuItem) {
         Menu2InputDelegate.initialize();
-        _storage = storage;
-        _item = item;
+        _storage  = storage;
+        _item     = item;
         _modeItem = modeItem;
     }
 
@@ -174,78 +160,8 @@ class FixedIntervalDelegate extends WatchUi.Menu2InputDelegate {
         var value = item.getId() as Number;
         _storage.setFixedIntervalMin(value);
         _item.setSubLabel(value.format("%d") + " min");
-        // Refresh mode label — it embeds the interval when mode is Fixed
         _modeItem.setSubLabel(FuelPlannerMenuDelegate.modeLabel(
             _storage.getReminderMode(), value));
-        WatchUi.popView(WatchUi.SLIDE_RIGHT);
-    }
-
-    function onBack() as Void {
-        WatchUi.popView(WatchUi.SLIDE_RIGHT);
-    }
-}
-
-//! Start delay picker delegate
-class StartDelayDelegate extends WatchUi.Menu2InputDelegate {
-    private var _storage as StorageManager;
-    private var _item as WatchUi.MenuItem;
-
-    function initialize(storage as StorageManager, item as WatchUi.MenuItem) {
-        Menu2InputDelegate.initialize();
-        _storage = storage;
-        _item = item;
-    }
-
-    function onSelect(item as WatchUi.MenuItem) as Void {
-        var value = item.getId() as Number;
-        _storage.setStartDelayMin(value);
-        _item.setSubLabel(value.format("%d") + " min");
-        WatchUi.popView(WatchUi.SLIDE_RIGHT);
-    }
-
-    function onBack() as Void {
-        WatchUi.popView(WatchUi.SLIDE_RIGHT);
-    }
-}
-
-//! Snooze time picker delegate
-class SnoozeTimeDelegate extends WatchUi.Menu2InputDelegate {
-    private var _storage as StorageManager;
-    private var _item as WatchUi.MenuItem;
-
-    function initialize(storage as StorageManager, item as WatchUi.MenuItem) {
-        Menu2InputDelegate.initialize();
-        _storage = storage;
-        _item = item;
-    }
-
-    function onSelect(item as WatchUi.MenuItem) as Void {
-        var value = item.getId() as Number;
-        _storage.setMaxSnoozeMin(value);
-        _item.setSubLabel(value.format("%d") + " min");
-        WatchUi.popView(WatchUi.SLIDE_RIGHT);
-    }
-
-    function onBack() as Void {
-        WatchUi.popView(WatchUi.SLIDE_RIGHT);
-    }
-}
-
-//! Carb fraction picker delegate
-class CarbFractionDelegate extends WatchUi.Menu2InputDelegate {
-    private var _storage as StorageManager;
-    private var _item as WatchUi.MenuItem;
-
-    function initialize(storage as StorageManager, item as WatchUi.MenuItem) {
-        Menu2InputDelegate.initialize();
-        _storage = storage;
-        _item = item;
-    }
-
-    function onSelect(item as WatchUi.MenuItem) as Void {
-        var value = item.getId() as Number;
-        _storage.setCarbFractionPct(value);
-        _item.setSubLabel(value.format("%d") + "%");
         WatchUi.popView(WatchUi.SLIDE_RIGHT);
     }
 

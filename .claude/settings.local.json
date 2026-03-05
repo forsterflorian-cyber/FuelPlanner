@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh auth status)",
+      "Bash(cmd /c \"gh auth status\")",
+      "Bash(cmd /c \"where gh\")",
+      "Bash(powershell -Command \"gh auth status\")",
+      "Read(//c/Program Files/GitHub CLI//**)",
+      "Read(//c/Users/forst/AppData/Local/Programs/**)",
+      "Read(//c/Users/forst/**)",
+      "Bash(powershell -Command \"\\(Get-ChildItem -Path ''C:\\\\'' -Recurse -Filter ''gh.exe'' -ErrorAction SilentlyContinue | Select-Object -First 3 FullName\\) 2>&1\")"
+    ]
+  }
+}

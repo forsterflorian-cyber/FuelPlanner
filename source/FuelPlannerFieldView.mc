@@ -212,11 +212,15 @@ class FuelPlannerFieldView extends WatchUi.DataField {
                         Graphics.TEXT_JUSTIFY_CENTER);
         }
 
-        // ── ROW 6: tap hint ────────────────────────────────
+        // ── ROW 6: tap hint — shows all three zones ────────
+        // Top 25%: half dose (or snooze)  |  Middle: default  |  Bottom 25%: double
         if (showHint) {
+            var dose   = _model.getDoseG();
+            var half   = dose / 2;
+            if (half < 5) { half = 5; }
             dc.setColor(dimColor, Graphics.COLOR_TRANSPARENT);
             dc.drawText(cx, y6, fontHint,
-                        "Tap: +" + _model.getDoseG() + "g",
+                        half.format("%d") + "g / " + dose.format("%d") + "g / " + (dose * 2).format("%d") + "g",
                         Graphics.TEXT_JUSTIFY_CENTER);
         }
     }
