@@ -27,6 +27,8 @@ class FuelModel {
     private var _autoIntakeEventPending as Boolean = false;
     private var _fitFieldDeficit      as FitContributor.Field? = null;
     private var _fitFieldConsumed     as FitContributor.Field? = null;
+    private var _fitFieldTargetSummary as FitContributor.Field? = null;
+    private var _fitFieldActualSummary as FitContributor.Field? = null;
     private var _lastFitFieldUpdateMs as Number = 0;
     private var _forceNextFitFieldUpdate as Boolean = true;
     private const FIT_UPDATE_INTERVAL_MS = 5000;
@@ -126,10 +128,15 @@ class FuelModel {
     }
 
     function setFitFields(fieldDeficit as FitContributor.Field?,
-                          fieldConsumed as FitContributor.Field?) as Void {
+                          fieldConsumed as FitContributor.Field?,
+                          fieldTargetSummary as FitContributor.Field?,
+                          fieldActualSummary as FitContributor.Field?) as Void {
         _fitFieldDeficit = fieldDeficit;
         _fitFieldConsumed = fieldConsumed;
+        _fitFieldTargetSummary = fieldTargetSummary;
+        _fitFieldActualSummary = fieldActualSummary;
         _forceNextFitFieldUpdate = true;
+        flushFitSessionSummary();
     }
 
     //! Load session from storage
@@ -173,6 +180,7 @@ class FuelModel {
     //! Save session to storage
     function saveSession() as Void {
         if (_sessionActive) {
+            flushFitSessionSummary();
             _storage.setSessionId(_sessionId);
             _storage.setStartTimestamp(_startTimestamp);
             _storage.setConsumedTotalG10(_consumedTotalG);
@@ -236,7 +244,10 @@ class FuelModel {
         var timerTime = getTimerTime(info);
 
         if (timerTime == null) {
-            if (_sessionActive) { _sessionActive = false; }
+            if (_sessionActive) {
+                flushFitSessionSummary();
+                _sessionActive = false;
+            }
             resetDisplayValues();
             return;
         }
@@ -302,7 +313,7 @@ class FuelModel {
         if (_isPaused) {
             _isReminderDue = false;
             _autoIntakeLocked = false;
-            updateFitFields(_fitFieldDeficit, _fitFieldConsumed);
+            updateFitFields(_fitFieldDeficit, _fitFieldConsumed, _fitFieldTargetSummary, _fitFieldActualSummary);
             return;
         }
 
@@ -325,7 +336,7 @@ class FuelModel {
         calculateNextDue();
         checkReminderDue();
         applyAutoIntakeIfDue();
-        updateFitFields(_fitFieldDeficit, _fitFieldConsumed);
+        updateFitFields(_fitFieldDeficit, _fitFieldConsumed, _fitFieldTargetSummary, _fitFieldActualSummary);
     }
 
     private function detectTouchScreen() as Boolean {
@@ -401,12 +412,15 @@ class FuelModel {
     }
 
     function updateFitFields(fieldDeficit as FitContributor.Field?,
-                             fieldConsumed as FitContributor.Field?) as Void {
+                             fieldConsumed as FitContributor.Field?,
+                             fieldTargetSummary as FitContributor.Field?,
+                             fieldActualSummary as FitContributor.Field?) as Void {
         if (!isSessionActive()) {
             _forceNextFitFieldUpdate = true;
             return;
         }
-        if (fieldDeficit == null && fieldConsumed == null) {
+        if (fieldDeficit == null && fieldConsumed == null &&
+            fieldTargetSummary == null && fieldActualSummary == null) {
             return;
         }
 
@@ -427,6 +441,30 @@ class FuelModel {
         try {
             if (fieldConsumed != null) {
                 fieldConsumed.setData(_consumedTotalG.toFloat() / 10.0f);
+            }
+        } catch (e) {}
+
+        writeFitSessionSummary(fieldTargetSummary, fieldActualSummary);
+    }
+
+    function flushFitSessionSummary() as Void {
+        if (!_sessionActive) {
+            return;
+        }
+        writeFitSessionSummary(_fitFieldTargetSummary, _fitFieldActualSummary);
+    }
+
+    private function writeFitSessionSummary(fieldTargetSummary as FitContributor.Field?,
+                                            fieldActualSummary as FitContributor.Field?) as Void {
+        try {
+            if (fieldTargetSummary != null) {
+                fieldTargetSummary.setData(_targetTotalG.toFloat() / 10.0f);
+            }
+        } catch (e) {}
+
+        try {
+            if (fieldActualSummary != null) {
+                fieldActualSummary.setData(_consumedTotalG.toFloat() / 10.0f);
             }
         } catch (e) {}
     }

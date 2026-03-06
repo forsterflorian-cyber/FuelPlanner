@@ -33,6 +33,7 @@
     <string id="LabelLapUndoHint">LAP halten Undo</string>
     <string id="LabelLapUndoShort">LAP undo</string>
     <string id="LabelNext">Nächste</string>
+    <string id="LabelAutoFlowStatus">AUTO-FLOW</string>
 
     <!-- Field View: deficit row -->
     <string id="LabelBehind">Hinter</string>
@@ -43,6 +44,8 @@
     <string id="LabelRateTargetPrefix">Ziel</string>
     <string id="LabelRateAutoCarbsSuffix">% KH</string>
     <string id="LabelRateAutoNoData">auto (keine KH-Daten)</string>
+    <string id="LabelEnableTouchForManual">Enable Touch for Manual</string>
+    <string id="LabelAutoFlowActive">AUTO-FLOW active</string>
 
     <!-- Field View: idle screen -->
     <string id="LabelWaiting">Aktivität starten</string>
@@ -64,4 +67,7 @@
     <string id="FitDeficitDataLabel">Aktuelles Defizit</string>
     <string id="FitConsumedChartTitle">Gesamtaufnahme</string>
     <string id="FitConsumedDataLabel">Gesamtaufnahme</string>
+    <string id="FitTargetCarbsSummaryLabel">Target Carbs</string>
+    <string id="FitActualIntakeSummaryLabel">Actual Intake</string>
+    <string id="FitActualIntakeEstimateSummaryLabel">Intake (Estimate)</string>
 </strings>

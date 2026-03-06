@@ -21,7 +21,11 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private var _strRateTargetPrefix as String = "";
     private var _strRateAutoCarbsSuffix as String = "";
     private var _strRateAutoNoData as String = "";
+    private var _strEnableTouchForManual as String = "";
+    private var _strAutoFlowActive as String = "";
+    private var _strAutoFlowStatus as String = "";
     private var _isTouch as Boolean = false;
+    private var _hasTouchHardware as Boolean = false;
 
     // Colors
     private const COLOR_NORMAL  = Graphics.COLOR_WHITE;
@@ -78,7 +82,6 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private const UNIT_G = "g";
     private const UNIT_GPH = " g/h";
     private const SEP_PIPE = " | ";
-    private const STATUS_AUTO_FLOW = "AUTO-FLOW";
 
     function getFieldHeight() as Number {
         if (_lastFieldHeight > 0) {
@@ -92,6 +95,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         _model    = model;
         _reminder = reminder;
         _isTouch  = detectTouchScreen();
+        _hasTouchHardware = detectTouchHardware();
         loadStrings();
     }
 
@@ -153,6 +157,17 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         return false;
     }
 
+    private function detectTouchHardware() as Boolean {
+        try {
+            if (Rez has :DeviceInfo &&
+                Rez.DeviceInfo has :hasTouchScreen &&
+                Rez.DeviceInfo.hasTouchScreen instanceof Boolean) {
+                return Rez.DeviceInfo.hasTouchScreen;
+            }
+        } catch (e) {}
+        return _isTouch;
+    }
+
     private function getScreenHeight() as Number {
         try {
             var settings = System.getDeviceSettings();
@@ -189,6 +204,9 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         _strRateTargetPrefix = loadString(Rez.Strings.LabelRateTargetPrefix, "Target");
         _strRateAutoCarbsSuffix = loadString(Rez.Strings.LabelRateAutoCarbsSuffix, "% carbs");
         _strRateAutoNoData = loadString(Rez.Strings.LabelRateAutoNoData, "auto: no calorie data");
+        _strEnableTouchForManual = loadString(Rez.Strings.LabelEnableTouchForManual, "Enable Touch for Manual");
+        _strAutoFlowActive = loadString(Rez.Strings.LabelAutoFlowActive, "AUTO-FLOW active");
+        _strAutoFlowStatus = loadString(Rez.Strings.LabelAutoFlowStatus, "AUTO-FLOW");
     }
 
     //! Waiting screen before activity starts
@@ -219,7 +237,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         var showLabel = (h >= 80);
         var drawLabel = showLabel;
         var drawMeta  = showMeta;
-        var drawHint  = showHint && touchEnabled;
+        var drawHint  = showHint && (touchEnabled || (!touchEnabled && isReminderDue));
 
         var gap = getRowGap(h);
         var safeTop = getSafeTopInset(h);
@@ -254,7 +272,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
                     ? _strFuelNow
                     : _strTapPrefix + doseG + UNIT_G;
             } else {
-                statusText = STATUS_AUTO_FLOW;
+                statusText = _strAutoFlowStatus;
             }
             statusColor = COLOR_ALERT;
         } else {
@@ -321,9 +339,15 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         // Row 6: interaction hint
         var hintText = "";
         if (drawHint) {
-            var half = doseG / 2;
-            if (half < 5) { half = 5; }
-            hintText = half.format("%d") + UNIT_G + " / " + doseG.format("%d") + UNIT_G + " / " + (doseG * 2).format("%d") + UNIT_G;
+            if (touchEnabled) {
+                var half = doseG / 2;
+                if (half < 5) { half = 5; }
+                hintText = half.format("%d") + UNIT_G + " / " + doseG.format("%d") + UNIT_G + " / " + (doseG * 2).format("%d") + UNIT_G;
+            } else if (_hasTouchHardware) {
+                hintText = _strEnableTouchForManual;
+            } else {
+                hintText = _strAutoFlowActive;
+            }
         }
 
         // Pre-measure row heights for flow layout and overflow handling.
