@@ -24,6 +24,7 @@ class FuelModel {
     private var _intakeCount          as Number  = 0;
     private var _isTouch              as Boolean = false;
     private var _autoIntakeLocked     as Boolean = false;
+    private var _autoIntakeEventPending as Boolean = false;
     private var _fitFieldDeficit      as FitContributor.Field? = null;
     private var _fitFieldConsumed     as FitContributor.Field? = null;
     private var _lastFitFieldUpdateMs as Number = 0;
@@ -195,6 +196,7 @@ class FuelModel {
         _isStartTimestampConfirmed = (activityStartTs != null);
         _lastReminderTimestamp = 0;
         _autoIntakeLocked    = false;
+        _autoIntakeEventPending = false;
         _sessionActive       = true;
         _intakeCount         = 0;
         _lastTimerTime       = 0;
@@ -368,11 +370,13 @@ class FuelModel {
     private function applyAutoIntakeIfDue() as Void {
         if (_isTouch) {
             _autoIntakeLocked = false;
+            _autoIntakeEventPending = false;
             return;
         }
 
         if (!_isReminderDue) {
             _autoIntakeLocked = false;
+            _autoIntakeEventPending = false;
             return;
         }
 
@@ -386,8 +390,10 @@ class FuelModel {
         if (_intakeCount <= intakeCountBefore) {
             // Intake was not booked (e.g. unexpected validation/storage issue) -> allow retry.
             _autoIntakeLocked = false;
+            _autoIntakeEventPending = false;
             return;
         }
+        _autoIntakeEventPending = true;
         recordReminderTriggered();
         _deficitG = _targetTotalG - _consumedTotalG;
         calculateNextDue();
@@ -580,6 +586,7 @@ class FuelModel {
         _isPaused           = false;
         _isReminderDue      = false;
         _autoIntakeLocked   = false;
+        _autoIntakeEventPending = false;
         _lastTimerTime      = 0;
         _timerStallCount    = 0;
         _pausedTimerOffsetS = 0;
@@ -801,6 +808,14 @@ class FuelModel {
     function getCarbFractionPct()   as Number  { return _carbFractionPct; }
     function isCaloriesAvailable()  as Boolean { return _caloriesAvailable; }
     function isCalorieModeActive()  as Boolean { return _reminderMode == MODE_CALORIE_AUTO; }
+
+    function consumeAutoIntakeEvent() as Boolean {
+        if (!_autoIntakeEventPending) {
+            return false;
+        }
+        _autoIntakeEventPending = false;
+        return true;
+    }
 
     function getAverageGph() as Float {
         if (_elapsedActiveHours < 0.01f) { return 0.0f; }

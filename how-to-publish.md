@@ -50,7 +50,7 @@ Custom SDK or key path:
    - Short Description (EN/DE): from `garmin.md`
    - Changelog: from `garmin.md`
 4. Upload `bin\FuelPlanner-DataField.iq`.
-5. Set minimum API level to match `manifest.xml`: `3.3.0`.
+5. Set minimum API level to match `manifest.xml`: `3.0.0`.
 6. Add the launcher icon.
 7. Submit for review.
 

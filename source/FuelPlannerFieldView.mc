@@ -102,6 +102,10 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     function compute(info as Activity.Info) as Void {
         _model.compute(info);
 
+        if (_model.consumeAutoIntakeEvent()) {
+            _reminder.triggerAutoIntake();
+        }
+
         if (_model.isReminderDue() && !_model.isPaused()) {
             if (_reminder.triggerReminder()) {
                 _model.recordReminderTriggered();

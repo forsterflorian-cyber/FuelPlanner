@@ -17,6 +17,8 @@ class ReminderManager {
     private var _minVibInterval as Number = 2000; // Minimum 2 seconds between vibes
     private var _intakeReminderPattern as Array<Attention.VibeProfile>? = null;
     private var _confirmationPattern as Array<Attention.VibeProfile>? = null;
+    private var _autoIntakePattern as Array<Attention.VibeProfile>? = null;
+    private var _undoPattern as Array<Attention.VibeProfile>? = null;
     private var _snoozePattern as Array<Attention.VibeProfile>? = null;
     
     //! Constructor
@@ -38,6 +40,18 @@ class ReminderManager {
             new Attention.VibeProfile(50, VIBE_SHORT),
             new Attention.VibeProfile(0, 50),
             new Attention.VibeProfile(50, VIBE_SHORT)
+        ] as Array<Attention.VibeProfile>;
+
+        // Auto-Flow feedback: short double impulse (clearly distinct from reminder).
+        _autoIntakePattern = [
+            new Attention.VibeProfile(45, VIBE_SHORT),
+            new Attention.VibeProfile(0, 60),
+            new Attention.VibeProfile(45, VIBE_SHORT)
+        ] as Array<Attention.VibeProfile>;
+
+        // Undo feedback: a single gentle pulse.
+        _undoPattern = [
+            new Attention.VibeProfile(20, 120)
         ] as Array<Attention.VibeProfile>;
 
         _snoozePattern = [
@@ -109,6 +123,32 @@ class ReminderManager {
         }
         
         return vibratePattern(_confirmationPattern as Array<Attention.VibeProfile>);
+    }
+
+    //! Trigger Auto-Flow intake confirmation (short double pulse)
+    function triggerAutoIntake() as Boolean {
+        if (!_hasVibration || _autoIntakePattern == null) {
+            return false;
+        }
+
+        var now = System.getTimer();
+        if (now - _lastVibeTime < _minVibInterval) {
+            return false;
+        }
+
+        var success = vibratePattern(_autoIntakePattern as Array<Attention.VibeProfile>);
+        if (success) {
+            _lastVibeTime = now;
+        }
+        return success;
+    }
+
+    //! Trigger undo feedback (single gentle pulse)
+    function triggerUndo() as Boolean {
+        if (!_hasVibration || _undoPattern == null) {
+            return false;
+        }
+        return vibratePattern(_undoPattern as Array<Attention.VibeProfile>);
     }
     
     //! Trigger snooze confirmation

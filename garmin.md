@@ -32,8 +32,7 @@ LOGGING INTAKE
 - Tap center: Log your default gel or dose
 - Tap top 25%: Snooze reminder, or log a half dose
 - Tap bottom 25%: Log a double dose
-- Hold DOWN on button-only or touch-disabled devices: Log your default gel or dose
-- Hold LAP (~1s) on button devices: Undo the last logged intake
+- On non-touch devices, Auto-Flow handles intake booking automatically when a reminder is due.
 
 WHAT YOU SEE
 - Countdown to next recommended intake (color-coded: green/yellow/red)
@@ -102,8 +101,7 @@ ZUFUHR ERFASSEN
 - Mitte antippen: Standard-Gel oder Portion erfassen
 - Oben (25%): Erinnerung schlummern oder halbe Portion erfassen
 - Unten (25%): Doppelte Portion erfassen
-- DOWN halten auf button-only oder touch-disabled Geraeten: Standard-Gel oder Portion erfassen
-- LAP ca. 1 Sekunde halten (Button-Geraete): Letzte Erfassung rueckgaengig machen
+- Auf Nicht-Touch-Geraeten uebernimmt Auto-Flow die Buchung automatisch, sobald eine Erinnerung faellig ist.
 
 WAS DU SIEHST
 - Countdown bis zur naechsten empfohlenen Zufuhr (farbig: gruen/gelb/rot)

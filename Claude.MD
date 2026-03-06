@@ -3,5 +3,9 @@ This is a Monkey C project for the Garmin Connect IQ platform. If you are in dou
 
 ## Key info
 - Language: Monkey C
-- Target device: Touchscreendevices
-- SDK version: Minimum Version which works
+- App type: Data Field
+- Target devices: Touch and non-touch Garmin watch profiles from `manifest.xml`
+- Input model:
+  - Touch devices: tap zones (top/middle/bottom)
+  - Non-touch devices: Auto-Flow auto-booking when reminder is due
+- Minimum API level: 3.0.0
