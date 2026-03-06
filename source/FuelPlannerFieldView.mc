@@ -14,9 +14,6 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private var _strPaused as String = "";
     private var _strFuelNow as String = "";
     private var _strTapPrefix as String = "";
-    private var _strHoldPrefix as String = "";
-    private var _strLapUndoHint as String = "";
-    private var _strLapUndoShort as String = "";
     private var _strNext as String = "";
     private var _strBehind as String = "";
     private var _strAhead as String = "";
@@ -24,6 +21,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private var _strRateTargetPrefix as String = "";
     private var _strRateAutoCarbsSuffix as String = "";
     private var _strRateAutoNoData as String = "";
+    private var _isTouch as Boolean = false;
 
     // Colors
     private const COLOR_NORMAL  = Graphics.COLOR_WHITE;
@@ -80,6 +78,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private const UNIT_G = "g";
     private const UNIT_GPH = " g/h";
     private const SEP_PIPE = " | ";
+    private const STATUS_AUTO_FLOW = "AUTO-FLOW";
 
     function getFieldHeight() as Number {
         if (_lastFieldHeight > 0) {
@@ -92,6 +91,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         DataField.initialize();
         _model    = model;
         _reminder = reminder;
+        _isTouch  = detectTouchScreen();
         loadStrings();
     }
 
@@ -129,7 +129,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         var textColor = isDark ? COLOR_NORMAL : Graphics.COLOR_BLACK;
         var dimColor  = isDark ? COLOR_DIM    : Graphics.COLOR_DK_GRAY;
 
-        var touchEnabled = isTouchEnabled();
+        var touchEnabled = _isTouch;
 
         if (!_model.isSessionActive()) {
             drawNoSession(dc, cx, h, textColor, dimColor);
@@ -139,7 +139,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         drawMainLayout(dc, w, h, cx, textColor, dimColor, touchEnabled);
     }
 
-    private function isTouchEnabled() as Boolean {
+    private function detectTouchScreen() as Boolean {
         try {
             var settings = System.getDeviceSettings();
             if (settings != null && settings has :isTouchScreen) {
@@ -159,22 +159,32 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         return DEFAULT_SCREEN_HEIGHT;
     }
 
+    private function loadString(resourceId as Lang.ResourceId?, fallback as String) as String {
+        if (resourceId == null) {
+            return fallback;
+        }
+        try {
+            var value = WatchUi.loadResource(resourceId);
+            if (value instanceof String) {
+                return value as String;
+            }
+        } catch (e) {}
+        return fallback;
+    }
+
     private function loadStrings() as Void {
-        _strAppName = WatchUi.loadResource(Rez.Strings.AppName) as String;
-        _strWaiting = WatchUi.loadResource(Rez.Strings.LabelWaiting) as String;
-        _strPaused = WatchUi.loadResource(Rez.Strings.LabelPaused) as String;
-        _strFuelNow = WatchUi.loadResource(Rez.Strings.LabelFuelNow) as String;
-        _strTapPrefix = WatchUi.loadResource(Rez.Strings.LabelTapPrefix) as String;
-        _strHoldPrefix = WatchUi.loadResource(Rez.Strings.LabelHoldPrefix) as String;
-        _strLapUndoHint = WatchUi.loadResource(Rez.Strings.LabelLapUndoHint) as String;
-        _strLapUndoShort = WatchUi.loadResource(Rez.Strings.LabelLapUndoShort) as String;
-        _strNext = WatchUi.loadResource(Rez.Strings.LabelNext) as String;
-        _strBehind = WatchUi.loadResource(Rez.Strings.LabelBehind) as String;
-        _strAhead = WatchUi.loadResource(Rez.Strings.LabelAhead) as String;
-        _strOnTarget = WatchUi.loadResource(Rez.Strings.LabelOnTarget) as String;
-        _strRateTargetPrefix = WatchUi.loadResource(Rez.Strings.LabelRateTargetPrefix) as String;
-        _strRateAutoCarbsSuffix = WatchUi.loadResource(Rez.Strings.LabelRateAutoCarbsSuffix) as String;
-        _strRateAutoNoData = WatchUi.loadResource(Rez.Strings.LabelRateAutoNoData) as String;
+        _strAppName = loadString(Rez.Strings.AppName, "FuelPlanner");
+        _strWaiting = loadString(Rez.Strings.LabelWaiting, "Waiting for activity...");
+        _strPaused = loadString(Rez.Strings.LabelPaused, "PAUSED");
+        _strFuelNow = loadString(Rez.Strings.LabelFuelNow, "FUEL NOW");
+        _strTapPrefix = loadString(Rez.Strings.LabelTapPrefix, "Tap");
+        _strNext = loadString(Rez.Strings.LabelNext, "Next");
+        _strBehind = loadString(Rez.Strings.LabelBehind, "Behind");
+        _strAhead = loadString(Rez.Strings.LabelAhead, "Ahead");
+        _strOnTarget = loadString(Rez.Strings.LabelOnTarget, "On target");
+        _strRateTargetPrefix = loadString(Rez.Strings.LabelRateTargetPrefix, "Target");
+        _strRateAutoCarbsSuffix = loadString(Rez.Strings.LabelRateAutoCarbsSuffix, "% carbs");
+        _strRateAutoNoData = loadString(Rez.Strings.LabelRateAutoNoData, "auto: no calorie data");
     }
 
     //! Waiting screen before activity starts
@@ -205,7 +215,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         var showLabel = (h >= 80);
         var drawLabel = showLabel;
         var drawMeta  = showMeta;
-        var drawHint  = showHint;
+        var drawHint  = showHint && touchEnabled;
 
         var gap = getRowGap(h);
         var safeTop = getSafeTopInset(h);
@@ -222,11 +232,11 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         rowHeight = rowHeight / baseRows;
 
         var fontStatus = getBestFontForHeight(dc, rowHeight, false);
-        var fontNumber = getBestFontForHeight(dc, rowHeight.toFloat() * 1.55f, true);
-        var fontUnit   = getBestFontForHeight(dc, rowHeight.toFloat() * 0.75f, false);
-        var fontLabel  = getBestFontForHeight(dc, rowHeight.toFloat() * 0.65f, false);
-        var fontMeta   = getBestFontForHeight(dc, rowHeight.toFloat() * 0.7f, false);
-        var fontHint   = getBestFontForHeight(dc, rowHeight.toFloat() * 0.65f, false);
+        var fontNumber = getBestFontForHeight(dc, (rowHeight.toFloat() * 1.55f).toNumber(), true);
+        var fontUnit   = getBestFontForHeight(dc, (rowHeight.toFloat() * 0.75f).toNumber(), false);
+        var fontLabel  = getBestFontForHeight(dc, (rowHeight.toFloat() * 0.65f).toNumber(), false);
+        var fontMeta   = getBestFontForHeight(dc, (rowHeight.toFloat() * 0.7f).toNumber(), false);
+        var fontHint   = getBestFontForHeight(dc, (rowHeight.toFloat() * 0.65f).toNumber(), false);
 
         // Row 1: status
         var statusText;
@@ -235,12 +245,13 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             statusText  = _strPaused;
             statusColor = COLOR_WARNING;
         } else if (isReminderDue || nextDueSec <= 0) {
-            var actionPrefix = touchEnabled
-                ? _strTapPrefix
-                : _strHoldPrefix;
-            statusText  = _blinkState
-                ? _strFuelNow
-                : actionPrefix + doseG + UNIT_G;
+            if (touchEnabled) {
+                statusText = _blinkState
+                    ? _strFuelNow
+                    : _strTapPrefix + doseG + UNIT_G;
+            } else {
+                statusText = STATUS_AUTO_FLOW;
+            }
             statusColor = COLOR_ALERT;
         } else {
             statusText  = _strNext + " " + formatDuration(nextDueSec);
@@ -305,17 +316,10 @@ class FuelPlannerFieldView extends WatchUi.DataField {
 
         // Row 6: interaction hint
         var hintText = "";
-        if (showHint) {
-            if (touchEnabled) {
-                var half = doseG / 2;
-                if (half < 5) { half = 5; }
-                hintText = half.format("%d") + UNIT_G + " / " + doseG.format("%d") + UNIT_G + " / " + (doseG * 2).format("%d") + UNIT_G;
-            } else {
-                var lapHint = (w <= 300 || h <= 300)
-                    ? _strLapUndoShort
-                    : _strLapUndoHint;
-                hintText = _strHoldPrefix + doseG + UNIT_G + SEP_PIPE + lapHint;
-            }
+        if (drawHint) {
+            var half = doseG / 2;
+            if (half < 5) { half = 5; }
+            hintText = half.format("%d") + UNIT_G + " / " + doseG.format("%d") + UNIT_G + " / " + (doseG * 2).format("%d") + UNIT_G;
         }
 
         // Pre-measure row heights for flow layout and overflow handling.
@@ -340,9 +344,15 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         // If it does not fit, progressively hide optional rows from bottom.
         var flowGap   = gap;
         while (true) {
-            var requiredHeight = getRequiredMainHeight(statusH, numberH, labelH,
-                                                       deficitH, metaH, hintH,
-                                                       drawLabel, drawMeta, drawHint, flowGap);
+            var requiredHeight = getRequiredMainHeight(
+                statusH,
+                numberH,
+                drawLabel ? labelH : 0,
+                deficitH,
+                drawMeta ? metaH : 0,
+                drawHint ? hintH : 0,
+                flowGap
+            );
             if (requiredHeight <= availableHeight) { break; }
             if (drawMeta) {
                 drawMeta = false;
@@ -499,7 +509,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
 
     //! Select best fitting font for a target row height.
     //! If `allowNumber` is true, `FONT_NUMBER_MILD` is also considered.
-    private function getBestFontForHeight(dc as Dc, rowHeight,
+    private function getBestFontForHeight(dc as Dc, rowHeight as Number,
                                           allowNumber as Boolean) {
         var target = rowHeight;
         if (target < 1) {
@@ -587,20 +597,19 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private function getRequiredMainHeight(statusH as Number, numberH as Number,
                                            labelH as Number, deficitH as Number,
                                            metaH as Number, hintH as Number,
-                                           showLabel as Boolean, showMeta as Boolean,
-                                           showHint as Boolean, gap as Number) as Number {
+                                           gap as Number) as Number {
         var required = statusH + numberH + deficitH;
         var rows = 3;
 
-        if (showLabel) {
+        if (labelH > 0) {
             required += labelH;
             rows += 1;
         }
-        if (showMeta) {
+        if (metaH > 0) {
             required += metaH;
             rows += 1;
         }
-        if (showHint) {
+        if (hintH > 0) {
             required += hintH;
             rows += 1;
         }

@@ -57,4 +57,10 @@
     <string id="UnitGrams">g</string>
     <string id="UnitGramsPerHour">g/h</string>
     <string id="UnitMinutes">min</string>
+
+    <!-- FIT chart labels -->
+    <string id="FitDeficitChartTitle">Aktuelles Defizit</string>
+    <string id="FitDeficitDataLabel">Aktuelles Defizit</string>
+    <string id="FitConsumedChartTitle">Gesamtaufnahme</string>
+    <string id="FitConsumedDataLabel">Gesamtaufnahme</string>
 </strings>

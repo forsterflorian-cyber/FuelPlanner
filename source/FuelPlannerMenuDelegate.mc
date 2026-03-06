@@ -30,23 +30,42 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
         loadStrings();
     }
 
+    private function loadString(resourceId as Lang.ResourceId?, fallback as String) as String {
+        if (resourceId == null) {
+            return fallback;
+        }
+        try {
+            var value = WatchUi.loadResource(resourceId);
+            if (value instanceof String) {
+                return value as String;
+            }
+        } catch (e) {}
+        return fallback;
+    }
+
     private function loadStrings() as Void {
-        _strModeAuto = WatchUi.loadResource(Rez.Strings.ModeAuto) as String;
-        _strModeFixed = WatchUi.loadResource(Rez.Strings.ModeFixed) as String;
-        _strModeCalorieAuto = WatchUi.loadResource(Rez.Strings.ModeCalorieAuto) as String;
-        _strSettingCarbsTarget = WatchUi.loadResource(Rez.Strings.SettingCarbsTarget) as String;
-        _strSettingDoseSize = WatchUi.loadResource(Rez.Strings.SettingDoseSize) as String;
-        _strSettingCarbFraction = WatchUi.loadResource(Rez.Strings.SettingCarbFraction) as String;
-        _strSettingFixedInterval = WatchUi.loadResource(Rez.Strings.SettingFixedInterval) as String;
-        _strSettingStartDelay = WatchUi.loadResource(Rez.Strings.SettingStartDelay) as String;
-        _strSettingSnoozeTime = WatchUi.loadResource(Rez.Strings.SettingSnoozeTime) as String;
-        _strLabelConfirmClear = WatchUi.loadResource(Rez.Strings.LabelConfirmClear) as String;
-        _strUnitGramsPerHour = WatchUi.loadResource(Rez.Strings.UnitGramsPerHour) as String;
-        _strUnitGrams = WatchUi.loadResource(Rez.Strings.UnitGrams) as String;
-        _strUnitMinutes = WatchUi.loadResource(Rez.Strings.UnitMinutes) as String;
+        _strModeAuto = loadString(Rez.Strings.ModeAuto, "Auto");
+        _strModeFixed = loadString(Rez.Strings.ModeFixed, "Fixed");
+        _strModeCalorieAuto = loadString(Rez.Strings.ModeCalorieAuto, "Auto (Calories)");
+        _strSettingCarbsTarget = loadString(Rez.Strings.SettingCarbsTarget, "Carbs target");
+        _strSettingDoseSize = loadString(Rez.Strings.SettingDoseSize, "Dose size");
+        _strSettingCarbFraction = loadString(Rez.Strings.SettingCarbFraction, "Carb fraction");
+        _strSettingFixedInterval = loadString(Rez.Strings.SettingFixedInterval, "Fixed interval");
+        _strSettingStartDelay = loadString(Rez.Strings.SettingStartDelay, "Start delay");
+        _strSettingSnoozeTime = loadString(Rez.Strings.SettingSnoozeTime, "Snooze time");
+        _strLabelConfirmClear = loadString(Rez.Strings.LabelConfirmClear, "Clear session?");
+        _strUnitGramsPerHour = loadString(Rez.Strings.UnitGramsPerHour, "g/h");
+        _strUnitGrams = loadString(Rez.Strings.UnitGrams, "g");
+        _strUnitMinutes = loadString(Rez.Strings.UnitMinutes, "min");
         _suffixGph = " " + _strUnitGramsPerHour;
         _suffixGrams = " " + _strUnitGrams;
         _suffixMinutes = " " + _strUnitMinutes;
+    }
+
+    private function clampSetting(value as Number, min as Number, max as Number) as Number {
+        if (value < min) { return min; }
+        if (value > max) { return max; }
+        return value;
     }
 
     //! Returns the localized display label for a reminder mode value
@@ -63,31 +82,56 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
 
         switch (id) {
             case :carbsTarget:
-                pushNumberPicker(_strSettingCarbsTarget, _storage.getCarbsTargetGph(), 20, 120, 10,
+                pushNumberPicker(_strSettingCarbsTarget,
+                    _storage.getCarbsTargetGph(),
+                    _storage.MIN_CARBS_TARGET_GPH,
+                    _storage.MAX_CARBS_TARGET_GPH,
+                    10,
                     new NumberPickerDelegate(_fuelMenu.carbsItem,
-                        new Lang.Method(_storage, :setCarbsTargetGph), _suffixGph));
+                        new Lang.Method(_storage, :setCarbsTargetGph), _suffixGph,
+                        _storage.MIN_CARBS_TARGET_GPH, _storage.MAX_CARBS_TARGET_GPH));
                 break;
 
             case :doseSize:
-                pushNumberPicker(_strSettingDoseSize, _storage.getDoseG(), 5, 100, 5,
+                pushNumberPicker(_strSettingDoseSize,
+                    _storage.getDoseG(),
+                    _storage.MIN_DOSE_G,
+                    _storage.MAX_DOSE_G,
+                    5,
                     new NumberPickerDelegate(_fuelMenu.doseItem,
-                        new Lang.Method(_storage, :setDoseG), _suffixGrams));
+                        new Lang.Method(_storage, :setDoseG), _suffixGrams,
+                        _storage.MIN_DOSE_G, _storage.MAX_DOSE_G));
                 break;
 
             case :reminderMode:
-                var newMode = (_storage.getReminderMode() + 1) % 3;
+                var currentMode = clampSetting(
+                    _storage.getReminderMode(),
+                    _storage.MIN_REMINDER_MODE,
+                    _storage.MAX_REMINDER_MODE
+                );
+                var modeCount = _storage.MAX_REMINDER_MODE - _storage.MIN_REMINDER_MODE + 1;
+                var newMode = (currentMode + 1) % modeCount;
                 _storage.setReminderMode(newMode);
                 item.setSubLabel(modeLabel(newMode, _storage.getFixedIntervalMin()));
                 break;
 
             case :carbFraction:
-                pushNumberPicker(_strSettingCarbFraction, _storage.getCarbFractionPct(), 40, 80, 5,
+                pushNumberPicker(_strSettingCarbFraction,
+                    _storage.getCarbFractionPct(),
+                    _storage.MIN_CARB_FRACTION_PCT,
+                    _storage.MAX_CARB_FRACTION_PCT,
+                    5,
                     new NumberPickerDelegate(_fuelMenu.carbFracItem,
-                        new Lang.Method(_storage, :setCarbFractionPct), "%"));
+                        new Lang.Method(_storage, :setCarbFractionPct), "%",
+                        _storage.MIN_CARB_FRACTION_PCT, _storage.MAX_CARB_FRACTION_PCT));
                 break;
 
             case :fixedInterval:
-                pushNumberPicker(_strSettingFixedInterval, _storage.getFixedIntervalMin(), 5, 60, 5,
+                pushNumberPicker(_strSettingFixedInterval,
+                    _storage.getFixedIntervalMin(),
+                    _storage.MIN_FIXED_INTERVAL_MIN,
+                    _storage.MAX_FIXED_INTERVAL_MIN,
+                    5,
                     new FixedIntervalDelegate(_storage, _fuelMenu.intervalItem,
                                              _fuelMenu.modeItem,
                                              _strModeAuto, _strModeFixed,
@@ -95,15 +139,25 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
                 break;
 
             case :startDelay:
-                pushNumberPicker(_strSettingStartDelay, _storage.getStartDelayMin(), 0, 60, 5,
+                pushNumberPicker(_strSettingStartDelay,
+                    _storage.getStartDelayMin(),
+                    _storage.MIN_START_DELAY_MIN,
+                    _storage.MAX_START_DELAY_MIN,
+                    5,
                     new NumberPickerDelegate(_fuelMenu.delayItem,
-                        new Lang.Method(_storage, :setStartDelayMin), _suffixMinutes));
+                        new Lang.Method(_storage, :setStartDelayMin), _suffixMinutes,
+                        _storage.MIN_START_DELAY_MIN, _storage.MAX_START_DELAY_MIN));
                 break;
 
             case :snoozeTime:
-                pushNumberPicker(_strSettingSnoozeTime, _storage.getMaxSnoozeMin(), 1, 15, 1,
+                pushNumberPicker(_strSettingSnoozeTime,
+                    _storage.getMaxSnoozeMin(),
+                    _storage.MIN_MAX_SNOOZE_MIN,
+                    _storage.MAX_MAX_SNOOZE_MIN,
+                    1,
                     new NumberPickerDelegate(_fuelMenu.snoozeItem,
-                        new Lang.Method(_storage, :setMaxSnoozeMin), _suffixMinutes));
+                        new Lang.Method(_storage, :setMaxSnoozeMin), _suffixMinutes,
+                        _storage.MIN_MAX_SNOOZE_MIN, _storage.MAX_MAX_SNOOZE_MIN));
                 break;
 
             case :presetRun:
@@ -134,7 +188,15 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
     private function pushNumberPicker(title as String, current as Number, min as Number,
                                        max as Number, step as Number,
                                        delegate as WatchUi.Menu2InputDelegate) as Void {
-        WatchUi.pushView(new NumberPickerView(title, current, min, max, step),
+        var safeMin = min;
+        var safeMax = max;
+        if (safeMax < safeMin) {
+            safeMax = safeMin;
+        }
+        var safeCurrent = clampSetting(current, safeMin, safeMax);
+        var safeStep = (step <= 0) ? 1 : step;
+
+        WatchUi.pushView(new NumberPickerView(title, safeCurrent, safeMin, safeMax, safeStep),
                          delegate, WatchUi.SLIDE_LEFT);
     }
 
@@ -143,11 +205,16 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
         _storage.setDoseG(doseG);
         _storage.setReminderMode(0);
         _storage.setStartDelayMin(15);
+
+        var safeCarbs = _storage.getCarbsTargetGph();
+        var safeDose = _storage.getDoseG();
+        var safeDelay = _storage.getStartDelayMin();
+
         // Refresh affected items
-        _fuelMenu.carbsItem.setSubLabel(carbsGph.format("%d") + _suffixGph);
-        _fuelMenu.doseItem.setSubLabel(doseG.format("%d") + _suffixGrams);
+        _fuelMenu.carbsItem.setSubLabel(safeCarbs.format("%d") + _suffixGph);
+        _fuelMenu.doseItem.setSubLabel(safeDose.format("%d") + _suffixGrams);
         _fuelMenu.modeItem.setSubLabel(modeLabel(0, _storage.getFixedIntervalMin()));
-        _fuelMenu.delayItem.setSubLabel("15" + _suffixMinutes);
+        _fuelMenu.delayItem.setSubLabel(safeDelay.format("%d") + _suffixMinutes);
     }
 
     function onBack() as Void {
@@ -160,19 +227,44 @@ class NumberPickerDelegate extends WatchUi.Menu2InputDelegate {
     private var _item   as WatchUi.MenuItem;
     private var _setter as Lang.Method;
     private var _suffix as String = "";
+    private var _min as Number;
+    private var _max as Number;
 
     function initialize(item as WatchUi.MenuItem,
                         setter as Lang.Method,
-                        suffix as String) {
+                        suffix as String,
+                        min as Number,
+                        max as Number) {
         Menu2InputDelegate.initialize();
         _item   = item;
         _setter = setter;
         _suffix = suffix;
+        if (max < min) {
+            _min = max;
+            _max = min;
+        } else {
+            _min = min;
+            _max = max;
+        }
+    }
+
+    private function clampSetting(value as Number) as Number {
+        if (value < _min) { return _min; }
+        if (value > _max) { return _max; }
+        return value;
     }
 
     function onSelect(item as WatchUi.MenuItem) as Void {
-        var value = item.getId() as Number;
-        _setter.invoke(value);
+        var selected = item.getId();
+        if (!(selected instanceof Number)) {
+            WatchUi.popView(WatchUi.SLIDE_RIGHT);
+            return;
+        }
+
+        var value = clampSetting(selected as Number);
+        try {
+            _setter.invoke(value);
+        } catch (e) {}
         _item.setSubLabel(value.format("%d") + _suffix);
         WatchUi.popView(WatchUi.SLIDE_RIGHT);
     }
@@ -215,7 +307,19 @@ class FixedIntervalDelegate extends WatchUi.Menu2InputDelegate {
     }
 
     function onSelect(item as WatchUi.MenuItem) as Void {
-        var value = item.getId() as Number;
+        var selected = item.getId();
+        if (!(selected instanceof Number)) {
+            WatchUi.popView(WatchUi.SLIDE_RIGHT);
+            return;
+        }
+
+        var value = selected as Number;
+        if (value < _storage.MIN_FIXED_INTERVAL_MIN) {
+            value = _storage.MIN_FIXED_INTERVAL_MIN;
+        } else if (value > _storage.MAX_FIXED_INTERVAL_MIN) {
+            value = _storage.MAX_FIXED_INTERVAL_MIN;
+        }
+
         _storage.setFixedIntervalMin(value);
         _item.setSubLabel(value.format("%d") + " " + _strUnitMinutes);
         _modeItem.setSubLabel(modeLabel(_storage.getReminderMode(), value));

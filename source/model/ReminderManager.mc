@@ -129,7 +129,6 @@ class ReminderManager {
             }
         } catch (e instanceof Lang.Exception) {
             // Vibration failed, continue silently
-            System.println("Vibration failed: " + e.getErrorMessage());
         } catch (e) {
         }
         return false;

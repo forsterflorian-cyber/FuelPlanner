@@ -1,0 +1,22 @@
+<resources xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
+    <fitContributions>
+        <fitField id="0"
+                  displayInChart="true"
+                  displayInActivitySummary="true"
+                  sortOrder="0"
+                  precision="1"
+                  chartTitle="@Strings.FitDeficitChartTitle"
+                  dataLabel="@Strings.FitDeficitDataLabel"
+                  unitLabel="@Strings.UnitGrams"
+                  fillColor="#FF6B00" />
+        <fitField id="1"
+                  displayInChart="true"
+                  displayInActivitySummary="true"
+                  sortOrder="1"
+                  precision="1"
+                  chartTitle="@Strings.FitConsumedChartTitle"
+                  dataLabel="@Strings.FitConsumedDataLabel"
+                  unitLabel="@Strings.UnitGrams"
+                  fillColor="#00AA55" />
+    </fitContributions>
+</resources>

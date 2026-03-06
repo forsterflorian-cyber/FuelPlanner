@@ -106,30 +106,43 @@ class FuelPlannerMenu extends WatchUi.Menu2 {
         }
     }
 
+    private function loadString(resourceId as Lang.ResourceId?, fallback as String) as String {
+        if (resourceId == null) {
+            return fallback;
+        }
+        try {
+            var value = WatchUi.loadResource(resourceId);
+            if (value instanceof String) {
+                return value as String;
+            }
+        } catch (e) {}
+        return fallback;
+    }
+
     private function loadStrings() as Void {
-        _strLabelMenuTitle = WatchUi.loadResource(Rez.Strings.LabelMenuTitle) as String;
-        _strSettingCarbsTarget = WatchUi.loadResource(Rez.Strings.SettingCarbsTarget) as String;
-        _strSettingDoseSize = WatchUi.loadResource(Rez.Strings.SettingDoseSize) as String;
-        _strSettingReminderMode = WatchUi.loadResource(Rez.Strings.SettingReminderMode) as String;
-        _strSettingCarbFraction = WatchUi.loadResource(Rez.Strings.SettingCarbFraction) as String;
-        _strSettingFixedInterval = WatchUi.loadResource(Rez.Strings.SettingFixedInterval) as String;
-        _strSettingStartDelay = WatchUi.loadResource(Rez.Strings.SettingStartDelay) as String;
-        _strSettingSnoozeTime = WatchUi.loadResource(Rez.Strings.SettingSnoozeTime) as String;
-        _strLabelPresets = WatchUi.loadResource(Rez.Strings.LabelPresets) as String;
-        _strPresetRun = WatchUi.loadResource(Rez.Strings.PresetRun) as String;
-        _strPresetRunSub = WatchUi.loadResource(Rez.Strings.PresetRunSub) as String;
-        _strPresetBike = WatchUi.loadResource(Rez.Strings.PresetBike) as String;
-        _strPresetBikeSub = WatchUi.loadResource(Rez.Strings.PresetBikeSub) as String;
-        _strPresetHike = WatchUi.loadResource(Rez.Strings.PresetHike) as String;
-        _strPresetHikeSub = WatchUi.loadResource(Rez.Strings.PresetHikeSub) as String;
-        _strLabelClearSession = WatchUi.loadResource(Rez.Strings.LabelClearSession) as String;
-        _strLabelClearSessionSub = WatchUi.loadResource(Rez.Strings.LabelClearSessionSub) as String;
-        _strModeAuto = WatchUi.loadResource(Rez.Strings.ModeAuto) as String;
-        _strModeFixed = WatchUi.loadResource(Rez.Strings.ModeFixed) as String;
-        _strModeCalorieAuto = WatchUi.loadResource(Rez.Strings.ModeCalorieAuto) as String;
-        _strUnitGramsPerHour = WatchUi.loadResource(Rez.Strings.UnitGramsPerHour) as String;
-        _strUnitGrams = WatchUi.loadResource(Rez.Strings.UnitGrams) as String;
-        _strUnitMinutes = WatchUi.loadResource(Rez.Strings.UnitMinutes) as String;
+        _strLabelMenuTitle = loadString(Rez.Strings.LabelMenuTitle, "FuelPlanner");
+        _strSettingCarbsTarget = loadString(Rez.Strings.SettingCarbsTarget, "Carbs target");
+        _strSettingDoseSize = loadString(Rez.Strings.SettingDoseSize, "Dose size");
+        _strSettingReminderMode = loadString(Rez.Strings.SettingReminderMode, "Reminder mode");
+        _strSettingCarbFraction = loadString(Rez.Strings.SettingCarbFraction, "Carb fraction");
+        _strSettingFixedInterval = loadString(Rez.Strings.SettingFixedInterval, "Fixed interval");
+        _strSettingStartDelay = loadString(Rez.Strings.SettingStartDelay, "Start delay");
+        _strSettingSnoozeTime = loadString(Rez.Strings.SettingSnoozeTime, "Snooze time");
+        _strLabelPresets = loadString(Rez.Strings.LabelPresets, "Presets");
+        _strPresetRun = loadString(Rez.Strings.PresetRun, "Run");
+        _strPresetRunSub = loadString(Rez.Strings.PresetRunSub, "60 g/h, 25 g");
+        _strPresetBike = loadString(Rez.Strings.PresetBike, "Bike");
+        _strPresetBikeSub = loadString(Rez.Strings.PresetBikeSub, "90 g/h, 30 g");
+        _strPresetHike = loadString(Rez.Strings.PresetHike, "Hike");
+        _strPresetHikeSub = loadString(Rez.Strings.PresetHikeSub, "40 g/h, 20 g");
+        _strLabelClearSession = loadString(Rez.Strings.LabelClearSession, "Clear session");
+        _strLabelClearSessionSub = loadString(Rez.Strings.LabelClearSessionSub, "Delete current data");
+        _strModeAuto = loadString(Rez.Strings.ModeAuto, "Auto");
+        _strModeFixed = loadString(Rez.Strings.ModeFixed, "Fixed");
+        _strModeCalorieAuto = loadString(Rez.Strings.ModeCalorieAuto, "Auto (Calories)");
+        _strUnitGramsPerHour = loadString(Rez.Strings.UnitGramsPerHour, "g/h");
+        _strUnitGrams = loadString(Rez.Strings.UnitGrams, "g");
+        _strUnitMinutes = loadString(Rez.Strings.UnitMinutes, "min");
     }
 
     private function modeLabel(mode as Number, intervalMin as Number) as String {

@@ -12,11 +12,13 @@ Character counts are noted for each block.
 Real-time carbohydrate intake tracker for endurance athletes. Reminds you when to fuel, logs your gels, and shows your deficit vs. target directly on your watch during any activity.
 ```
 
-### Full Description (~2050 chars)
+### Full Description (~2300 chars)
 ```text
 FuelPlanner - Carbohydrate Intake Tracker
 
 Never bonk again. FuelPlanner is a data field that tracks your carbohydrate intake during running, cycling, or hiking and vibrates when it is time to eat.
+
+Version 0.1 is the Initial Beta release focused on robust race-day fueling logic and FIT-based post-activity analysis.
 
 HOW IT WORKS
 FuelPlanner watches your active elapsed time and calculates how many grams of carbs you should have consumed based on your target rate. When the deficit reaches your gel size, it reminds you to fuel. Paused time is automatically excluded.
@@ -31,18 +33,23 @@ LOGGING INTAKE
 - Tap top 25%: Snooze reminder, or log a half dose
 - Tap bottom 25%: Log a double dose
 - Hold DOWN on button-only or touch-disabled devices: Log your default gel or dose
+- Hold LAP (~1s) on button devices: Undo the last logged intake
 
 WHAT YOU SEE
 - Countdown to next recommended intake (color-coded: green/yellow/red)
 - Consumed vs. target carbs in grams
 - Deficit or surplus indicator
 - Active elapsed time and intake count
+- Edge deficit gauge (green/red) for quick status at a glance
 
 SMART FEATURES
-- Pause-aware: Activity pauses excluded from deficit calculation
+- Smart-Pause: Paused activity time is excluded from deficit math, so coffee stops and traffic lights do not corrupt your fueling model.
 - Session persistence: Survives watch restart mid-activity
 - Vibration + backlight flash alert
 - Snooze to delay a reminder
+- Settings hot-reload: updates apply during activity without restarting
+- Auto-Flow for non-touch devices (e.g. fenix 6/7, Forerunner 255/955): when a reminder is due, the default dose can be booked automatically to maintain fueling rhythm under load.
+- Real-Time FIT Analysis: custom FIT fields for deficit and consumed carbs are recorded and can be reviewed directly in Garmin Connect after the workout.
 
 SETTINGS (on watch or in Garmin Connect)
 - Carbs Target: 20-120 g/h (default 60)
@@ -53,19 +60,17 @@ SETTINGS (on watch or in Garmin Connect)
 - Snooze Time: 1-15 min (default 5)
 - Carb % of kcal: 40-80 % (default 60, used in Calorie Auto mode)
 
-Requires Connect IQ 3.3.0+.
+Requires Connect IQ 3.0.0+.
 ```
 
 ### Changelog
 ```text
-v1.0.0
-- Initial release
-- Auto, Fixed Interval, and Calorie Auto reminder modes
-- Real-time carb deficit tracking
-- Vibration + backlight alerts
-- Session persistence across restarts
-- Tap controls for instant intake logging
-- On-watch settings menu
+v0.1.0 - Initial Beta
+- Auto-Flow for non-touch devices
+- Real-Time FIT deficit/consumed recording for Garmin Connect analysis
+- Smart-Pause compensation for stable deficit calculations
+- Input validation and hardened session/timer resilience
+- Integer carb math and throttled FIT updates for battery efficiency
 ```
 
 ---
@@ -77,11 +82,13 @@ v1.0.0
 Echtzeit-Kohlenhydrat-Tracker fuer Ausdauersport. Erinnert dich ans Essen, protokolliert Gels und zeigt dein Defizit vs. Ziel direkt auf der Uhr waehrend jeder Aktivitaet.
 ```
 
-### Vollstandige Beschreibung (~2150 Zeichen)
+### Vollstandige Beschreibung (~2400 Zeichen)
 ```text
 FuelPlanner - Kohlenhydrat-Tracking fuer Ausdauersportler
 
 Nie wieder "Hungerast". FuelPlanner ist ein Datenfeld, das deine Kohlenhydratzufuhr waehrend Laufen, Radfahren oder Wandern verfolgt und vibriert, wenn es Zeit zum Essen ist.
+
+Version 0.1 ist der Initial-Beta-Release mit Fokus auf robuster Race-Day-Logik und FIT-basierter Nachanalyse.
 
 WIE ES FUNKTIONIERT
 FuelPlanner berechnet anhand deiner aktiven Zeit, wie viele Gramm Kohlenhydrate du bis jetzt haettest zufuehren sollen. Wenn das Defizit deine Gel-Groesse erreicht, wirst du erinnert. Pausenzeiten werden automatisch herausgerechnet.
@@ -96,18 +103,23 @@ ZUFUHR ERFASSEN
 - Oben (25%): Erinnerung schlummern oder halbe Portion erfassen
 - Unten (25%): Doppelte Portion erfassen
 - DOWN halten auf button-only oder touch-disabled Geraeten: Standard-Gel oder Portion erfassen
+- LAP ca. 1 Sekunde halten (Button-Geraete): Letzte Erfassung rueckgaengig machen
 
 WAS DU SIEHST
 - Countdown bis zur naechsten empfohlenen Zufuhr (farbig: gruen/gelb/rot)
 - Konsumierte vs. Ziel-Kohlenhydrate in Gramm
 - Defizit- oder Ueberschuss-Anzeige
 - Aktive Zeit und Anzahl der Einnahmen
+- Edge-Defizit-Anzeige (gruen/rot) fuer schnellen Status auf einen Blick
 
 FUNKTIONEN
-- Pausenerkennung: Pausen werden nicht mitgezaehlt
+- Smart-Pause: Pausenzeiten werden sauber aus der Defizit-Berechnung ausgeschlossen, damit Kaffee-Stopps oder Ampeln die Fueling-Logik nicht verfaelschen.
 - Sitzungs-Persistenz: Ueberlebt Neustart der Uhr mitten in der Aktivitaet
 - Vibrations- und Hintergrundlicht-Alarm
 - Schlummer-Funktion fuer Erinnerungen
+- Settings-Hot-Reload: Aenderungen greifen waehrend der Aktivitaet ohne Neustart
+- Auto-Flow fuer Nicht-Touch-Geraete (z.B. fenix 6/7, Forerunner 255/955): Wenn eine Erinnerung faellig ist, kann die Standard-Portion automatisch gebucht werden, damit der Fueling-Rhythmus unter Belastung stabil bleibt.
+- Echtzeit-FIT-Analyse: Eigene FIT-Felder fuer Defizit und konsumierte KH werden aufgezeichnet und sind direkt in Garmin Connect auswertbar.
 
 EINSTELLUNGEN (auf der Uhr oder in Garmin Connect)
 - KH-Ziel: 20-120 g/h (Standard 60)
@@ -118,19 +130,17 @@ EINSTELLUNGEN (auf der Uhr oder in Garmin Connect)
 - Schlummer-Zeit: 1-15 min (Standard 5)
 - KH-Anteil: 40-80 % (Standard 60, fuer Kalorien-Auto-Modus)
 
-Erfordert Connect IQ 3.3.0+.
+Erfordert Connect IQ 3.0.0+.
 ```
 
 ### Aenderungsprotokoll
 ```text
-v1.0.0
-- Erstveroeffentlichung
-- Auto-, Festes-Intervall- und Kalorien-Auto-Erinnerungsmodi
-- Echtzeit-KH-Defizit-Berechnung
-- Vibrations- und Hintergrundlicht-Alarme
-- Sitzungs-Persistenz ueber Neustarts hinweg
-- Antippen-Steuerung fuer sofortige Erfassung
-- Einstellungsmenue auf der Uhr
+v0.1.0 - Initial Beta
+- Auto-Flow fuer Nicht-Touch-Geraete
+- Echtzeit-FIT-Aufzeichnung fuer Defizit/Konsum und Analyse in Garmin Connect
+- Smart-Pause Kompensation fuer stabile Defizit-Berechnung
+- Eingabevalidierung und robustere Session-/Timer-Resilienz
+- Ganzzahl-KH-Mathematik und FIT-Throttling fuer Akkueffizienz
 ```
 
 ---
