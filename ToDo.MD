@@ -7,7 +7,7 @@ This file tracks current project status and next tasks.
 - Min API: 3.0.0
 - Permission: `FitContributor`
 - Language support: English and German
-- Device targets: 67 profiles listed in `manifest.xml`
+- Device targets: 97 profiles listed in `manifest.xml`
 
 ## Current Runtime Behavior
 - Touch devices:

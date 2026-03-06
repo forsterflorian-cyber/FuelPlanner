@@ -15,10 +15,12 @@ Real-time carbohydrate intake tracker for endurance athletes. Reminds you when t
 ### Full Description (~2300 chars)
 ```text
 FuelPlanner - Carbohydrate Intake Tracker
+Support the project: https://buymeacoffee.com/forsterf
 
 Never bonk again. FuelPlanner is a data field that tracks your carbohydrate intake during running, cycling, or hiking and vibrates when it is time to eat.
 
 Version 0.1 is the Initial Beta release focused on robust race-day fueling logic and FIT-based post-activity analysis.
+Current device coverage: 97 Garmin watch profiles (see manifest.xml).
 
 HOW IT WORKS
 FuelPlanner watches your active elapsed time and calculates how many grams of carbs you should have consumed based on your target rate. When the deficit reaches your gel size, it reminds you to fuel. Paused time is automatically excluded.
@@ -84,10 +86,12 @@ Echtzeit-Kohlenhydrat-Tracker fuer Ausdauersport. Erinnert dich ans Essen, proto
 ### Vollstandige Beschreibung (~2400 Zeichen)
 ```text
 FuelPlanner - Kohlenhydrat-Tracking fuer Ausdauersportler
+Projekt unterstuetzen: https://buymeacoffee.com/forsterf
 
 Nie wieder "Hungerast". FuelPlanner ist ein Datenfeld, das deine Kohlenhydratzufuhr waehrend Laufen, Radfahren oder Wandern verfolgt und vibriert, wenn es Zeit zum Essen ist.
 
 Version 0.1 ist der Initial-Beta-Release mit Fokus auf robuster Race-Day-Logik und FIT-basierter Nachanalyse.
+Aktueller Geraeteumfang: 97 Garmin-Uhrenprofile (siehe manifest.xml).
 
 WIE ES FUNKTIONIERT
 FuelPlanner berechnet anhand deiner aktiven Zeit, wie viele Gramm Kohlenhydrate du bis jetzt haettest zufuehren sollen. Wenn das Defizit deine Gel-Groesse erreicht, wirst du erinnert. Pausenzeiten werden automatisch herausgerechnet.

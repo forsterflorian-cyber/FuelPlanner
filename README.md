@@ -33,7 +33,7 @@ Supported languages: English, Deutsch
 - App type: `datafield`
 - Minimum API level: `3.0.0`
 - Permission: `FitContributor`
-- Product targets: see `manifest.xml` (currently 67 device profiles)
+- Product targets: see `manifest.xml` (currently 97 device profiles)
 
 ---
 
