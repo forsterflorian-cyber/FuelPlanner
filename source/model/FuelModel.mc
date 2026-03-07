@@ -4,9 +4,16 @@ import Toybox.Activity;
 import Toybox.FitContributor;
 import Toybox.System;
 
+// Module-level constants: stored in bytecode, not per-instance heap
+module FuelModelConsts {
+    const FIT_UPDATE_INTERVAL_MS          = 5000;
+    const TIMER_BACKTRACK_RESET_DELTA_SEC = 10;
+    const TIMER_BACKTRACK_CONFIRM_TICKS   = 4;
+}
+
 //! Core calculation model for fuel planning
 class FuelModel {
-    // Reminder modes
+    // Reminder modes (class-level const — class prototype, not per-instance heap)
     public const MODE_AUTO         = 0;  // deficit-based with fixed g/h target
     public const MODE_FIXED        = 1;  // fixed interval from last intake
     public const MODE_CALORIE_AUTO = 2;  // target derived from watch calorie data
@@ -31,13 +38,10 @@ class FuelModel {
     private var _fitFieldActualSummary as FitContributor.Field? = null;
     private var _lastFitFieldUpdateMs as Number = 0;
     private var _forceNextFitFieldUpdate as Boolean = true;
-    private const FIT_UPDATE_INTERVAL_MS = 5000;
 
-    // Cached settings
+    // Cached settings (_carbsTargetGph10 / _doseG10 computed on-the-fly to save heap slots)
     private var _carbsTargetGph    as Number = 60;
-    private var _carbsTargetGph10  as Number = 600;
     private var _doseG             as Number = 25;
-    private var _doseG10           as Number = 250;
     private var _reminderMode      as Number = 0;
     private var _fixedIntervalMin  as Number = 20;
     private var _startDelayMin     as Number = 15;
@@ -47,8 +51,7 @@ class FuelModel {
     // Last reminder timestamp (for snooze)
     private var _lastReminderTimestamp as Number = 0;
 
-    // Computed values (updated each tick)
-    private var _elapsedActiveHours  as Float   = 0.0f;
+    // Computed values (updated each tick; _elapsedActiveHours derived on-the-fly)
     private var _elapsedActiveSec    as Number  = 0;
     private var _targetTotalG        as Number  = 0; // g10
     private var _deficitG            as Number  = 0; // g10
@@ -66,8 +69,6 @@ class FuelModel {
     private var _pausedTimerOffsetS as Number = 0;
     private var _pauseStartTimerS   as Number? = null;
     private var _timerBacktrackCount as Number = 0;
-    private const TIMER_BACKTRACK_RESET_DELTA_SEC = 10;
-    private const TIMER_BACKTRACK_CONFIRM_TICKS = 4;
 
     //! Constructor
     function initialize(storage as StorageManager) {
@@ -83,13 +84,11 @@ class FuelModel {
             _storage.MIN_CARBS_TARGET_GPH,
             _storage.MAX_CARBS_TARGET_GPH
         );
-        _carbsTargetGph10 = _carbsTargetGph * 10;
         _doseG            = clampSetting(
             _storage.getDoseG(),
             _storage.MIN_DOSE_G,
             _storage.MAX_DOSE_G
         );
-        _doseG10          = _doseG * 10;
         _reminderMode     = clampSetting(
             _storage.getReminderMode(),
             _storage.MIN_REMINDER_MODE,
@@ -213,7 +212,6 @@ class FuelModel {
         _pauseStartTimerS    = null;
         _timerBacktrackCount = 0;
 
-        _elapsedActiveHours     = 0.0f;
         _elapsedActiveSec       = 0;
         _targetTotalG           = 0;
         _deficitG               = 0;
@@ -233,10 +231,6 @@ class FuelModel {
 
     //! Main compute function — call every tick (1 Hz)
     function compute(info as Activity.Info?) as Void {
-        // Reload settings every tick so changes made via the on-watch settings
-        // menu or Garmin Connect are picked up immediately without an app restart.
-        loadSettings();
-
         if (info == null) {
             return;
         }
@@ -302,18 +296,17 @@ class FuelModel {
         var effectiveTimerSec = getEffectiveTimerSec(timerSec, timerStatePaused);
         if (!timerStatePaused &&
             _elapsedActiveSec > 0 &&
-            effectiveTimerSec + TIMER_BACKTRACK_RESET_DELTA_SEC < _elapsedActiveSec) {
+            effectiveTimerSec + FuelModelConsts.TIMER_BACKTRACK_RESET_DELTA_SEC < _elapsedActiveSec) {
             // Ignore transient timer backtracks until fallback reset detection confirms a real new session.
             effectiveTimerSec = _elapsedActiveSec;
         }
         _elapsedActiveSec = effectiveTimerSec;
-        _elapsedActiveHours = _elapsedActiveSec.toFloat() / 3600.0f;
 
         detectPause(timerTime, timerStatePaused);
         if (_isPaused) {
             _isReminderDue = false;
             _autoIntakeLocked = false;
-            updateFitFields(_fitFieldDeficit, _fitFieldConsumed, _fitFieldTargetSummary, _fitFieldActualSummary);
+            updateFitFields();
             return;
         }
 
@@ -325,8 +318,8 @@ class FuelModel {
             // Formula: kcal × carbFraction / 4 kcal-per-gram
             _targetTotalG = ((_latestCaloriesKcal * _carbFractionPct * 10) + 200) / 400;
         } else {
-            var safeCarbsRateGph10 = (_carbsTargetGph10 > 0)
-                ? _carbsTargetGph10
+            var safeCarbsRateGph10 = (_carbsTargetGph > 0)
+                ? _carbsTargetGph * 10
                 : _storage.MIN_CARBS_TARGET_GPH * 10;
             _targetTotalG = (_elapsedActiveSec * safeCarbsRateGph10) / 3600;
         }
@@ -336,7 +329,7 @@ class FuelModel {
         calculateNextDue();
         checkReminderDue();
         applyAutoIntakeIfDue();
-        updateFitFields(_fitFieldDeficit, _fitFieldConsumed, _fitFieldTargetSummary, _fitFieldActualSummary);
+        updateFitFields();
     }
 
     private function detectTouchScreen() as Boolean {
@@ -364,13 +357,13 @@ class FuelModel {
         }
 
         var delta = _elapsedActiveSec - rawTimerSec;
-        if (delta < TIMER_BACKTRACK_RESET_DELTA_SEC) {
+        if (delta < FuelModelConsts.TIMER_BACKTRACK_RESET_DELTA_SEC) {
             _timerBacktrackCount = 0;
             return false;
         }
 
         _timerBacktrackCount += 1;
-        if (_timerBacktrackCount < TIMER_BACKTRACK_CONFIRM_TICKS) {
+        if (_timerBacktrackCount < FuelModelConsts.TIMER_BACKTRACK_CONFIRM_TICKS) {
             return false;
         }
 
@@ -411,40 +404,37 @@ class FuelModel {
         checkReminderDue();
     }
 
-    function updateFitFields(fieldDeficit as FitContributor.Field?,
-                             fieldConsumed as FitContributor.Field?,
-                             fieldTargetSummary as FitContributor.Field?,
-                             fieldActualSummary as FitContributor.Field?) as Void {
+    private function updateFitFields() as Void {
         if (!isSessionActive()) {
             _forceNextFitFieldUpdate = true;
             return;
         }
-        if (fieldDeficit == null && fieldConsumed == null &&
-            fieldTargetSummary == null && fieldActualSummary == null) {
+        if (_fitFieldDeficit == null && _fitFieldConsumed == null &&
+            _fitFieldTargetSummary == null && _fitFieldActualSummary == null) {
             return;
         }
 
         var nowMs = System.getTimer();
         var elapsedMs = nowMs - _lastFitFieldUpdateMs;
-        if (!_forceNextFitFieldUpdate && elapsedMs >= 0 && elapsedMs < FIT_UPDATE_INTERVAL_MS) {
+        if (!_forceNextFitFieldUpdate && elapsedMs >= 0 && elapsedMs < FuelModelConsts.FIT_UPDATE_INTERVAL_MS) {
             return;
         }
         _lastFitFieldUpdateMs = nowMs;
         _forceNextFitFieldUpdate = false;
 
         try {
-            if (fieldDeficit != null) {
-                fieldDeficit.setData(_deficitG.toFloat() / 10.0f);
+            if (_fitFieldDeficit != null) {
+                _fitFieldDeficit.setData(_deficitG.toFloat() / 10.0f);
             }
         } catch (e) {}
 
         try {
-            if (fieldConsumed != null) {
-                fieldConsumed.setData(_consumedTotalG.toFloat() / 10.0f);
+            if (_fitFieldConsumed != null) {
+                _fitFieldConsumed.setData(_consumedTotalG.toFloat() / 10.0f);
             }
         } catch (e) {}
 
-        writeFitSessionSummary(fieldTargetSummary, fieldActualSummary);
+        writeFitSessionSummary(_fitFieldTargetSummary, _fitFieldActualSummary);
     }
 
     function flushFitSessionSummary() as Void {
@@ -616,7 +606,6 @@ class FuelModel {
     }
 
     private function resetDisplayValues() as Void {
-        _elapsedActiveHours = 0.0f;
         _elapsedActiveSec   = 0;
         _targetTotalG       = 0;
         _deficitG           = 0;
@@ -644,8 +633,8 @@ class FuelModel {
         if (_reminderMode == MODE_CALORIE_AUTO && _caloriesAvailable) {
             _targetTotalG = ((_latestCaloriesKcal * _carbFractionPct * 10) + 200) / 400;
         } else {
-            var safeCarbsRateGph10 = (_carbsTargetGph10 > 0)
-                ? _carbsTargetGph10
+            var safeCarbsRateGph10 = (_carbsTargetGph > 0)
+                ? _carbsTargetGph * 10
                 : _storage.MIN_CARBS_TARGET_GPH * 10;
             _targetTotalG = (_elapsedActiveSec * safeCarbsRateGph10) / 3600;
         }
@@ -665,11 +654,11 @@ class FuelModel {
         var safeStartDelayMin = (_startDelayMin >= 0)
             ? _startDelayMin
             : _storage.MIN_START_DELAY_MIN;
-        var safeDoseG10 = (_doseG10 > 0)
-            ? _doseG10
+        var safeDoseG10 = (_doseG > 0)
+            ? _doseG * 10
             : _storage.MIN_DOSE_G * 10;
-        var safeCarbsRateGph10 = (_carbsTargetGph10 > 0)
-            ? _carbsTargetGph10
+        var safeCarbsRateGph10 = (_carbsTargetGph > 0)
+            ? _carbsTargetGph * 10
             : _storage.MIN_CARBS_TARGET_GPH * 10;
 
         var startDelaySec = safeStartDelayMin * 60;
@@ -817,12 +806,9 @@ class FuelModel {
         return Time.now().value();
     }
 
+    // grams is always an integer Number, so * 10 is exact — no Float needed
     private function gramsToG10(grams as Number) as Number {
-        var g10 = (grams.toFloat() * 10.0f);
-        if (g10 >= 0.0f) {
-            return (g10 + 0.5f).toNumber();
-        }
-        return (g10 - 0.5f).toNumber();
+        return grams * 10;
     }
 
     // ── Getters ─────────────────────────────────────────
@@ -830,7 +816,7 @@ class FuelModel {
     function isSessionActive()      as Boolean { return _sessionActive; }
     function isPaused()             as Boolean { return _isPaused; }
     function getElapsedActiveSec()  as Number  { return _elapsedActiveSec; }
-    function getElapsedActiveHours()as Float   { return _elapsedActiveHours; }
+    function getElapsedActiveHours()as Float   { return _elapsedActiveSec.toFloat() / 3600.0f; }
     function getConsumedTotalG()    as Number  { return (_consumedTotalG + 5) / 10; }
     function getTargetTotalG()      as Float   { return _targetTotalG.toFloat() / 10.0f; }
     function getDeficitG()          as Float   { return _deficitG.toFloat() / 10.0f; }
@@ -841,7 +827,7 @@ class FuelModel {
     function isReminderDue()        as Boolean { return _isReminderDue; }
     function getCarbsTargetGph()    as Number  { return _carbsTargetGph; }
     function getDoseG()             as Number  { return _doseG; }
-    function getDoseG10()           as Number  { return _doseG10; }
+    function getDoseG10()           as Number  { return _doseG * 10; }
     function getReminderMode()      as Number  { return _reminderMode; }
     function getCarbFractionPct()   as Number  { return _carbFractionPct; }
     function isCaloriesAvailable()  as Boolean { return _caloriesAvailable; }
@@ -856,8 +842,8 @@ class FuelModel {
     }
 
     function getAverageGph() as Float {
-        if (_elapsedActiveHours < 0.01f) { return 0.0f; }
-        return (_consumedTotalG.toFloat() / 10.0f) / _elapsedActiveHours;
+        if (_elapsedActiveSec < 36) { return 0.0f; }  // < 0.01h
+        return (_consumedTotalG.toFloat() / 10.0f) / (_elapsedActiveSec.toFloat() / 3600.0f);
     }
 
     function getIntakeCount() as Number {

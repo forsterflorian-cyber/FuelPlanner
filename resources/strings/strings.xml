@@ -43,7 +43,7 @@
     <string id="LabelRateTargetPrefix">target</string>
     <string id="LabelRateAutoCarbsSuffix">% carbs</string>
     <string id="LabelRateAutoNoData">auto (no cal data)</string>
-    <string id="LabelEnableTouchForManual">Enable Touch for Manual</string>
+    <string id="LabelEnableTouchForManual">Enable Touch for Intake</string>
     <string id="LabelAutoFlowActive">AUTO-FLOW active</string>
 
     <!-- Field View: idle screen -->

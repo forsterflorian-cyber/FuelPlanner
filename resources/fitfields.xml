@@ -18,5 +18,20 @@
                   dataLabel="@Strings.FitConsumedDataLabel"
                   unitLabel="@Strings.UnitGrams"
                   fillColor="#00AA55" />
+
+        <fitField id="2"
+                  displayInChart="false"
+                  displayInActivitySummary="true"
+                  sortOrder="2"
+                  precision="1"
+                  dataLabel="@Strings.FitTargetCarbsSummaryLabel"
+                  unitLabel="@Strings.UnitGrams" />
+        <fitField id="3"
+                  displayInChart="false"
+                  displayInActivitySummary="true"
+                  sortOrder="3"
+                  precision="1"
+                  dataLabel="@Strings.FitActualIntakeSummaryLabel"
+                  unitLabel="@Strings.UnitGrams" />
     </fitContributions>
 </resources>

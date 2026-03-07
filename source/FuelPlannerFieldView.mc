@@ -61,10 +61,10 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private const ROUND_EDGE_PAD_MAX_PX = 14;
 
     // Deficit gauge constants (responsive edge indicator)
-    private const GAUGE_WIDTH_RATIO = 0.018f;
-    private const GAUGE_MIN_W_PX = 2;
-    private const GAUGE_MAX_W_PX = 6;
-    private const GAUGE_EDGE_PAD_RATIO = 0.01f;
+    private const GAUGE_WIDTH_RATIO = 0.15f;
+    private const GAUGE_MIN_W_PX = 6;
+    private const GAUGE_MAX_W_PX = 45;
+    private const GAUGE_EDGE_PAD_RATIO = 0.0;
     private const GAUGE_EDGE_PAD_MIN_PX = 1;
     private const GAUGE_EDGE_PAD_MAX_PX = 4;
     private const GAUGE_MIN_H_PX = 8;
@@ -82,6 +82,10 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private const UNIT_G = "g";
     private const UNIT_GPH = " g/h";
     private const SEP_PIPE = " | ";
+
+    //Eating overlay config
+    private var _overlayEndTime as Number = 0;
+    private const OVERLAY_DURATION_MS = 3000; // 3 Sekunden
 
     function getFieldHeight() as Number {
         if (_lastFieldHeight > 0) {
@@ -111,11 +115,12 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         }
 
         if (_model.isReminderDue() && !_model.isPaused()) {
-            if (_reminder.triggerReminder()) {
+            if (_reminder.triggerReminder()) { // Liefert true, wenn der Alarm gerade ausgelöst wurde
                 _model.recordReminderTriggered();
+                // Starte den Overlay-Timer für 3 Sekunden
+                _overlayEndTime = System.getTimer() + OVERLAY_DURATION_MS;
             }
-        }
-
+        }       
         var now = System.getTimer();
         if (now - _lastBlinkTime >= BLINK_INTERVAL) {
             _blinkState    = !_blinkState;
@@ -125,9 +130,14 @@ class FuelPlannerFieldView extends WatchUi.DataField {
 
     function onUpdate(dc as Dc) as Void {
         var bgColor = getBackgroundColor();
+        var now = System.getTimer();
         dc.setColor(Graphics.COLOR_TRANSPARENT, bgColor);
         dc.clear();
-
+        // Prüfen, ob das Overlay aktiv sein soll
+        if (now < _overlayEndTime) {
+            drawReminderOverlay(dc);
+            return; // Wir brechen hier ab, damit das Overlay die ganze Fläche nutzt
+        }
         var w  = dc.getWidth();
         var h  = dc.getHeight();
         _lastFieldHeight = h;
@@ -137,7 +147,8 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         var textColor = isDark ? COLOR_NORMAL : Graphics.COLOR_BLACK;
         var dimColor  = isDark ? COLOR_DIM    : Graphics.COLOR_DK_GRAY;
 
-        var touchEnabled = _isTouch;
+        var touchEnabled = System.getDeviceSettings().isTouchScreen;
+        if (touchEnabled) { _hasTouchHardware = true; }
 
         if (!_model.isSessionActive()) {
             drawNoSession(dc, cx, h, textColor, dimColor);
@@ -165,7 +176,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
                 return Rez.DeviceInfo.hasTouchScreen;
             }
         } catch (e) {}
-        return _isTouch;
+        return getScreenHeight() >= 260;
     }
 
     private function getScreenHeight() as Number {
@@ -209,6 +220,29 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         _strAutoFlowStatus = loadString(Rez.Strings.LabelAutoFlowStatus, "AUTO-FLOW");
     }
 
+    //! Zeichnet ein auffälliges Vollbild-Overlay
+    private function drawReminderOverlay(dc as Dc) as Void {
+        var w = dc.getWidth();
+        var h = dc.getHeight();
+        
+        // Hintergrund: Aggressives Rot oder Orange
+        dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_RED);
+        dc.fillRectangle(0, 0, w, h);
+        
+        // Text-Farbe Weiß für maximalen Kontrast
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
+        
+        var font = Graphics.FONT_LARGE;
+        var doseText = _model.getDoseG().format("%d") + "g Carbs";
+
+        // Text zentriert ausgeben
+        dc.drawText(w/2, h/2 - 20, font, _strFuelNow, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(w/2, h/2 + 20, Graphics.FONT_MEDIUM, doseText, Graphics.TEXT_JUSTIFY_CENTER);
+        
+        // Optional: Ein weißer Rahmen zur Abgrenzung
+        dc.setPenWidth(4);
+        dc.drawRectangle(2, 2, w-4, h-4);
+    }
     //! Waiting screen before activity starts
     private function drawNoSession(dc as Dc, cx as Number, h as Number,
                                    textColor as Number, dimColor as Number) as Void {
@@ -237,7 +271,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         var showLabel = (h >= 80);
         var drawLabel = showLabel;
         var drawMeta  = showMeta;
-        var drawHint  = showHint && (touchEnabled || (!touchEnabled && isReminderDue));
+        var drawHint  = showHint;
 
         var gap = getRowGap(h);
         var safeTop = getSafeTopInset(h);
@@ -438,67 +472,86 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         }
     }
 
-    //! Draw responsive edge gauge: green when on/ahead, red proportional to dose-sized deficit.
-    private function drawDeficitGauge(dc as Dc, w as Number, h as Number,
-                                      deficitG10 as Number, doseG10 as Number,
-                                      dimColor as Number, touchEnabled as Boolean) as Void {
-        var edgePad = (w * GAUGE_EDGE_PAD_RATIO).toNumber();
-        if (edgePad < GAUGE_EDGE_PAD_MIN_PX) {
-            edgePad = GAUGE_EDGE_PAD_MIN_PX;
-        } else if (edgePad > GAUGE_EDGE_PAD_MAX_PX) {
-            edgePad = GAUGE_EDGE_PAD_MAX_PX;
-        }
+//! Draw responsive edge gauges on both sides: green when on/ahead, red proportional to deficit.
+//! Balken füllen sich von unten nach oben: 
+//! Oben Grün (Plan), unten Orange/Rot (Defizit), bündig am Displayrand.
+private function drawDeficitGauge(dc as Dc, w as Number, h as Number, 
+                                  deficitG10 as Number, doseG10 as Number, 
+                                  dimColor as Number, touchEnabled as Boolean) as Void {
+    
+    // 1. Breite der Balken
+    var gaugeW = (w * GAUGE_WIDTH_RATIO).toNumber();
+    if (gaugeW < GAUGE_MIN_W_PX) { gaugeW = GAUGE_MIN_W_PX; }
+    else if (gaugeW > GAUGE_MAX_W_PX) { gaugeW = GAUGE_MAX_W_PX; }
 
-        var gaugeW = (w * GAUGE_WIDTH_RATIO).toNumber();
-        if (gaugeW < GAUGE_MIN_W_PX) {
-            gaugeW = GAUGE_MIN_W_PX;
-        } else if (gaugeW > GAUGE_MAX_W_PX) {
-            gaugeW = GAUGE_MAX_W_PX;
-        }
+    // 2. Vertikaler Bereich (Safe Inset beachten)
+    var top = getSafeTopInset(h);
+    var bottomInset = getSafeBottomInset(w, h, touchEnabled);
+    var gaugeH = h - top - bottomInset;
 
-        var top = getSafeTopInset(h) + edgePad;
-        var bottomInset = getSafeBottomInset(w, h, touchEnabled) + edgePad;
-        var gaugeH = h - top - bottomInset;
-        if (gaugeH < GAUGE_MIN_H_PX) {
-            return;
-        }
+    if (gaugeH < GAUGE_MIN_H_PX) { return; }
 
-        var x = w - edgePad - gaugeW;
-        var y = top;
+    // 3. X-Positionen OHNE Randabstand (direkt am Displayrand)
+    var xLeft = 0;
+    var xRight = w - gaugeW;
+    var y = top;
 
-        // Track
-        dc.setColor(dimColor, Graphics.COLOR_TRANSPARENT);
-        dc.fillRectangle(x, y, gaugeW, gaugeH);
-
-        // Ratio is clamped to [0..1], where 1 means one full planned dose behind.
-        var ratio = 0.0f;
-        if (doseG10 > 0) {
-            ratio = deficitG10.toFloat() / doseG10.toFloat();
-        }
-        if (ratio < 0.0f) {
-            ratio = 0.0f;
-        } else if (ratio > 1.0f) {
-            ratio = 1.0f;
-        }
-
-        var redH = (gaugeH.toFloat() * ratio).toNumber();
-        var greenH = gaugeH - redH;
-        var alertColor = COLOR_GOOD;
-        if (deficitG10 > GAUGE_ALERT_G10) {
-            alertColor = Graphics.COLOR_DK_RED;
-        } else if (deficitG10 >= GAUGE_WARN_G10) {
-            alertColor = Graphics.COLOR_ORANGE;
-        }
-
-        if (greenH > 0) {
-            dc.setColor(COLOR_GOOD, Graphics.COLOR_TRANSPARENT);
-            dc.fillRectangle(x, y, gaugeW, greenH);
-        }
-        if (redH > 0) {
-            dc.setColor(alertColor, Graphics.COLOR_TRANSPARENT);
-            dc.fillRectangle(x, y + greenH, gaugeW, redH);
-        }
+    // --- Logik für Farben und Höhen ---
+    var ratio = 0.0f;
+    if (doseG10 > 0) {
+        // Berechnet wie viel % der Portion aktuell fehlen
+        ratio = deficitG10.toFloat() / doseG10.toFloat();
     }
+    
+    // Begrenzung auf 0 bis 100% der Balkenhöhe
+    if (ratio < 0.0f) { ratio = 0.0f; }
+    if (ratio > 1.0f) { ratio = 1.0f; }
+
+    var redH = (gaugeH.toFloat() * ratio).toNumber();
+    var greenH = gaugeH - redH;
+    
+    // FARB-LOGIK: 
+    // Wir fangen bei Orange an, sobald ein Defizit da ist.
+    var alertColor = Graphics.COLOR_ORANGE; 
+    
+    // Wenn wir "ganz hinten" sind (Defizit > Alarm-Schwelle) -> ROT
+    if (deficitG10 >= GAUGE_ALERT_G10) {
+        alertColor = Graphics.COLOR_RED;
+    } 
+
+    // --- Zeichnen ---
+    
+    // 1. Hintergrund (Hohlraum/Track)
+    dc.setColor(dimColor, Graphics.COLOR_TRANSPARENT);
+    dc.fillRectangle(xLeft, y, gaugeW, gaugeH);
+    dc.fillRectangle(xRight, y, gaugeW, gaugeH);
+
+    // 2. Grüner Bereich (Oberer Teil - steht für "im Plan")
+    if (greenH > 0) {
+        dc.setColor(COLOR_GOOD, Graphics.COLOR_TRANSPARENT);
+        dc.fillRectangle(xLeft, y, gaugeW, greenH);
+        dc.fillRectangle(xRight, y, gaugeW, greenH);
+    }
+
+    // 3. Warn Bereich (Unterer Teil - füllt sich bei Defizit auf)
+    if (redH > 0) {
+        dc.setColor(alertColor, Graphics.COLOR_TRANSPARENT);
+        dc.fillRectangle(xLeft, y + greenH, gaugeW, redH);
+        dc.fillRectangle(xRight, y + greenH, gaugeW, redH);
+    }
+}
+
+// Hilfsfunktion zum Clamping (falls nicht schon vorhanden)
+private function clamp(val, min, max) {
+    if (val < min) { return min; }
+    if (val > max) { return max; }
+    return val;
+}
+private function clampFloat(val, min, max) {
+    if (val < min) { return min; }
+    if (val > max) { return max; }
+    return val;
+}
 
     private function getSafeTopInset(h as Number) as Number {
         var inset = (h * SAFE_TOP_RATIO).toNumber();
