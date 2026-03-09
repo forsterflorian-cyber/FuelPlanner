@@ -3,6 +3,36 @@ import Toybox.Application.Storage;
 import Toybox.Application.Properties;
 import Toybox.Lang;
 
+class StorageBackend {
+    function initialize() {
+    }
+
+    function getValue(key as String) as Lang.Object? {
+        return Storage.getValue(key);
+    }
+
+    function setValue(key as String, value as Lang.Object?) as Void {
+        Storage.setValue(key, value);
+    }
+
+    function deleteValue(key as String) as Void {
+        Storage.deleteValue(key);
+    }
+}
+
+class PropertiesBackend {
+    function initialize() {
+    }
+
+    function getValue(key as String) as Lang.Object? {
+        return Properties.getValue(key);
+    }
+
+    function setValue(key as String, value as Lang.Object?) as Void {
+        Properties.setValue(key, value);
+    }
+}
+
 //! Manages persistent storage for settings and session data
 class StorageManager {
 
@@ -19,6 +49,7 @@ class StorageManager {
     private const KEY_ELAPSED_SEC = "elapsed_s";
     private const KEY_PAUSED_TIMER_OFFSET_S = "pause_off_s";
     private const KEY_PAUSE_START_TIMER_S = "pause_start_s";
+    private const KEY_LAST_LAP_SNAPSHOT = "lap_snap";
 
     // Defaults
     public const MIN_CARBS_TARGET_GPH       = 20;
@@ -46,7 +77,13 @@ class StorageManager {
 
     private const MAX_INTAKE_LOG_ENTRIES = 50;
 
-    function initialize() {
+    private var _storageBackend as StorageBackend;
+    private var _propertiesBackend as PropertiesBackend;
+
+    function initialize(storageBackend as StorageBackend?,
+                        propertiesBackend as PropertiesBackend?) {
+        _storageBackend = (storageBackend != null) ? storageBackend : new StorageBackend();
+        _propertiesBackend = (propertiesBackend != null) ? propertiesBackend : new PropertiesBackend();
     }
 
     private function clamp(value as Number, min as Number, max as Number) as Number {
@@ -70,12 +107,12 @@ class StorageManager {
     private function getClampedProperty(key as String, defaultValue as Number,
                                         min as Number, max as Number) as Number {
         try {
-            var value = Properties.getValue(key);
+            var value = _propertiesBackend.getValue(key);
             if (value instanceof Number) {
                 var clamped = clamp(value, min, max);
                 var normalized = roundToInt(clamped);
                 if (normalized != value) {
-                    Properties.setValue(key, normalized);
+                    _propertiesBackend.setValue(key, normalized);
                 }
                 return normalized;
             }
@@ -86,7 +123,7 @@ class StorageManager {
     private function setClampedProperty(key as String, value as Number,
                                         min as Number, max as Number) as Void {
         try {
-            Properties.setValue(key, roundToInt(clamp(value, min, max)));
+            _propertiesBackend.setValue(key, roundToInt(clamp(value, min, max)));
         } catch (e) {}
     }
 
@@ -187,7 +224,7 @@ class StorageManager {
     // ========== Session Data (in Storage) ==========
 
     function getSessionId() as Number? {
-        var value = Storage.getValue(KEY_SESSION_ID);
+        var value = _storageBackend.getValue(KEY_SESSION_ID);
         if (value instanceof Number && value > 0) {
             return value;
         }
@@ -196,14 +233,14 @@ class StorageManager {
 
     function setSessionId(value as Number) as Void {
         if (value > 0) {
-            Storage.setValue(KEY_SESSION_ID, value);
+            _storageBackend.setValue(KEY_SESSION_ID, value);
         } else {
-            Storage.deleteValue(KEY_SESSION_ID);
+            _storageBackend.deleteValue(KEY_SESSION_ID);
         }
     }
 
     function getStartTimestamp() as Number? {
-        var value = Storage.getValue(KEY_START_TIMESTAMP);
+        var value = _storageBackend.getValue(KEY_START_TIMESTAMP);
         if (value instanceof Number && value > 0) {
             return value;
         }
@@ -212,14 +249,14 @@ class StorageManager {
 
     function setStartTimestamp(value as Number) as Void {
         if (value > 0) {
-            Storage.setValue(KEY_START_TIMESTAMP, value);
+            _storageBackend.setValue(KEY_START_TIMESTAMP, value);
         } else {
-            Storage.deleteValue(KEY_START_TIMESTAMP);
+            _storageBackend.deleteValue(KEY_START_TIMESTAMP);
         }
     }
 
     function getIsStartTimestampConfirmed() as Boolean {
-        var value = Storage.getValue(KEY_START_TS_CONFIRMED);
+        var value = _storageBackend.getValue(KEY_START_TS_CONFIRMED);
         if (value instanceof Boolean) {
             return value;
         }
@@ -227,11 +264,11 @@ class StorageManager {
     }
 
     function setIsStartTimestampConfirmed(value as Boolean) as Void {
-        Storage.setValue(KEY_START_TS_CONFIRMED, value);
+        _storageBackend.setValue(KEY_START_TS_CONFIRMED, value);
     }
 
     function getConsumedTotal() as Number {
-        var value = Storage.getValue(KEY_CONSUMED_TOTAL);
+        var value = _storageBackend.getValue(KEY_CONSUMED_TOTAL);
         if (value instanceof Number) {
             return nonNegative(value);
         }
@@ -239,11 +276,11 @@ class StorageManager {
     }
 
     function setConsumedTotal(value as Number) as Void {
-        Storage.setValue(KEY_CONSUMED_TOTAL, nonNegative(value));
+        _storageBackend.setValue(KEY_CONSUMED_TOTAL, nonNegative(value));
     }
 
     function getConsumedTotalG10() as Number {
-        var value = Storage.getValue(KEY_CONSUMED_TOTAL_G10);
+        var value = _storageBackend.getValue(KEY_CONSUMED_TOTAL_G10);
         if (value instanceof Number) {
             return nonNegative(value);
         }
@@ -253,13 +290,13 @@ class StorageManager {
 
     function setConsumedTotalG10(value as Number) as Void {
         var clamped = nonNegative(value);
-        Storage.setValue(KEY_CONSUMED_TOTAL_G10, clamped);
+        _storageBackend.setValue(KEY_CONSUMED_TOTAL_G10, clamped);
         // Keep legacy key in sync for downgrade compatibility.
-        Storage.setValue(KEY_CONSUMED_TOTAL, clamped / 10);
+        _storageBackend.setValue(KEY_CONSUMED_TOTAL, clamped / 10);
     }
 
     function getLastIntakeTimestamp() as Number? {
-        var value = Storage.getValue(KEY_LAST_INTAKE_TS);
+        var value = _storageBackend.getValue(KEY_LAST_INTAKE_TS);
         if (value instanceof Number && value > 0) {
             return value;
         }
@@ -268,14 +305,14 @@ class StorageManager {
 
     function setLastIntakeTimestamp(value as Number) as Void {
         if (value > 0) {
-            Storage.setValue(KEY_LAST_INTAKE_TS, value);
+            _storageBackend.setValue(KEY_LAST_INTAKE_TS, value);
         } else {
-            Storage.deleteValue(KEY_LAST_INTAKE_TS);
+            _storageBackend.deleteValue(KEY_LAST_INTAKE_TS);
         }
     }
 
     function getIsPaused() as Boolean {
-        var value = Storage.getValue(KEY_IS_PAUSED);
+        var value = _storageBackend.getValue(KEY_IS_PAUSED);
         if (value instanceof Boolean) {
             return value;
         }
@@ -283,11 +320,11 @@ class StorageManager {
     }
 
     function setIsPaused(value as Boolean) as Void {
-        Storage.setValue(KEY_IS_PAUSED, value);
+        _storageBackend.setValue(KEY_IS_PAUSED, value);
     }
 
     function getElapsedActiveSec() as Number {
-        var value = Storage.getValue(KEY_ELAPSED_SEC);
+        var value = _storageBackend.getValue(KEY_ELAPSED_SEC);
         if (value instanceof Number) {
             return nonNegative(value);
         }
@@ -295,11 +332,11 @@ class StorageManager {
     }
 
     function setElapsedActiveSec(value as Number) as Void {
-        Storage.setValue(KEY_ELAPSED_SEC, nonNegative(value));
+        _storageBackend.setValue(KEY_ELAPSED_SEC, nonNegative(value));
     }
 
     function getPausedTimerOffsetSec() as Number {
-        var value = Storage.getValue(KEY_PAUSED_TIMER_OFFSET_S);
+        var value = _storageBackend.getValue(KEY_PAUSED_TIMER_OFFSET_S);
         if (value instanceof Number) {
             return nonNegative(value);
         }
@@ -307,11 +344,11 @@ class StorageManager {
     }
 
     function setPausedTimerOffsetSec(value as Number) as Void {
-        Storage.setValue(KEY_PAUSED_TIMER_OFFSET_S, nonNegative(value));
+        _storageBackend.setValue(KEY_PAUSED_TIMER_OFFSET_S, nonNegative(value));
     }
 
     function getPauseStartTimerSec() as Number? {
-        var value = Storage.getValue(KEY_PAUSE_START_TIMER_S);
+        var value = _storageBackend.getValue(KEY_PAUSE_START_TIMER_S);
         if (value instanceof Number) {
             var sanitized = nonNegative(value);
             if (sanitized > 0) {
@@ -323,16 +360,34 @@ class StorageManager {
 
     function setPauseStartTimerSec(value as Number?) as Void {
         if (value == null || value <= 0) {
-            Storage.deleteValue(KEY_PAUSE_START_TIMER_S);
+            _storageBackend.deleteValue(KEY_PAUSE_START_TIMER_S);
             return;
         }
-        Storage.setValue(KEY_PAUSE_START_TIMER_S, nonNegative(value));
+        _storageBackend.setValue(KEY_PAUSE_START_TIMER_S, nonNegative(value));
+    }
+
+    function getLastLapSnapshot() as Dictionary? {
+        var value = _storageBackend.getValue(KEY_LAST_LAP_SNAPSHOT);
+        if (value instanceof Dictionary) {
+            return value;
+        }
+        return null;
+    }
+
+    function setLastLapSnapshot(sessionId as Number, elapsedActiveSec as Number,
+                                consumedTotalG10 as Number, deficitG10 as Number) as Void {
+        _storageBackend.setValue(KEY_LAST_LAP_SNAPSHOT, {
+            "sessionId" => nonNegative(sessionId),
+            "elapsedActiveSec" => nonNegative(elapsedActiveSec),
+            "consumedTotalG10" => nonNegative(consumedTotalG10),
+            "deficitG10" => deficitG10
+        });
     }
 
     // ========== Intake Log ==========
 
     function getIntakeLog() as Array<Dictionary> {
-        var value = Storage.getValue(KEY_INTAKE_LOG);
+        var value = _storageBackend.getValue(KEY_INTAKE_LOG);
         if (value instanceof Array) {
             var rawLog = value as Array;
             var sanitizedLog = [] as Array<Dictionary>;
@@ -348,7 +403,7 @@ class StorageManager {
     }
 
     function getIntakeCount() as Number {
-        var value = Storage.getValue(KEY_INTAKE_COUNT);
+        var value = _storageBackend.getValue(KEY_INTAKE_COUNT);
         if (value instanceof Number) {
             return value;
         }
@@ -377,8 +432,8 @@ class StorageManager {
             log.remove(log[0]);
         }
 
-        Storage.setValue(KEY_INTAKE_LOG, log);
-        Storage.setValue(KEY_INTAKE_COUNT, log.size());
+        _storageBackend.setValue(KEY_INTAKE_LOG, log);
+        _storageBackend.setValue(KEY_INTAKE_COUNT, log.size());
     }
 
     function removeLastIntakeEntry() as Boolean {
@@ -390,34 +445,35 @@ class StorageManager {
 
         log.remove(log[count - 1]);
         if (log.size() > 0) {
-            Storage.setValue(KEY_INTAKE_LOG, log);
+            _storageBackend.setValue(KEY_INTAKE_LOG, log);
         } else {
-            Storage.deleteValue(KEY_INTAKE_LOG);
+            _storageBackend.deleteValue(KEY_INTAKE_LOG);
         }
-        Storage.setValue(KEY_INTAKE_COUNT, log.size());
+        _storageBackend.setValue(KEY_INTAKE_COUNT, log.size());
         return true;
     }
 
     function clearIntakeLog() as Void {
-        Storage.deleteValue(KEY_INTAKE_LOG);
-        Storage.setValue(KEY_INTAKE_COUNT, 0);
+        _storageBackend.deleteValue(KEY_INTAKE_LOG);
+        _storageBackend.setValue(KEY_INTAKE_COUNT, 0);
     }
 
     // ========== Session Management ==========
 
     function clearSession() as Void {
-        Storage.deleteValue(KEY_SESSION_ID);
-        Storage.deleteValue(KEY_START_TIMESTAMP);
-        Storage.deleteValue(KEY_START_TS_CONFIRMED);
-        Storage.deleteValue(KEY_CONSUMED_TOTAL);
-        Storage.deleteValue(KEY_CONSUMED_TOTAL_G10);
-        Storage.deleteValue(KEY_LAST_INTAKE_TS);
-        Storage.deleteValue(KEY_INTAKE_LOG);
-        Storage.deleteValue(KEY_INTAKE_COUNT);
-        Storage.deleteValue(KEY_IS_PAUSED);
-        Storage.deleteValue(KEY_ELAPSED_SEC);
-        Storage.deleteValue(KEY_PAUSED_TIMER_OFFSET_S);
-        Storage.deleteValue(KEY_PAUSE_START_TIMER_S);
+        _storageBackend.deleteValue(KEY_SESSION_ID);
+        _storageBackend.deleteValue(KEY_START_TIMESTAMP);
+        _storageBackend.deleteValue(KEY_START_TS_CONFIRMED);
+        _storageBackend.deleteValue(KEY_CONSUMED_TOTAL);
+        _storageBackend.deleteValue(KEY_CONSUMED_TOTAL_G10);
+        _storageBackend.deleteValue(KEY_LAST_INTAKE_TS);
+        _storageBackend.deleteValue(KEY_INTAKE_LOG);
+        _storageBackend.deleteValue(KEY_INTAKE_COUNT);
+        _storageBackend.deleteValue(KEY_IS_PAUSED);
+        _storageBackend.deleteValue(KEY_ELAPSED_SEC);
+        _storageBackend.deleteValue(KEY_PAUSED_TIMER_OFFSET_S);
+        _storageBackend.deleteValue(KEY_PAUSE_START_TIMER_S);
+        _storageBackend.deleteValue(KEY_LAST_LAP_SNAPSHOT);
     }
 
     function hasActiveSession() as Boolean {

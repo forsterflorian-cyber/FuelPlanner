@@ -5,6 +5,7 @@ import Toybox.WatchUi;
 import Toybox.System;
 import Toybox.Lang;
 //! Data Field View for FuelPlanner - responsive, top-to-bottom layout
+(:full)
 class FuelPlannerFieldView extends WatchUi.DataField {
 
     private var _model as FuelModel;
@@ -27,7 +28,6 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private var _strRecovery as String = "";
     private var _strRecoveryAction as String = "";
     private var _strFuelingOk as String = "";
-    private var _isTouch as Boolean = false;
     private var _hasTouchHardware as Boolean = false;
     private var _showRecoveryLayout as Boolean = false;
 
@@ -69,11 +69,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private const GAUGE_WIDTH_RATIO = 0.15f;
     private const GAUGE_MIN_W_PX = 6;
     private const GAUGE_MAX_W_PX = 45;
-    private const GAUGE_EDGE_PAD_RATIO = 0.0;
-    private const GAUGE_EDGE_PAD_MIN_PX = 1;
-    private const GAUGE_EDGE_PAD_MAX_PX = 4;
     private const GAUGE_MIN_H_PX = 8;
-    private const GAUGE_WARN_G10 = 100;  // 10g
     private const GAUGE_ALERT_G10 = 200; // 20g
 
     // Blink state for "FUEL NOW" indicator
@@ -104,12 +100,26 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         DataField.initialize();
         _model    = model;
         _reminder = reminder;
-        _isTouch  = detectTouchScreen();
         _hasTouchHardware = detectTouchHardware();
         loadStrings();
     }
 
     function onLayout(dc as Dc) as Void {
+    }
+
+    (:testsupport)
+    public static function getGaugeAlertTone(deficitG10 as Number) as String {
+        if (deficitG10 <= 0) {
+            return "GREEN";
+        }
+        if (deficitG10 >= 200) {
+            return "RED";
+        }
+        return "ORANGE";
+    }
+
+    function onTimerLap() as Void {
+        _model.onTimerLap();
     }
 
     //! Called every second with activity info

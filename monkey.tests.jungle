@@ -1,0 +1,2 @@
+base.sourcePath = $(base.sourcePath);tests
+base.excludeAnnotations = lite;instinct;testReleaseOnly

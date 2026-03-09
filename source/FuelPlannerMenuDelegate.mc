@@ -2,6 +2,7 @@ import Toybox.Lang;
 import Toybox.WatchUi;
 
 //! Menu delegate for settings
+(:full)
 class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
 
     private var _storage as StorageManager;
@@ -223,6 +224,7 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
 }
 
 //! Generic number picker delegate - handles all simple setting pickers
+(:full)
 class NumberPickerDelegate extends WatchUi.Menu2InputDelegate {
     private var _item   as WatchUi.MenuItem;
     private var _setter as Lang.Method;
@@ -275,6 +277,7 @@ class NumberPickerDelegate extends WatchUi.Menu2InputDelegate {
 }
 
 //! Fixed interval picker - also refreshes the mode label (which embeds the interval)
+(:full)
 class FixedIntervalDelegate extends WatchUi.Menu2InputDelegate {
     private var _storage  as StorageManager;
     private var _item     as WatchUi.MenuItem;
@@ -332,6 +335,7 @@ class FixedIntervalDelegate extends WatchUi.Menu2InputDelegate {
 }
 
 //! Clear session confirmation delegate
+(:full)
 class ClearConfirmDelegate extends WatchUi.ConfirmationDelegate {
     private var _storage as StorageManager;
 

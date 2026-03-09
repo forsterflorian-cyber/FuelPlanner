@@ -1,27 +1,23 @@
 ==============================================================================
-PROJECT CONTEXT & HANDOVER - FuelPlanner
+HANDOVER: FuelPlanner (Release v0.5.0-alpha - Tier Symmetry)
 ==============================================================================
-Current Status: Initial Beta (v0.1.0)
-Principle: Relative Design (All UI scales via screen height/width factors)
+Status: Production-ready across all device tiers (Full & Lite).
 
-### KEY IMPLEMENTATIONS
-- Logic: FuelModel calculates deficit based on (ElapsedMinutes * Gph/60).
-- Modes: 
-  * Auto: Triggers when deficit reaches gel size.
-  * Fixed: Simple timer-based intervals.
-  * Calorie Auto: Carbs = burned calories * carb_fraction.
-- UI: FuelPlannerFieldView uses 3-zone touch interaction.
-  * Top 25%: Snooze / Half Dose.
-  * Center: Default Dose / Menu.
-  * Bottom 25%: Double Dose.
-- Hardware: Auto-Flow logic for button-only devices (Fenix/Forerunner).
+### ARCHITECTURE SUMMARY
+- Annotation Symmetry: Strictly enforced via (:full) and (:lite).
+- Full-Tier: Includes touch-zones, menu-system, and full FIT-logging.
+- Lite-Tier: Stripped-down logic for 32KB devices (Fenix 5/6, Instinct).
+- Build Separation: monkey.tests.jungle handles :test independently.
 
-### DATA INTEGRITY
-- Persistence: Session survives watch restarts mid-activity.
-- FIT Fields: Records mDeficitField and mTotalCarbsField for summary.
+### TECHNICAL STATS
+- Instinct 3 Release: ~23KB (well below 32KB limit).
+- Symbol Integrity: Zero leak of FieldDelegate/Menu symbols in Lite build.
+- Logic: 14/14 Unit, Chaos, and Memory tests passed (verified on fr955).
 
-### BACKLOG
-- [ ] Refine Calorie Auto metabolic efficiency factors.
-- [ ] Implement "Undo" logic for accidental bookings.
-- [ ] Add visual "Flash" feedback on successful logging.
+### PERSISTENCE & RECOVERY
+- Crash-recovery and Lap-based snapshots verified in both tiers.
+- Smart-Pause correctly excludes non-active time from deficit math.
+
+### KNOWN REMAINING
+- FIT field warnings on specific legacy hardware (suppressed/ignored).
 ==============================================================================

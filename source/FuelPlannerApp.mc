@@ -9,15 +9,24 @@ class FuelPlannerApp extends Application.AppBase {
     private var _model as FuelModel? = null;
     private var _storage as StorageManager? = null;
     private var _reminder as ReminderManager? = null;
+    (:full)
     private var _fieldDeficit as FitContributor.Field? = null;
+    (:full)
     private var _fieldConsumed as FitContributor.Field? = null;
+    (:full)
     private var _fieldTargetSummary as FitContributor.Field? = null;
+    (:full)
     private var _fieldActualSummary as FitContributor.Field? = null;
 
+    (:full)
     private const FIT_FIELD_ID_DEFICIT = 0;
+    (:full)
     private const FIT_FIELD_ID_CONSUMED = 1;
+    (:full)
     private const FIT_FIELD_ID_TARGET_SUMMARY = 2;
+    (:full)
     private const FIT_FIELD_ID_ACTUAL_SUMMARY = 3;
+    (:full)
     private const FIT_UNIT_GRAMS = "g";
 
     public function initialize() {
@@ -25,14 +34,15 @@ class FuelPlannerApp extends Application.AppBase {
     }
 
     public function onStart(state as Dictionary?) as Void {
-        _storage = new StorageManager();
+        _storage = new StorageManager(null, null);
         var storage = _storage as StorageManager;
-        _model = new FuelModel(storage);
+        _model = new FuelModel(storage, null);
         _reminder = new ReminderManager();
         var model = _model as FuelModel;
         model.loadSession();
     }
 
+    (:full)
     public function onStop(state as Dictionary?) as Void {
         if (_model != null) {
             var model = _model as FuelModel;
@@ -41,14 +51,21 @@ class FuelPlannerApp extends Application.AppBase {
         }
     }
 
+    (:lite)
+    public function onStop(state as Dictionary?) as Void {
+        if (_model != null) {
+            (_model as FuelModel).saveSession();
+        }
+    }
+
     public function onSettingsChanged() as Void {
         if (_storage == null) {
-            _storage = new StorageManager();
+            _storage = new StorageManager(null, null);
         }
         var storage = _storage as StorageManager;
 
         if (_model == null) {
-            _model = new FuelModel(storage);
+            _model = new FuelModel(storage, null);
             var model = _model as FuelModel;
             model.loadSession();
         }
@@ -58,11 +75,12 @@ class FuelPlannerApp extends Application.AppBase {
         WatchUi.requestUpdate();
     }
 
+    (:full)
     public function getInitialView() as [Views] or [Views, InputDelegates] {
         if (_model == null || _storage == null || _reminder == null) {
-            _storage = new StorageManager();
+            _storage = new StorageManager(null, null);
             var storage = _storage as StorageManager;
-            _model = new FuelModel(storage);
+            _model = new FuelModel(storage, null);
             _reminder = new ReminderManager();
         }
 
@@ -75,6 +93,22 @@ class FuelPlannerApp extends Application.AppBase {
         return [view, inputDelegate];
     }
 
+    (:lite)
+    public function getInitialView() as [Views] or [Views, InputDelegates] {
+        if (_model == null || _storage == null || _reminder == null) {
+            _storage = new StorageManager(null, null);
+            var storage = _storage as StorageManager;
+            _model = new FuelModel(storage, null);
+            _reminder = new ReminderManager();
+        }
+
+        var model = _model as FuelModel;
+        var reminder = _reminder as ReminderManager;
+        var view = new FuelPlannerFieldView(model, reminder);
+        return [view];
+    }
+
+    (:full)
     private function ensureFitFields(view as FuelPlannerFieldView) as Void {
         if (_fieldDeficit == null) {
             try {
@@ -129,6 +163,7 @@ class FuelPlannerApp extends Application.AppBase {
         }
     }
 
+    (:full)
     private function getActualIntakeSummaryLabel() as String {
         if (!isTouchScreenEnabled()) {
             return loadString(Rez.Strings.FitActualIntakeEstimateSummaryLabel, "Intake (Estimate)");
@@ -136,6 +171,7 @@ class FuelPlannerApp extends Application.AppBase {
         return loadString(Rez.Strings.FitActualIntakeSummaryLabel, "Actual Intake");
     }
 
+    (:full)
     private function isTouchScreenEnabled() as Boolean {
         try {
             var settings = System.getDeviceSettings();
@@ -148,6 +184,7 @@ class FuelPlannerApp extends Application.AppBase {
         return false;
     }
 
+    (:full)
     private function loadString(resourceId as Lang.ResourceId?, fallback as String) as String {
         if (resourceId == null) {
             return fallback;
@@ -161,11 +198,17 @@ class FuelPlannerApp extends Application.AppBase {
         return fallback;
     }
 
+    (:full)
     public function getSettingsView() as [Views] or [Views, InputDelegates] or Null {
-        var storage = new StorageManager();
+        var storage = new StorageManager(null, null);
         var menu = new FuelPlannerMenu(storage);
         var inputDelegate = new FuelPlannerMenuDelegate(storage, menu);
         return [menu, inputDelegate];
+    }
+
+    (:lite)
+    public function getSettingsView() as [Views] or [Views, InputDelegates] or Null {
+        return null;
     }
 
 }

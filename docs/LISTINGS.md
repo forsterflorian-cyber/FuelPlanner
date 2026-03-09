@@ -1,37 +1,46 @@
 ==============================================================================
-STORE LISTING - FuelPlanner
+STORE LISTING - FuelPlanner (v0.5.0-alpha)
 ==============================================================================
 
 [ENGLISH]
 FuelPlanner - Carbohydrate Intake Tracker
 Support the project: https://buymeacoffee.com/forsterf
 
-Never bonk again. FuelPlanner is a data field that tracks your 
-carbohydrate intake during running, cycling, or hiking and vibrates 
-when it is time to eat. Version 0.1 is the Initial Beta release 
-focused on robust race-day fueling logic and FIT-based 
-post-activity analysis.
+NEVER BONK AGAIN. 
+FuelPlanner is a professional Data Field that tracks your carbohydrate 
+intake during running, cycling, or hiking and vibrates when it is time 
+to fuel. Optimized for race-day reliability and memory efficiency.
 
-HOW IT WORKS:
-FuelPlanner monitors your active elapsed time and calculates your 
-carb demand based on your target rate. When the deficit reaches 
-your gel size, it reminds you to fuel. Paused time is excluded.
+### HOW IT WORKS
+FuelPlanner monitors your active elapsed time and calculates your carb 
+demand based on your personal target rate. When the deficit reaches 
+your configured gel size, it triggers a reminder. 
 
-THREE REMINDER MODES:
-- Auto (default): Triggers when your carb deficit reaches your 
-  configured gel size. Adapts dynamically.
-- Fixed Interval: Reminds you every N minutes.
-- Calorie Auto: Carbs calculated from burned calories (kcal * %).
+### THREE REMINDER MODES
+- AUTO (Default): Triggers when your carb deficit reaches your gel size. 
+  Adapts dynamically if you eat more or less than planned.
+- FIXED INTERVAL: Predictable reminders every N minutes.
+- CALORIE AUTO: Target carbs = calories burned x your carb fraction. 
+  Adapts perfectly to your actual effort and intensity.
 
-LOGGING INTAKE:
-- Tap Center: Log default gel/dose.
-- Tap Top 25%: Snooze or half dose.
-- Tap Bottom 25%: Log double dose.
-- Non-touch devices: Auto-Flow handles intake automatically.
+### LOGGING INTAKE
+- TAP CENTER: Log your default gel/dose.
+- TAP TOP 25%: Snooze reminder or log a half dose.
+- TAP BOTTOM 25%: Log a double dose.
+- NON-TOUCH DEVICES: Auto-Flow handles intake booking automatically 
+  when a reminder is due to keep your focus on the road.
 
-REAL-TIME FIT ANALYSIS:
-Custom FIT fields for deficit and consumed carbs are recorded and 
-can be reviewed directly in Garmin Connect after the workout.
+### VISUAL FEEDBACK
+- Color-coded countdown to next intake (Green/Yellow/Red).
+- Real-time deficit gauge at the edge.
+- Detailed stats: Consumed vs. Target grams and intake count.
+
+### SMART FEATURES
+- SMART-PAUSE: Paused time is excluded from fueling math.
+- FIT ANALYSIS: Custom FIT fields for deficit and consumed carbs 
+  recorded for post-activity review in Garmin Connect.
+- PERSISTENCE: Survives watch restarts mid-activity.
+- HOT-RELOAD: Settings updates apply instantly during your session.
 
 ------------------------------------------------------------------------------
 
@@ -39,28 +48,41 @@ can be reviewed directly in Garmin Connect after the workout.
 FuelPlanner - Kohlenhydrat-Tracker
 Unterstuetze das Projekt: https://buymeacoffee.com/forsterf
 
-Kein Hungerast mehr. FuelPlanner ist ein Datenfeld, das deine 
-Kohlenhydratzufuhr beim Laufen, Radfahren oder Wandern trackt und 
-dich vibriert, wenn es Zeit zum Essen ist. Version 0.1 ist der 
-Initial Beta-Release mit Fokus auf Wettkampf-Logik und FIT-Analyse.
+KEIN HUNGERAST MEHR.
+FuelPlanner ist ein professionelles Datenfeld, das deine Kohlenhydrat-
+zufuhr beim Laufen, Radfahren oder Wandern trackt und dich per 
+Vibration ans Essen erinnert. Optimiert fuer maximale Stabilitaet 
+am Wettkampftag.
 
-WIE ES FUNKTIONIERT:
+### WIE ES FUNKTIONIERT
 FuelPlanner ueberwacht deine aktive Zeit und berechnet den Carb-Bedarf 
 basierend auf deiner Zielrate. Erreicht das Defizit deine Gel-Groesse, 
-erfolgt die Erinnerung. Pausen werden automatisch erkannt.
+erfolgt die Erinnerung. Pausen werden automatisch ignoriert.
 
-DREI ERINNERUNGS-MODI:
-- Auto (Standard): Triggers bei Erreichen des Defizits.
-- Fixed Interval: Einfache zeitbasierte Intervalle.
-- Calorie Auto: Carbs basierend auf Kalorienverbrauch (kcal * %).
+### DREI ERINNERUNGS-MODI
+- AUTO (Standard): Reagiert dynamisch auf dein Defizit. Passt sich an, 
+  wenn du mehr oder weniger als geplant isst.
+- FIXED INTERVAL: Einfache, zeitbasierte Erinnerungen alle N Minuten.
+- CALORIE AUTO: Carbs basierend auf Kalorienverbrauch (kcal * %). 
+  Passt sich perfekt deiner tatsaechlichen Intensitaet an.
 
-LOGGING:
-- Mitte tippen: Standard Gel/Dosis buchen.
-- Oben 25%: Snooze oder halbe Dosis.
-- Unten 25%: Doppelte Dosis.
-- Button-Geraete: Auto-Flow bucht automatisch bei Faelligkeit.
+### LOGGING
+- MITTE TIPPEN: Standard Gel/Dosis buchen.
+- OBEN 25% TIPPEN: Snooze oder halbe Dosis buchen.
+- UNTEN 25% TIPPEN: Doppelte Dosis buchen.
+- BUTTON-GERAETE: Auto-Flow bucht automatisch bei Faelligkeit, damit 
+  dein Fokus auf der Strecke bleibt.
 
-ECHTZEIT FIT-ANALYSE:
-Spezielle FIT-Felder fuer Defizit und Carbs werden aufgezeichnet und 
-koennen nach dem Training in Garmin Connect analysiert werden.
+### VISUELLES FEEDBACK
+- Farbig codierter Countdown (Gruen/Gelb/Rot).
+- Defizit-Anzeige am Rand (Gauge) fuer schnellen Status-Check.
+- Anzeige von Konsumiert vs. Ziel (in Gramm) und Anzahl der Gels.
+
+### SMART FEATURES
+- SMART-PAUSE: Pausenzeit wird nicht in das Defizit eingerechnet.
+- FIT-ANALYSE: Aufzeichnung von Defizit und Verbrauch fuer die 
+  Analyse in Garmin Connect nach dem Training.
+- PERSISTENZ: Daten bleiben bei Neustart der Uhr erhalten.
+- HOT-RELOAD: Einstellungen werden sofort waehrend der Aktivitaet aktiv.
+
 ==============================================================================

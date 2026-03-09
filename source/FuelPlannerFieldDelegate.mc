@@ -1,6 +1,7 @@
 import Toybox.Lang;
 import Toybox.WatchUi;
 
+(:full)
 class FuelPlannerFieldDelegate extends WatchUi.InputDelegate {
     
     private var _model as FuelModel;

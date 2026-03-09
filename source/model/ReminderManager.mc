@@ -16,47 +16,73 @@ class ReminderManager {
     private var _lastVibeTime as Number = 0;
     private var _minVibInterval as Number = 2000; // Minimum 2 seconds between vibes
     private var _intakeReminderPattern as Array<Attention.VibeProfile>? = null;
-    private var _confirmationPattern as Array<Attention.VibeProfile>? = null;
     private var _autoIntakePattern as Array<Attention.VibeProfile>? = null;
+    (:full)
+    private var _confirmationPattern as Array<Attention.VibeProfile>? = null;
+    (:full)
     private var _undoPattern as Array<Attention.VibeProfile>? = null;
+    (:full)
     private var _snoozePattern as Array<Attention.VibeProfile>? = null;
     
     //! Constructor
     function initialize() {
-        buildPatterns();
         checkCapabilities();
     }
 
-    private function buildPatterns() as Void {
-        _intakeReminderPattern = [
-            new Attention.VibeProfile(100, VIBE_LONG),
-            new Attention.VibeProfile(0, VIBE_PAUSE),
-            new Attention.VibeProfile(100, VIBE_MEDIUM),
-            new Attention.VibeProfile(0, VIBE_PAUSE),
-            new Attention.VibeProfile(100, VIBE_LONG)
-        ] as Array<Attention.VibeProfile>;
+    private function getIntakeReminderPattern() as Array<Attention.VibeProfile> {
+        if (_intakeReminderPattern == null) {
+            _intakeReminderPattern = [
+                new Attention.VibeProfile(100, VIBE_LONG),
+                new Attention.VibeProfile(0, VIBE_PAUSE),
+                new Attention.VibeProfile(100, VIBE_MEDIUM),
+                new Attention.VibeProfile(0, VIBE_PAUSE),
+                new Attention.VibeProfile(100, VIBE_LONG)
+            ] as Array<Attention.VibeProfile>;
+        }
+        return _intakeReminderPattern as Array<Attention.VibeProfile>;
+    }
 
-        _confirmationPattern = [
-            new Attention.VibeProfile(50, VIBE_SHORT),
-            new Attention.VibeProfile(0, 50),
-            new Attention.VibeProfile(50, VIBE_SHORT)
-        ] as Array<Attention.VibeProfile>;
+    private function getAutoIntakePattern() as Array<Attention.VibeProfile> {
+        if (_autoIntakePattern == null) {
+            _autoIntakePattern = [
+                new Attention.VibeProfile(45, VIBE_SHORT),
+                new Attention.VibeProfile(0, 60),
+                new Attention.VibeProfile(45, VIBE_SHORT)
+            ] as Array<Attention.VibeProfile>;
+        }
+        return _autoIntakePattern as Array<Attention.VibeProfile>;
+    }
 
-        // Auto-Flow feedback: short double impulse (clearly distinct from reminder).
-        _autoIntakePattern = [
-            new Attention.VibeProfile(45, VIBE_SHORT),
-            new Attention.VibeProfile(0, 60),
-            new Attention.VibeProfile(45, VIBE_SHORT)
-        ] as Array<Attention.VibeProfile>;
+    (:full)
+    private function getConfirmationPattern() as Array<Attention.VibeProfile> {
+        if (_confirmationPattern == null) {
+            _confirmationPattern = [
+                new Attention.VibeProfile(50, VIBE_SHORT),
+                new Attention.VibeProfile(0, 50),
+                new Attention.VibeProfile(50, VIBE_SHORT)
+            ] as Array<Attention.VibeProfile>;
+        }
+        return _confirmationPattern as Array<Attention.VibeProfile>;
+    }
 
-        // Undo feedback: a single gentle pulse.
-        _undoPattern = [
-            new Attention.VibeProfile(20, 120)
-        ] as Array<Attention.VibeProfile>;
+    (:full)
+    private function getUndoPattern() as Array<Attention.VibeProfile> {
+        if (_undoPattern == null) {
+            _undoPattern = [
+                new Attention.VibeProfile(20, 120)
+            ] as Array<Attention.VibeProfile>;
+        }
+        return _undoPattern as Array<Attention.VibeProfile>;
+    }
 
-        _snoozePattern = [
-            new Attention.VibeProfile(25, VIBE_MEDIUM)
-        ] as Array<Attention.VibeProfile>;
+    (:full)
+    private function getSnoozePattern() as Array<Attention.VibeProfile> {
+        if (_snoozePattern == null) {
+            _snoozePattern = [
+                new Attention.VibeProfile(25, VIBE_MEDIUM)
+            ] as Array<Attention.VibeProfile>;
+        }
+        return _snoozePattern as Array<Attention.VibeProfile>;
     }
     
     //! Check device capabilities
@@ -88,6 +114,33 @@ class ReminderManager {
             _hasBacklight = false;
         }
     }
+
+    public static function shouldVibrate(nextDueInSec as Number,
+                                         isPaused as Boolean,
+                                         consumedTotalG10 as Number,
+                                         elapsedActiveSec as Number,
+                                         startDelayMin as Number,
+                                         lastReminderTimestamp as Number,
+                                         maxSnoozeMin as Number,
+                                         nowTimestamp as Number) as Boolean {
+        if (isPaused) {
+            return false;
+        }
+
+        if (consumedTotalG10 == 0 && elapsedActiveSec < startDelayMin * 60) {
+            return false;
+        }
+
+        if (nextDueInSec > 0) {
+            return false;
+        }
+
+        if (lastReminderTimestamp == 0) {
+            return true;
+        }
+
+        return (nowTimestamp - lastReminderTimestamp) >= (maxSnoozeMin * 60);
+    }
     
     //! Trigger reminder vibration pattern
     function triggerReminder() as Boolean {
@@ -100,8 +153,8 @@ class ReminderManager {
         var success = false;
         
         // Try vibration
-        if (_hasVibration && _intakeReminderPattern != null) {
-            success = vibratePattern(_intakeReminderPattern as Array<Attention.VibeProfile>);
+        if (_hasVibration) {
+            success = vibratePattern(getIntakeReminderPattern());
         }
         
         // Also flash backlight if available
@@ -117,17 +170,18 @@ class ReminderManager {
     }
     
     //! Trigger confirmation vibration (after intake recorded)
+    (:full)
     function triggerConfirmation() as Boolean {
-        if (!_hasVibration || _confirmationPattern == null) {
+        if (!_hasVibration) {
             return false;
         }
         
-        return vibratePattern(_confirmationPattern as Array<Attention.VibeProfile>);
+        return vibratePattern(getConfirmationPattern());
     }
 
     //! Trigger Auto-Flow intake confirmation (short double pulse)
     function triggerAutoIntake() as Boolean {
-        if (!_hasVibration || _autoIntakePattern == null) {
+        if (!_hasVibration) {
             return false;
         }
 
@@ -136,7 +190,7 @@ class ReminderManager {
             return false;
         }
 
-        var success = vibratePattern(_autoIntakePattern as Array<Attention.VibeProfile>);
+        var success = vibratePattern(getAutoIntakePattern());
         if (success) {
             _lastVibeTime = now;
         }
@@ -144,20 +198,22 @@ class ReminderManager {
     }
 
     //! Trigger undo feedback (single gentle pulse)
+    (:full)
     function triggerUndo() as Boolean {
-        if (!_hasVibration || _undoPattern == null) {
+        if (!_hasVibration) {
             return false;
         }
-        return vibratePattern(_undoPattern as Array<Attention.VibeProfile>);
+        return vibratePattern(getUndoPattern());
     }
     
     //! Trigger snooze confirmation
+    (:full)
     function triggerSnooze() as Boolean {
-        if (!_hasVibration || _snoozePattern == null) {
+        if (!_hasVibration) {
             return false;
         }
         
-        return vibratePattern(_snoozePattern as Array<Attention.VibeProfile>);
+        return vibratePattern(getSnoozePattern());
     }
     
     //! Execute vibration pattern

@@ -1,7 +1,6 @@
-# TODO - FuelPlanner
+# TODO - FuelPlanner Post-Release
 
-- [ ] Add "Undo" function (long press or center-hold).
-- [ ] Implement "Last Intake" timestamp on main screen.
-- [ ] Visual feedback (Green background flash) on intake booking.
-- [ ] Stress-test Auto-Flow logic on non-touch devices (Fenix 6/7).
-- [ ] Review memory footprint for low-memory devices (32kB limit).
+- [ ] Implement "Undo" logic within the In-Activity Menu.
+- [ ] Add visual background flash (Green) for successful intake logging.
+- [ ] Refactor FitContributor into a standalone :fitRecording module.
+- [ ] Perform field testing for vibration haptics at race intensity.

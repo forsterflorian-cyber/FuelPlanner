@@ -11,6 +11,15 @@ module FuelModelConsts {
     const TIMER_BACKTRACK_CONFIRM_TICKS   = 4;
 }
 
+class FuelClock {
+    function initialize() {
+    }
+
+    function now() as Number {
+        return Time.now().value();
+    }
+}
+
 //! Core calculation model for fuel planning
 class FuelModel {
     // Reminder modes (class-level const — class prototype, not per-instance heap)
@@ -20,6 +29,7 @@ class FuelModel {
 
     // State
     private var _storage              as StorageManager;
+    private var _clock                as FuelClock;
     private var _sessionActive        as Boolean = false;
     private var _startTimestamp       as Number  = 0;
     // Internally tracked in tenths of grams (g10)
@@ -71,8 +81,9 @@ class FuelModel {
     private var _timerBacktrackCount as Number = 0;
 
     //! Constructor
-    function initialize(storage as StorageManager) {
+    function initialize(storage as StorageManager, clock as FuelClock?) {
         _storage = storage;
+        _clock = (clock != null) ? clock : new FuelClock();
         _isTouch = detectTouchScreen();
         loadSettings();
     }
@@ -126,6 +137,7 @@ class FuelModel {
         }
     }
 
+    (:full)
     function setFitFields(fieldDeficit as FitContributor.Field?,
                           fieldConsumed as FitContributor.Field?,
                           fieldTargetSummary as FitContributor.Field?,
@@ -230,7 +242,7 @@ class FuelModel {
     }
 
     //! Main compute function — call every tick (1 Hz)
-    function compute(info as Activity.Info?) as Void {
+    function compute(info) as Void {
         if (info == null) {
             return;
         }
@@ -403,6 +415,7 @@ class FuelModel {
         checkReminderDue();
     }
 
+    (:full)
     private function updateFitFields() as Void {
         if (!isSessionActive()) {
             _forceNextFitFieldUpdate = true;
@@ -436,6 +449,12 @@ class FuelModel {
         writeFitSessionSummary(_fitFieldTargetSummary, _fitFieldActualSummary);
     }
 
+    (:lite)
+    private function updateFitFields() as Void {
+        _forceNextFitFieldUpdate = true;
+    }
+
+    (:full)
     function flushFitSessionSummary() as Void {
         if (!_sessionActive) {
             return;
@@ -443,6 +462,11 @@ class FuelModel {
         writeFitSessionSummary(_fitFieldTargetSummary, _fitFieldActualSummary);
     }
 
+    (:lite)
+    function flushFitSessionSummary() as Void {
+    }
+
+    (:full)
     private function writeFitSessionSummary(fieldTargetSummary as FitContributor.Field?,
                                             fieldActualSummary as FitContributor.Field?) as Void {
         try {
@@ -458,7 +482,7 @@ class FuelModel {
         } catch (e) {}
     }
 
-    private function getTimerTime(info as Activity.Info) as Number? {
+    private function getTimerTime(info) as Number? {
         try {
             if (info has :timerTime) {
                 var timerTime = getNonNegativeNumberOrNull(info.timerTime);
@@ -480,7 +504,7 @@ class FuelModel {
         return null;
     }
 
-    private function getActivityStartTimestamp(info as Activity.Info) as Number? {
+    private function getActivityStartTimestamp(info) as Number? {
         try {
             if (info has :startTime && info.startTime != null) {
                 return info.startTime.value();
@@ -491,7 +515,7 @@ class FuelModel {
         return null;
     }
 
-    private function isTimerStatePaused(info as Activity.Info) as Boolean {
+    private function isTimerStatePaused(info) as Boolean {
         try {
             if (info has :timerState &&
                 Activity has :TIMER_STATE_PAUSED &&
@@ -502,7 +526,7 @@ class FuelModel {
         return false;
     }
 
-    private function isTimerStateStoppedOrOff(info as Activity.Info) as Boolean {
+    private function isTimerStateStoppedOrOff(info) as Boolean {
         try {
             if (!(info has :timerState)) {
                 return false;
@@ -550,7 +574,7 @@ class FuelModel {
         return effectiveSec;
     }
 
-    private function updateCalorieData(info as Activity.Info) as Void {
+    private function updateCalorieData(info) as Void {
         _caloriesAvailable = false;
         _latestCaloriesKcal = 0;
         _latestEnergyExpKcalMin = 0.0f;
@@ -639,18 +663,62 @@ class FuelModel {
         _forceNextFitFieldUpdate = true;
     }
 
-    private function calculateTargetAndDeficit() as Void {
-        if (_reminderMode == MODE_CALORIE_AUTO && _caloriesAvailable) {
-            // Target = carbs the body has actually burned (estimated from watch calories)
-            _targetTotalG = ((_latestCaloriesKcal * _carbFractionPct * 10) + 200) / 400;
-        } else {
-            var safeCarbsRateGph10 = (_carbsTargetGph > 0)
-                ? _carbsTargetGph * 10
-                : _storage.MIN_CARBS_TARGET_GPH * 10;
-            _targetTotalG = (_elapsedActiveSec * safeCarbsRateGph10) / 3600;
+    public static function calculateTargetTotalG10(elapsedActiveSec as Number,
+                                                   carbsTargetGph as Number,
+                                                   reminderMode as Number,
+                                                   latestCaloriesKcal as Number,
+                                                   carbFractionPct as Number,
+                                                   caloriesAvailable as Boolean,
+                                                   minCarbsTargetGph as Number) as Number {
+        if (reminderMode == 2 && caloriesAvailable) {
+            // Target = burned carbs estimate in g10.
+            return ((latestCaloriesKcal * carbFractionPct * 10) + 200) / 400;
         }
 
-        _deficitG = _targetTotalG - _consumedTotalG;
+        var safeCarbsRateGph10 = ((carbsTargetGph > 0) ? carbsTargetGph : minCarbsTargetGph) * 10;
+        return (elapsedActiveSec * safeCarbsRateGph10) / 3600;
+    }
+
+    public static function calculateDeficit(elapsedActiveSec as Number,
+                                            consumedTotalG10 as Number,
+                                            carbsTargetGph as Number,
+                                            reminderMode as Number,
+                                            latestCaloriesKcal as Number,
+                                            carbFractionPct as Number,
+                                            caloriesAvailable as Boolean,
+                                            minCarbsTargetGph as Number) as Number {
+        return FuelModel.calculateTargetTotalG10(
+            elapsedActiveSec,
+            carbsTargetGph,
+            reminderMode,
+            latestCaloriesKcal,
+            carbFractionPct,
+            caloriesAvailable,
+            minCarbsTargetGph
+        ) - consumedTotalG10;
+    }
+
+    private function calculateTargetAndDeficit() as Void {
+        _targetTotalG = FuelModel.calculateTargetTotalG10(
+            _elapsedActiveSec,
+            _carbsTargetGph,
+            _reminderMode,
+            _latestCaloriesKcal,
+            _carbFractionPct,
+            _caloriesAvailable,
+            _storage.MIN_CARBS_TARGET_GPH
+        );
+
+        _deficitG = FuelModel.calculateDeficit(
+            _elapsedActiveSec,
+            _consumedTotalG,
+            _carbsTargetGph,
+            _reminderMode,
+            _latestCaloriesKcal,
+            _carbFractionPct,
+            _caloriesAvailable,
+            _storage.MIN_CARBS_TARGET_GPH
+        );
     }
 
     //! Recompute target/deficit/reminder timing from current state and settings.
@@ -668,6 +736,11 @@ class FuelModel {
     function setPaused(paused as Boolean) as Void {
         _isPaused = paused;
         _forceNextFitFieldUpdate = true;
+    }
+
+    (:testsupport)
+    function setTouchForTest(isTouch as Boolean) as Void {
+        _isTouch = isTouch;
     }
 
     //! Calculate time until next intake is due
@@ -729,24 +802,16 @@ class FuelModel {
 
     //! Check if reminder should fire
     private function checkReminderDue() as Void {
-        if (_isPaused) { _isReminderDue = false; return; }
-
-        // Never fire during the start delay (before any intake)
-        if (_consumedTotalG == 0 && _elapsedActiveSec < _startDelayMin * 60) {
-            _isReminderDue = false;
-            return;
-        }
-
-        if (_nextDueInSec <= 0) {
-            var snoozeSec             = _maxSnoozeMin * 60;
-            var now                   = getCurrentTimestamp();
-            var timeSinceLastReminder = now - _lastReminderTimestamp;
-
-            _isReminderDue = (_lastReminderTimestamp == 0 ||
-                              timeSinceLastReminder >= snoozeSec);
-        } else {
-            _isReminderDue = false;
-        }
+        _isReminderDue = ReminderManager.shouldVibrate(
+            _nextDueInSec,
+            _isPaused,
+            _consumedTotalG,
+            _elapsedActiveSec,
+            _startDelayMin,
+            _lastReminderTimestamp,
+            _maxSnoozeMin,
+            getCurrentTimestamp()
+        );
     }
 
     function recordReminderTriggered() as Void {
@@ -824,7 +889,17 @@ class FuelModel {
     }
 
     private function getCurrentTimestamp() as Number {
-        return Time.now().value();
+        return _clock.now();
+    }
+
+    function onTimerLap() as Void {
+        if (!_sessionActive) {
+            return;
+        }
+
+        calculateTargetAndDeficit();
+        _storage.setLastLapSnapshot(_sessionId, _elapsedActiveSec, _consumedTotalG, _deficitG);
+        saveSession();
     }
 
     // grams is always an integer Number, so * 10 is exact — no Float needed
