@@ -45,6 +45,9 @@
     <string id="LabelRateAutoNoData">auto (no cal data)</string>
     <string id="LabelEnableTouchForManual">Enable Touch for Intake</string>
     <string id="LabelAutoFlowActive">AUTO-FLOW active</string>
+    <string id="LabelRecovery">Recovery</string>
+    <string id="LabelRecoveryAction">Carbs</string>
+    <string id="LabelFuelingOk">Fueling OK</string>
 
     <!-- Field View: idle screen -->
     <string id="LabelWaiting">Start activity to begin</string>

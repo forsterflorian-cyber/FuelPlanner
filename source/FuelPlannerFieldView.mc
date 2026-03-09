@@ -24,8 +24,12 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private var _strEnableTouchForManual as String = "";
     private var _strAutoFlowActive as String = "";
     private var _strAutoFlowStatus as String = "";
+    private var _strRecovery as String = "";
+    private var _strRecoveryAction as String = "";
+    private var _strFuelingOk as String = "";
     private var _isTouch as Boolean = false;
     private var _hasTouchHardware as Boolean = false;
+    private var _showRecoveryLayout as Boolean = false;
 
     // Colors
     private const COLOR_NORMAL  = Graphics.COLOR_WHITE;
@@ -33,6 +37,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private const COLOR_ALERT   = Graphics.COLOR_RED;
     private const COLOR_GOOD    = Graphics.COLOR_GREEN;
     private const COLOR_DIM     = Graphics.COLOR_LT_GRAY;
+    private const COLOR_RECOVERY = Graphics.COLOR_ORANGE;
 
     // Vertical flow layout constants (relative to field size)
     private const SAFE_TOP_RATIO = 0.08f;
@@ -82,6 +87,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private const UNIT_G = "g";
     private const UNIT_GPH = " g/h";
     private const SEP_PIPE = " | ";
+    private const RECOVERY_MIN_G = 10;
 
     //Eating overlay config
     private var _overlayEndTime as Number = 0;
@@ -109,12 +115,16 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     //! Called every second with activity info
     function compute(info as Activity.Info) as Void {
         _model.compute(info);
+        _showRecoveryLayout = isTimerStateStoppedOrOff(info);
 
-        if (_model.consumeAutoIntakeEvent()) {
+        var autoIntakeTriggered = _model.consumeAutoIntakeEvent();
+        if (_showRecoveryLayout) {
+            _overlayEndTime = 0;
+        } else if (autoIntakeTriggered) {
             _reminder.triggerAutoIntake();
         }
 
-        if (_model.isReminderDue() && !_model.isPaused()) {
+        if (!_showRecoveryLayout && _model.isReminderDue() && !_model.isPaused()) {
             if (_reminder.triggerReminder()) { // Liefert true, wenn der Alarm gerade ausgelöst wurde
                 _model.recordReminderTriggered();
                 // Starte den Overlay-Timer für 3 Sekunden
@@ -152,6 +162,11 @@ class FuelPlannerFieldView extends WatchUi.DataField {
 
         if (!_model.isSessionActive()) {
             drawNoSession(dc, cx, h, textColor, dimColor);
+            return;
+        }
+
+        if (_showRecoveryLayout) {
+            drawRecoveryLayout(dc, w, h, cx);
             return;
         }
 
@@ -218,6 +233,9 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         _strEnableTouchForManual = loadString(Rez.Strings.LabelEnableTouchForManual, "Enable Touch for Manual");
         _strAutoFlowActive = loadString(Rez.Strings.LabelAutoFlowActive, "AUTO-FLOW active");
         _strAutoFlowStatus = loadString(Rez.Strings.LabelAutoFlowStatus, "AUTO-FLOW");
+        _strRecovery = loadString(Rez.Strings.LabelRecovery, "Recovery");
+        _strRecoveryAction = loadString(Rez.Strings.LabelRecoveryAction, "Carbs");
+        _strFuelingOk = loadString(Rez.Strings.LabelFuelingOk, "Fueling OK");
     }
 
     //! Zeichnet ein auffälliges Vollbild-Overlay
@@ -254,6 +272,57 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         dc.drawText(cx, h / 2 + h / 20, Graphics.FONT_TINY,
                     _strWaiting,
                     Graphics.TEXT_JUSTIFY_CENTER);
+    }
+
+    private function drawRecoveryLayout(dc as Dc, w as Number, h as Number,
+                                        cx as Number) as Void {
+        var recoveryDeficit = _model.getRecoveryDeficit();
+        var showRecoveryHint = false;
+        if (recoveryDeficit != null) {
+            showRecoveryHint = recoveryDeficit > RECOVERY_MIN_G;
+        }
+        var panelColor = showRecoveryHint ? COLOR_RECOVERY : COLOR_GOOD;
+        var titleText = showRecoveryHint ? _strRecovery : _strFuelingOk;
+        var valueText = "";
+        var noteText = "";
+        if (showRecoveryHint && recoveryDeficit != null) {
+            valueText = "+" + recoveryDeficit.format("%d") + UNIT_G;
+            noteText = _strRecoveryAction;
+        }
+
+        dc.setColor(panelColor, panelColor);
+        dc.fillRectangle(0, 0, w, h);
+
+        var titleFont = getBestFontForHeight(dc, (h.toFloat() * 0.15f).toNumber(), false);
+        var valueFont = getBestFontForHeight(dc, (h.toFloat() * 0.30f).toNumber(), true);
+        var noteFont  = getBestFontForHeight(dc, (h.toFloat() * 0.11f).toNumber(), false);
+        var gap = getRowGap(h);
+
+        var titleH = dc.getTextDimensions(titleText, titleFont)[1];
+        var valueH = (valueText != "") ? dc.getTextDimensions(valueText, valueFont)[1] : 0;
+        var noteH  = (noteText != "") ? dc.getTextDimensions(noteText, noteFont)[1] : 0;
+        var rowCount = 1;
+        if (valueH > 0) { rowCount += 1; }
+        if (noteH > 0) { rowCount += 1; }
+
+        var totalHeight = titleH + valueH + noteH + ((rowCount - 1) * gap);
+        var y = (h - totalHeight) / 2;
+        if (y < 0) { y = 0; }
+
+        dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(cx, y, titleFont, titleText, Graphics.TEXT_JUSTIFY_CENTER);
+        y += titleH;
+
+        if (valueText != "") {
+            y += gap;
+            dc.drawText(cx, y, valueFont, valueText, Graphics.TEXT_JUSTIFY_CENTER);
+            y += valueH;
+        }
+
+        if (noteText != "") {
+            y += gap;
+            dc.drawText(cx, y, noteFont, noteText, Graphics.TEXT_JUSTIFY_CENTER);
+        }
     }
 
     //! Main layout rendered as a vertical flow from top to bottom.
@@ -709,6 +778,23 @@ private function clampFloat(val, min, max) {
             return _strRateAutoNoData;
         }
         return _strRateTargetPrefix + " " + _model.getCarbsTargetGph().format("%d") + UNIT_GPH;
+    }
+
+    private function isTimerStateStoppedOrOff(info as Activity.Info) as Boolean {
+        try {
+            if (!(info has :timerState)) {
+                return false;
+            }
+            if (Activity has :TIMER_STATE_STOPPED &&
+                info.timerState == Activity.TIMER_STATE_STOPPED) {
+                return true;
+            }
+            if (Activity has :TIMER_STATE_OFF &&
+                info.timerState == Activity.TIMER_STATE_OFF) {
+                return true;
+            }
+        } catch (e) {}
+        return false;
     }
 
     //! Format seconds as m:ss or Xh:mm

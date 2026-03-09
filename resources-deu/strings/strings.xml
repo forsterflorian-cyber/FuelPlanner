@@ -46,6 +46,9 @@
     <string id="LabelRateAutoNoData">auto (keine KH-Daten)</string>
     <string id="LabelEnableTouchForManual">Bitte Touchscreen aktivieren</string>
     <string id="LabelAutoFlowActive">AUTO-FLOW active</string>
+    <string id="LabelRecovery">Recovery</string>
+    <string id="LabelRecoveryAction">KH fuellen</string>
+    <string id="LabelFuelingOk">Fueling OK</string>
 
     <!-- Field View: idle screen -->
     <string id="LabelWaiting">Aktivität starten</string>

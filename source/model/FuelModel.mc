@@ -302,29 +302,28 @@ class FuelModel {
         }
         _elapsedActiveSec = effectiveTimerSec;
 
+        var timerStateStoppedOrOff = isTimerStateStoppedOrOff(info);
         detectPause(timerTime, timerStatePaused);
+        updateCalorieData(info);
+        calculateTargetAndDeficit();
+
+        if (timerStateStoppedOrOff) {
+            _isReminderDue = false;
+            _nextDueInSec = 0;
+            _autoIntakeLocked = false;
+            _autoIntakeEventPending = false;
+            updateFitFields();
+            return;
+        }
         if (_isPaused) {
             _isReminderDue = false;
+            _nextDueInSec = 0;
             _autoIntakeLocked = false;
+            _autoIntakeEventPending = false;
             updateFitFields();
             return;
         }
 
-        updateCalorieData(info);
-
-        // --- Calculate target in g10 (tenths of grams) ---
-        if (_reminderMode == MODE_CALORIE_AUTO && _caloriesAvailable) {
-            // Target = carbs the body has actually burned (estimated from watch calories)
-            // Formula: kcal × carbFraction / 4 kcal-per-gram
-            _targetTotalG = ((_latestCaloriesKcal * _carbFractionPct * 10) + 200) / 400;
-        } else {
-            var safeCarbsRateGph10 = (_carbsTargetGph > 0)
-                ? _carbsTargetGph * 10
-                : _storage.MIN_CARBS_TARGET_GPH * 10;
-            _targetTotalG = (_elapsedActiveSec * safeCarbsRateGph10) / 3600;
-        }
-
-        _deficitG = _targetTotalG - _consumedTotalG;
 
         calculateNextDue();
         checkReminderDue();
@@ -503,6 +502,23 @@ class FuelModel {
         return false;
     }
 
+    private function isTimerStateStoppedOrOff(info as Activity.Info) as Boolean {
+        try {
+            if (!(info has :timerState)) {
+                return false;
+            }
+            if (Activity has :TIMER_STATE_STOPPED &&
+                info.timerState == Activity.TIMER_STATE_STOPPED) {
+                return true;
+            }
+            if (Activity has :TIMER_STATE_OFF &&
+                info.timerState == Activity.TIMER_STATE_OFF) {
+                return true;
+            }
+        } catch (e) {}
+        return false;
+    }
+
     private function getEffectiveTimerSec(rawTimerSec as Number,
                                           timerStatePaused as Boolean) as Number {
         if (timerStatePaused) {
@@ -623,14 +639,9 @@ class FuelModel {
         _forceNextFitFieldUpdate = true;
     }
 
-    //! Recompute target/deficit/reminder timing from current state and settings.
-    private function recalculateFromCurrentState() as Void {
-        if (_isPaused) {
-            _isReminderDue = false;
-            return;
-        }
-
+    private function calculateTargetAndDeficit() as Void {
         if (_reminderMode == MODE_CALORIE_AUTO && _caloriesAvailable) {
+            // Target = carbs the body has actually burned (estimated from watch calories)
             _targetTotalG = ((_latestCaloriesKcal * _carbFractionPct * 10) + 200) / 400;
         } else {
             var safeCarbsRateGph10 = (_carbsTargetGph > 0)
@@ -640,6 +651,16 @@ class FuelModel {
         }
 
         _deficitG = _targetTotalG - _consumedTotalG;
+    }
+
+    //! Recompute target/deficit/reminder timing from current state and settings.
+    private function recalculateFromCurrentState() as Void {
+        if (_isPaused) {
+            _isReminderDue = false;
+            return;
+        }
+
+        calculateTargetAndDeficit();
         calculateNextDue();
         checkReminderDue();
     }
@@ -848,5 +869,21 @@ class FuelModel {
 
     function getIntakeCount() as Number {
         return _intakeCount;
+    }
+
+    function getRecoveryDeficit() as Number? {
+        if (!_sessionActive || _elapsedActiveSec <= 0) {
+            return null;
+        }
+
+        var safeCarbsRateGph10 = (_carbsTargetGph > 0)
+            ? _carbsTargetGph * 10
+            : _storage.MIN_CARBS_TARGET_GPH * 10;
+        var recoveryTargetG10 = (_elapsedActiveSec * safeCarbsRateGph10) / 3600;
+        var recoveryDeficitG10 = recoveryTargetG10 - _consumedTotalG;
+        if (recoveryDeficitG10 <= 0) {
+            return null;
+        }
+        return (recoveryDeficitG10 + 5) / 10;
     }
 }
