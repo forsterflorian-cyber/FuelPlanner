@@ -1,5 +1,6 @@
 using Toybox.Test;
 import Toybox.Lang;
+import Toybox.Activity;
 
 class ReminderTests {
 
@@ -83,6 +84,67 @@ class ReminderTests {
         Test.assertMessage(atBoundary, "Snooze should release the reminder exactly after 5:00.");
         Test.assertMessage(elapsedSnoozeSec == 300, "Snooze should wait exactly 300 seconds at the 5 minute boundary.");
         Test.assertEqual(300, elapsedSnoozeSec);
+        return true;
+    }
+
+    (:test)
+    static function intakeImmediatelyClearsDueState(logger as Test.Logger) as Boolean {
+        var clock = new MockClock(7000);
+        var props = new MockPropertiesBackend();
+        props.setValue("carbsTargetGph", 60);
+        props.setValue("doseG", 25);
+        props.setValue("startDelayMin", 0);
+
+        var model = buildModel(clock, props);
+        var info = new MockActivityInfo(7000);
+        info.setTimerSeconds(1500);
+        model.compute(info);
+
+        Test.assertMessage(model.isReminderDue(), "The reminder should be due at the threshold.");
+
+        model.recordDefaultIntake();
+
+        logger.debug("postIntakeDeficitG10=" + model.getDeficitG10().format("%d"));
+        logger.debug("postIntakeDisplayNextDueSec=" + model.getDisplayNextDueInSec().format("%d"));
+
+        Test.assertMessage(!model.isReminderDue(), "Logging intake must clear the active due-state immediately.");
+        Test.assertMessage(model.getDisplayNextDueInSec() > 0, "Logging intake must restore a positive countdown immediately.");
+        Test.assertEqual(0, model.getDeficitG10());
+        return true;
+    }
+
+    (:test)
+    static function pausePreservesSnoozeCountdown(logger as Test.Logger) as Boolean {
+        var clock = new MockClock(9000);
+        var props = new MockPropertiesBackend();
+        props.setValue("carbsTargetGph", 60);
+        props.setValue("doseG", 25);
+        props.setValue("startDelayMin", 0);
+        props.setValue("maxSnoozeMin", 5);
+
+        var model = buildModel(clock, props);
+        var info = new MockActivityInfo(9000);
+        info.setTimerSeconds(1500);
+        model.compute(info);
+        model.recordReminderTriggered();
+
+        var countdownBeforePause = model.getDisplayNextDueInSec();
+
+        info.timerState = Activity.TIMER_STATE_PAUSED;
+        model.compute(info);
+        clock.advance(240);
+        model.compute(info);
+
+        info.timerState = null;
+        info.setTimerSeconds(1501);
+        model.compute(info);
+        var countdownAfterResume = model.getDisplayNextDueInSec();
+
+        logger.debug("countdownBeforePause=" + countdownBeforePause.format("%d"));
+        logger.debug("countdownAfterResume=" + countdownAfterResume.format("%d"));
+
+        Test.assertMessage(countdownBeforePause >= 299, "Snooze should start near the full configured duration.");
+        Test.assertMessage(countdownAfterResume >= 299, "Paused wall-clock time must not consume the snooze countdown.");
         return true;
     }
 }

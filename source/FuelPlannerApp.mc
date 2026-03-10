@@ -113,7 +113,7 @@ class FuelPlannerApp extends Application.AppBase {
         if (_fieldDeficit == null) {
             try {
                 _fieldDeficit = view.createField(
-                    "Aktuelles Defizit",
+                    loadString(Rez.Strings.FitDeficitDataLabel, "Current Deficit"),
                     FIT_FIELD_ID_DEFICIT,
                     FitContributor.DATA_TYPE_FLOAT,
                     { :mesgType => FitContributor.MESG_TYPE_RECORD, :units => FIT_UNIT_GRAMS }
@@ -126,7 +126,7 @@ class FuelPlannerApp extends Application.AppBase {
         if (_fieldConsumed == null) {
             try {
                 _fieldConsumed = view.createField(
-                    "Gesamtaufnahme",
+                    loadString(Rez.Strings.FitConsumedDataLabel, "Total Intake"),
                     FIT_FIELD_ID_CONSUMED,
                     FitContributor.DATA_TYPE_FLOAT,
                     { :mesgType => FitContributor.MESG_TYPE_RECORD, :units => FIT_UNIT_GRAMS }
@@ -202,7 +202,7 @@ class FuelPlannerApp extends Application.AppBase {
     public function getSettingsView() as [Views] or [Views, InputDelegates] or Null {
         var storage = new StorageManager(null, null);
         var menu = new FuelPlannerMenu(storage);
-        var inputDelegate = new FuelPlannerMenuDelegate(storage, menu);
+        var inputDelegate = new FuelPlannerMenuDelegate(storage, menu, _model);
         return [menu, inputDelegate];
     }
 

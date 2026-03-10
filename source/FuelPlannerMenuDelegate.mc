@@ -7,6 +7,7 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
 
     private var _storage as StorageManager;
     private var _fuelMenu as FuelPlannerMenu;
+    private var _model as FuelModel?;
     private var _strModeAuto as String = "";
     private var _strModeFixed as String = "";
     private var _strModeCalorieAuto as String = "";
@@ -24,10 +25,11 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
     private var _suffixGrams as String = "";
     private var _suffixMinutes as String = "";
 
-    function initialize(storage as StorageManager, menu as FuelPlannerMenu) {
+    function initialize(storage as StorageManager, menu as FuelPlannerMenu, model as FuelModel?) {
         Menu2InputDelegate.initialize();
         _storage = storage;
         _fuelMenu = menu;
+        _model = model;
         loadStrings();
     }
 
@@ -178,7 +180,7 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
 
             case :clearSession:
                 var confirm = new WatchUi.Confirmation(_strLabelConfirmClear);
-                WatchUi.pushView(confirm, new ClearConfirmDelegate(_storage), WatchUi.SLIDE_UP);
+                WatchUi.pushView(confirm, new ClearConfirmDelegate(_storage, _model), WatchUi.SLIDE_UP);
                 break;
 
             case :separator:
@@ -338,16 +340,20 @@ class FixedIntervalDelegate extends WatchUi.Menu2InputDelegate {
 (:full)
 class ClearConfirmDelegate extends WatchUi.ConfirmationDelegate {
     private var _storage as StorageManager;
+    private var _model as FuelModel?;
 
-    function initialize(storage as StorageManager) {
+    function initialize(storage as StorageManager, model as FuelModel?) {
         ConfirmationDelegate.initialize();
         _storage = storage;
+        _model = model;
     }
 
     function onResponse(response as WatchUi.Confirm) as Boolean {
         if (response == WatchUi.CONFIRM_YES) {
             _storage.clearSession();
-            _storage.clearIntakeLog();
+            if (_model != null) {
+                (_model as FuelModel).clearSessionState();
+            }
         }
         WatchUi.popView(WatchUi.SLIDE_DOWN);
         return true;

@@ -15,3 +15,7 @@ fenix5s.excludeAnnotations = full;test;testsupport
 fenix5x.excludeAnnotations = full;test;testsupport
 fenix6.excludeAnnotations = full;test;testsupport
 fenix6s.excludeAnnotations = full;test;testsupport
+vivoactive4.excludeAnnotations = full;test;testsupport
+vivoactive4s.excludeAnnotations = full;test;testsupport
+fr245.excludeAnnotations = full;test;testsupport
+instinctcrossover.excludeAnnotations = full;test;testsupport

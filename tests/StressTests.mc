@@ -122,7 +122,6 @@ class StressTests {
         var clock = ctx["clock"] as MockClock;
         var props = ctx["props"] as MockPropertiesBackend;
         var storageBackend = ctx["storageBackend"] as MockStorageBackend;
-        var storage = ctx["storage"] as StorageManager;
         var model = ctx["model"] as FuelModel;
         applyDefaultRaceSettings(props, model);
 
@@ -135,8 +134,7 @@ class StressTests {
         model.recordIntake(25);
         logger.debug(
             "crash_after_intake consumedG10=" + model.getConsumedTotalG10().format("%d") +
-            " intakeCount=" + model.getIntakeCount().format("%d") +
-            " lastLapSnapshot=" + boolToAscii(storage.getLastLapSnapshot() != null)
+            " intakeCount=" + model.getIntakeCount().format("%d")
         );
 
         var crashState = simulateCrash(storageBackend, props, 5100);
@@ -144,7 +142,6 @@ class StressTests {
         restoredModel.compute(info);
         logFuelStatus(logger, "crash_after_reload", restoredModel);
 
-        Test.assertMessage(storage.getLastLapSnapshot() == null, "Crash recovery should not depend on a lap snapshot.");
         Test.assertMessage(restoredModel.getConsumedTotalG10() == 250, "Booked carbs must survive a crash without onTimerLap.");
         Test.assertEqual(250, restoredModel.getConsumedTotalG10());
         Test.assertMessage(restoredModel.getIntakeCount() == 1, "Intake count must survive the crash.");

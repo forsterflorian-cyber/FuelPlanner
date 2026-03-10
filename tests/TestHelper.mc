@@ -158,6 +158,7 @@ function buildFuelStatusLine(label as String, model as FuelModel) as String {
         " consumedG10=" + model.getConsumedTotalG10().format("%d") +
         " deficitG10=" + model.getDeficitG10().format("%d") +
         " nextDueSec=" + model.getNextDueInSec().format("%d") +
+        " displayNextDueSec=" + model.getDisplayNextDueInSec().format("%d") +
         " reminderDue=" + boolToAscii(model.isReminderDue()) +
         " gaugeTone=" + FuelPlannerFieldView.getGaugeAlertTone(model.getDeficitG10())
     );

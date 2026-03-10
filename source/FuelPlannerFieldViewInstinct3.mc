@@ -135,6 +135,10 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     }
 
     private function drawGauge(dc as Dc, w as Number, h as Number, bgColor as Number) as Void {
+        if (h < 100 || w < 100) {
+            return;
+        }
+
         var doseG10 = _model.getDoseG10();
         if (doseG10 <= 0) {
             return;
@@ -171,10 +175,10 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         if (_model.isPaused()) {
             return loadString(Rez.Strings.LabelPaused, "PAUSED");
         }
-        if (_model.isReminderDue() || _model.getNextDueInSec() <= 0) {
+        if (_model.isReminderDue()) {
             return loadString(Rez.Strings.LabelFuelNow, "FUEL NOW");
         }
-        return loadString(Rez.Strings.LabelNext, "Next") + " " + formatDuration(_model.getNextDueInSec());
+        return loadString(Rez.Strings.LabelNext, "Next") + " " + formatDuration(_model.getDisplayNextDueInSec());
     }
 
     private function buildDeficitText() as String {

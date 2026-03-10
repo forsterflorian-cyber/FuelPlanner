@@ -41,7 +41,7 @@
     <string id="LabelOnTarget">Im Ziel</string>
 
     <!-- Field View: rate label row -->
-    <string id="LabelRateTargetPrefix">Ziel</string>
+    <string id="LabelRateTargetPrefix">Plan</string>
     <string id="LabelRateAutoCarbsSuffix">% KH</string>
     <string id="LabelRateAutoNoData">auto (keine KH-Daten)</string>
     <string id="LabelEnableTouchForManual">Bitte Touchscreen aktivieren</string>
@@ -70,7 +70,7 @@
     <string id="FitDeficitDataLabel">Aktuelles Defizit</string>
     <string id="FitConsumedChartTitle">Gesamtaufnahme</string>
     <string id="FitConsumedDataLabel">Gesamtaufnahme</string>
-    <string id="FitTargetCarbsSummaryLabel">Target Carbs</string>
-    <string id="FitActualIntakeSummaryLabel">Actual Intake</string>
+    <string id="FitTargetCarbsSummaryLabel">Geplante KH</string>
+    <string id="FitActualIntakeSummaryLabel">Gebuchte KH</string>
     <string id="FitActualIntakeEstimateSummaryLabel">Intake (Estimate)</string>
 </strings>

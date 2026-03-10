@@ -22,13 +22,10 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private var _strRateTargetPrefix as String = "";
     private var _strRateAutoCarbsSuffix as String = "";
     private var _strRateAutoNoData as String = "";
-    private var _strEnableTouchForManual as String = "";
-    private var _strAutoFlowActive as String = "";
     private var _strAutoFlowStatus as String = "";
     private var _strRecovery as String = "";
     private var _strRecoveryAction as String = "";
     private var _strFuelingOk as String = "";
-    private var _hasTouchHardware as Boolean = false;
     private var _showRecoveryLayout as Boolean = false;
 
     // Colors
@@ -77,9 +74,11 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private var _lastBlinkTime as Number  = 0;
     private const BLINK_INTERVAL = 500;
 
-    // Last known field height (for tap zone mapping in multi-field layouts)
+    // Last known field size (for tap zone mapping in multi-field layouts)
+    private var _lastFieldWidth as Number = 0;
     private var _lastFieldHeight as Number = 0;
     private const DEFAULT_SCREEN_HEIGHT = 240;
+    private const DEFAULT_SCREEN_WIDTH = 240;
     private const UNIT_G = "g";
     private const UNIT_GPH = " g/h";
     private const SEP_PIPE = " | ";
@@ -96,11 +95,17 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         return getScreenHeight();
     }
 
+    function getFieldWidth() as Number {
+        if (_lastFieldWidth > 0) {
+            return _lastFieldWidth;
+        }
+        return getScreenWidth();
+    }
+
     function initialize(model as FuelModel, reminder as ReminderManager) {
         DataField.initialize();
         _model    = model;
         _reminder = reminder;
-        _hasTouchHardware = detectTouchHardware();
         loadStrings();
     }
 
@@ -120,6 +125,10 @@ class FuelPlannerFieldView extends WatchUi.DataField {
 
     function onTimerLap() as Void {
         _model.onTimerLap();
+    }
+
+    function dismissOverlay() as Void {
+        _overlayEndTime = 0;
     }
 
     //! Called every second with activity info
@@ -151,6 +160,10 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     function onUpdate(dc as Dc) as Void {
         var bgColor = getBackgroundColor();
         var now = System.getTimer();
+        var w  = dc.getWidth();
+        var h  = dc.getHeight();
+        _lastFieldWidth = w;
+        _lastFieldHeight = h;
         dc.setColor(Graphics.COLOR_TRANSPARENT, bgColor);
         dc.clear();
         // Prüfen, ob das Overlay aktiv sein soll
@@ -158,17 +171,13 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             drawReminderOverlay(dc);
             return; // Wir brechen hier ab, damit das Overlay die ganze Fläche nutzt
         }
-        var w  = dc.getWidth();
-        var h  = dc.getHeight();
-        _lastFieldHeight = h;
         var cx = w / 2;
 
         var isDark    = (bgColor == Graphics.COLOR_BLACK);
         var textColor = isDark ? COLOR_NORMAL : Graphics.COLOR_BLACK;
         var dimColor  = isDark ? COLOR_DIM    : Graphics.COLOR_DK_GRAY;
 
-        var touchEnabled = System.getDeviceSettings().isTouchScreen;
-        if (touchEnabled) { _hasTouchHardware = true; }
+        var touchEnabled = isTouchEnabled();
 
         if (!_model.isSessionActive()) {
             drawNoSession(dc, cx, h, textColor, dimColor);
@@ -183,25 +192,16 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         drawMainLayout(dc, w, h, cx, textColor, dimColor, touchEnabled);
     }
 
-    private function detectTouchScreen() as Boolean {
+    private function isTouchEnabled() as Boolean {
         try {
             var settings = System.getDeviceSettings();
-            if (settings != null && settings has :isTouchScreen) {
+            if (settings != null &&
+                settings has :isTouchScreen &&
+                settings.isTouchScreen instanceof Boolean) {
                 return settings.isTouchScreen;
             }
         } catch (e) {}
         return false;
-    }
-
-    private function detectTouchHardware() as Boolean {
-        try {
-            if (Rez has :DeviceInfo &&
-                Rez.DeviceInfo has :hasTouchScreen &&
-                Rez.DeviceInfo.hasTouchScreen instanceof Boolean) {
-                return Rez.DeviceInfo.hasTouchScreen;
-            }
-        } catch (e) {}
-        return getScreenHeight() >= 260;
     }
 
     private function getScreenHeight() as Number {
@@ -212,6 +212,16 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             }
         } catch (e) {}
         return DEFAULT_SCREEN_HEIGHT;
+    }
+
+    private function getScreenWidth() as Number {
+        try {
+            var settings = System.getDeviceSettings();
+            if (settings != null && settings has :screenWidth && settings.screenWidth instanceof Number) {
+                return settings.screenWidth;
+            }
+        } catch (e) {}
+        return DEFAULT_SCREEN_WIDTH;
     }
 
     private function loadString(resourceId as Lang.ResourceId?, fallback as String) as String {
@@ -237,11 +247,9 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         _strBehind = loadString(Rez.Strings.LabelBehind, "Behind");
         _strAhead = loadString(Rez.Strings.LabelAhead, "Ahead");
         _strOnTarget = loadString(Rez.Strings.LabelOnTarget, "On target");
-        _strRateTargetPrefix = loadString(Rez.Strings.LabelRateTargetPrefix, "Target");
+        _strRateTargetPrefix = loadString(Rez.Strings.LabelRateTargetPrefix, "Plan");
         _strRateAutoCarbsSuffix = loadString(Rez.Strings.LabelRateAutoCarbsSuffix, "% carbs");
         _strRateAutoNoData = loadString(Rez.Strings.LabelRateAutoNoData, "auto: no calorie data");
-        _strEnableTouchForManual = loadString(Rez.Strings.LabelEnableTouchForManual, "Enable Touch for Manual");
-        _strAutoFlowActive = loadString(Rez.Strings.LabelAutoFlowActive, "AUTO-FLOW active");
         _strAutoFlowStatus = loadString(Rez.Strings.LabelAutoFlowStatus, "AUTO-FLOW");
         _strRecovery = loadString(Rez.Strings.LabelRecovery, "Recovery");
         _strRecoveryAction = loadString(Rez.Strings.LabelRecoveryAction, "Carbs");
@@ -261,7 +269,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         
         var font = Graphics.FONT_LARGE;
-        var doseText = _model.getDoseG().format("%d") + "g Carbs";
+        var doseText = _model.getDoseG().format("%d") + UNIT_G;
 
         // Text zentriert ausgeben
         dc.drawText(w/2, h/2 - 20, font, _strFuelNow, Graphics.TEXT_JUSTIFY_CENTER);
@@ -340,14 +348,14 @@ class FuelPlannerFieldView extends WatchUi.DataField {
                                     cx as Number, textColor as Number,
                                     dimColor as Number, touchEnabled as Boolean) as Void {
         var isReminderDue = _model.isReminderDue();
-        var nextDueSec    = _model.getNextDueInSec();
+        var nextDueSec    = _model.getDisplayNextDueInSec();
         var isPaused      = _model.isPaused();
         var doseG         = _model.getDoseG();
         var doseG10       = _model.getDoseG10();
 
-        var showHint  = (h >= 115);
+        var showHint  = (touchEnabled && h >= 140);
         var showMeta  = (h >= 115);
-        var showLabel = (h >= 80);
+        var showLabel = (h >= 90);
         var drawLabel = showLabel;
         var drawMeta  = showMeta;
         var drawHint  = showHint;
@@ -379,7 +387,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         if (isPaused) {
             statusText  = _strPaused;
             statusColor = COLOR_WARNING;
-        } else if (isReminderDue || nextDueSec <= 0) {
+        } else if (isReminderDue) {
             if (touchEnabled) {
                 statusText = _blinkState
                     ? _strFuelNow
@@ -452,15 +460,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         // Row 6: interaction hint
         var hintText = "";
         if (drawHint) {
-            if (touchEnabled) {
-                var half = doseG / 2;
-                if (half < 5) { half = 5; }
-                hintText = half.format("%d") + UNIT_G + " / " + doseG.format("%d") + UNIT_G + " / " + (doseG * 2).format("%d") + UNIT_G;
-            } else if (_hasTouchHardware) {
-                hintText = _strEnableTouchForManual;
-            } else {
-                hintText = _strAutoFlowActive;
-            }
+            hintText = _strTapPrefix + doseG + UNIT_G;
         }
 
         // Pre-measure row heights for flow layout and overflow handling.
@@ -470,9 +470,9 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         var labelH   = drawLabel ? dc.getTextDimensions(rateLabel, fontLabel)[1] : 0;
         var deficitH = dc.getTextDimensions(deficitText, fontUnit)[1];
         var metaH    = drawMeta ? dc.getTextDimensions(timeText, fontMeta)[1] : 0;
-        var hintH    = drawHint ? dc.getTextDimensions(hintText, fontHint)[1] : 0;
+        var hintH    = (drawHint && hintText != "") ? dc.getTextDimensions(hintText, fontHint)[1] : 0;
 
-        if (drawHint && w == h) {
+        if (drawHint && hintText != "" && w == h) {
             var hintWidth = dc.getTextDimensions(hintText, fontHint)[0];
             var roundHintSafeBottom = getRoundHintBottomInset(w, h, hintWidth, hintH);
             if (roundHintSafeBottom > safeBottom) {
@@ -545,7 +545,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             y += metaH + flowGap;
         }
 
-        if (drawHint) {
+        if (drawHint && hintText != "") {
             dc.setColor(dimColor, Graphics.COLOR_TRANSPARENT);
             dc.drawText(cx, y, fontHint, hintText, Graphics.TEXT_JUSTIFY_CENTER);
         }
@@ -557,6 +557,9 @@ class FuelPlannerFieldView extends WatchUi.DataField {
 private function drawDeficitGauge(dc as Dc, w as Number, h as Number, 
                                   deficitG10 as Number, doseG10 as Number, 
                                   dimColor as Number, touchEnabled as Boolean) as Void {
+    if (w < 150 || h < 110) {
+        return;
+    }
     
     // 1. Breite der Balken
     var gaugeW = (w * GAUGE_WIDTH_RATIO).toNumber();
@@ -618,18 +621,6 @@ private function drawDeficitGauge(dc as Dc, w as Number, h as Number,
         dc.fillRectangle(xLeft, y + greenH, gaugeW, redH);
         dc.fillRectangle(xRight, y + greenH, gaugeW, redH);
     }
-}
-
-// Hilfsfunktion zum Clamping (falls nicht schon vorhanden)
-private function clamp(val, min, max) {
-    if (val < min) { return min; }
-    if (val > max) { return max; }
-    return val;
-}
-private function clampFloat(val, min, max) {
-    if (val < min) { return min; }
-    if (val > max) { return max; }
-    return val;
 }
 
     private function getSafeTopInset(h as Number) as Number {

@@ -20,8 +20,6 @@ class ReminderManager {
     (:full)
     private var _confirmationPattern as Array<Attention.VibeProfile>? = null;
     (:full)
-    private var _undoPattern as Array<Attention.VibeProfile>? = null;
-    (:full)
     private var _snoozePattern as Array<Attention.VibeProfile>? = null;
     
     //! Constructor
@@ -63,16 +61,6 @@ class ReminderManager {
             ] as Array<Attention.VibeProfile>;
         }
         return _confirmationPattern as Array<Attention.VibeProfile>;
-    }
-
-    (:full)
-    private function getUndoPattern() as Array<Attention.VibeProfile> {
-        if (_undoPattern == null) {
-            _undoPattern = [
-                new Attention.VibeProfile(20, 120)
-            ] as Array<Attention.VibeProfile>;
-        }
-        return _undoPattern as Array<Attention.VibeProfile>;
     }
 
     (:full)
@@ -123,15 +111,20 @@ class ReminderManager {
                                          lastReminderTimestamp as Number,
                                          maxSnoozeMin as Number,
                                          nowTimestamp as Number) as Boolean {
+        var safeNextDueInSec = (nextDueInSec < 0) ? 0 : nextDueInSec;
+        var safeElapsedActiveSec = (elapsedActiveSec < 0) ? 0 : elapsedActiveSec;
+        var safeStartDelayMin = (startDelayMin < 0) ? 0 : startDelayMin;
+        var safeNowTimestamp = (nowTimestamp < 0) ? 0 : nowTimestamp;
+
         if (isPaused) {
             return false;
         }
 
-        if (consumedTotalG10 == 0 && elapsedActiveSec < startDelayMin * 60) {
+        if (consumedTotalG10 <= 0 && safeElapsedActiveSec < safeStartDelayMin * 60) {
             return false;
         }
 
-        if (nextDueInSec > 0) {
+        if (safeNextDueInSec > 0) {
             return false;
         }
 
@@ -139,7 +132,7 @@ class ReminderManager {
             return true;
         }
 
-        return (nowTimestamp - lastReminderTimestamp) >= (maxSnoozeMin * 60);
+        return (safeNowTimestamp - lastReminderTimestamp) >= (maxSnoozeMin * 60);
     }
     
     //! Trigger reminder vibration pattern
@@ -197,15 +190,6 @@ class ReminderManager {
         return success;
     }
 
-    //! Trigger undo feedback (single gentle pulse)
-    (:full)
-    function triggerUndo() as Boolean {
-        if (!_hasVibration) {
-            return false;
-        }
-        return vibratePattern(getUndoPattern());
-    }
-    
     //! Trigger snooze confirmation
     (:full)
     function triggerSnooze() as Boolean {

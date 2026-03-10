@@ -43,13 +43,17 @@ class StorageManager {
     private const KEY_CONSUMED_TOTAL = "consumed";
     private const KEY_CONSUMED_TOTAL_G10 = "consum10";
     private const KEY_LAST_INTAKE_TS = "last_int";
-    private const KEY_INTAKE_LOG = "int_log";
+    private const KEY_LAST_REMINDER_TS = "last_rem";
     private const KEY_INTAKE_COUNT = "int_cnt";
     private const KEY_IS_PAUSED = "is_paused";
     private const KEY_ELAPSED_SEC = "elapsed_s";
     private const KEY_PAUSED_TIMER_OFFSET_S = "pause_off_s";
     private const KEY_PAUSE_START_TIMER_S = "pause_start_s";
-    private const KEY_LAST_LAP_SNAPSHOT = "lap_snap";
+    private const KEY_PAUSE_START_CLOCK_TS = "pause_clock_s";
+
+    // Legacy keys kept only so reset paths can clean up older installs.
+    private const LEGACY_KEY_INTAKE_LOG = "int_log";
+    private const LEGACY_KEY_LAST_LAP_SNAPSHOT = "lap_snap";
 
     // Defaults
     public const MIN_CARBS_TARGET_GPH       = 20;
@@ -74,8 +78,6 @@ class StorageManager {
     public const DEFAULT_START_DELAY_MIN    = 15;
     public const DEFAULT_MAX_SNOOZE_MIN     = 5;
     public const DEFAULT_CARB_FRACTION_PCT  = 60;  // 60% of kcal from carbs
-
-    private const MAX_INTAKE_LOG_ENTRIES = 50;
 
     private var _storageBackend as StorageBackend;
     private var _propertiesBackend as PropertiesBackend;
@@ -311,6 +313,22 @@ class StorageManager {
         }
     }
 
+    function getLastReminderTimestamp() as Number {
+        var value = _storageBackend.getValue(KEY_LAST_REMINDER_TS);
+        if (value instanceof Number && value > 0) {
+            return value;
+        }
+        return 0;
+    }
+
+    function setLastReminderTimestamp(value as Number) as Void {
+        if (value > 0) {
+            _storageBackend.setValue(KEY_LAST_REMINDER_TS, value);
+        } else {
+            _storageBackend.deleteValue(KEY_LAST_REMINDER_TS);
+        }
+    }
+
     function getIsPaused() as Boolean {
         var value = _storageBackend.getValue(KEY_IS_PAUSED);
         if (value instanceof Boolean) {
@@ -366,96 +384,35 @@ class StorageManager {
         _storageBackend.setValue(KEY_PAUSE_START_TIMER_S, nonNegative(value));
     }
 
-    function getLastLapSnapshot() as Dictionary? {
-        var value = _storageBackend.getValue(KEY_LAST_LAP_SNAPSHOT);
-        if (value instanceof Dictionary) {
-            return value;
+    function getPauseStartClockSec() as Number? {
+        var value = _storageBackend.getValue(KEY_PAUSE_START_CLOCK_TS);
+        if (value instanceof Number) {
+            var sanitized = nonNegative(value);
+            if (sanitized > 0) {
+                return sanitized;
+            }
         }
         return null;
     }
 
-    function setLastLapSnapshot(sessionId as Number, elapsedActiveSec as Number,
-                                consumedTotalG10 as Number, deficitG10 as Number) as Void {
-        _storageBackend.setValue(KEY_LAST_LAP_SNAPSHOT, {
-            "sessionId" => nonNegative(sessionId),
-            "elapsedActiveSec" => nonNegative(elapsedActiveSec),
-            "consumedTotalG10" => nonNegative(consumedTotalG10),
-            "deficitG10" => deficitG10
-        });
-    }
-
-    // ========== Intake Log ==========
-
-    function getIntakeLog() as Array<Dictionary> {
-        var value = _storageBackend.getValue(KEY_INTAKE_LOG);
-        if (value instanceof Array) {
-            var rawLog = value as Array;
-            var sanitizedLog = [] as Array<Dictionary>;
-            for (var i = 0; i < rawLog.size(); i += 1) {
-                var entry = rawLog[i];
-                if (entry instanceof Dictionary) {
-                    sanitizedLog.add(entry);
-                }
-            }
-            return sanitizedLog;
+    function setPauseStartClockSec(value as Number?) as Void {
+        if (value == null || value <= 0) {
+            _storageBackend.deleteValue(KEY_PAUSE_START_CLOCK_TS);
+            return;
         }
-        return [] as Array<Dictionary>;
+        _storageBackend.setValue(KEY_PAUSE_START_CLOCK_TS, nonNegative(value));
     }
 
     function getIntakeCount() as Number {
         var value = _storageBackend.getValue(KEY_INTAKE_COUNT);
         if (value instanceof Number) {
-            return value;
+            return nonNegative(value);
         }
         return 0;
     }
 
-    function addIntakeEntry(timestamp as Number, grams as Number, intakeType as String) as Void {
-        var safeTs = nonNegative(timestamp);
-        var safeGrams = nonNegative(grams);
-        if (safeGrams <= 0) {
-            return;
-        }
-
-        var log = getIntakeLog();
-
-        var entry = {
-            "t" => safeTs,
-            "g" => safeGrams,
-            "type" => (intakeType == "") ? "manual" : intakeType
-        };
-
-        log.add(entry);
-
-        // Cap at MAX entries (rolling)
-        while (log.size() > MAX_INTAKE_LOG_ENTRIES) {
-            log.remove(log[0]);
-        }
-
-        _storageBackend.setValue(KEY_INTAKE_LOG, log);
-        _storageBackend.setValue(KEY_INTAKE_COUNT, log.size());
-    }
-
-    function removeLastIntakeEntry() as Boolean {
-        var log = getIntakeLog();
-        var count = log.size();
-        if (count <= 0) {
-            return false;
-        }
-
-        log.remove(log[count - 1]);
-        if (log.size() > 0) {
-            _storageBackend.setValue(KEY_INTAKE_LOG, log);
-        } else {
-            _storageBackend.deleteValue(KEY_INTAKE_LOG);
-        }
-        _storageBackend.setValue(KEY_INTAKE_COUNT, log.size());
-        return true;
-    }
-
-    function clearIntakeLog() as Void {
-        _storageBackend.deleteValue(KEY_INTAKE_LOG);
-        _storageBackend.setValue(KEY_INTAKE_COUNT, 0);
+    function setIntakeCount(value as Number) as Void {
+        _storageBackend.setValue(KEY_INTAKE_COUNT, nonNegative(value));
     }
 
     // ========== Session Management ==========
@@ -467,13 +424,15 @@ class StorageManager {
         _storageBackend.deleteValue(KEY_CONSUMED_TOTAL);
         _storageBackend.deleteValue(KEY_CONSUMED_TOTAL_G10);
         _storageBackend.deleteValue(KEY_LAST_INTAKE_TS);
-        _storageBackend.deleteValue(KEY_INTAKE_LOG);
+        _storageBackend.deleteValue(KEY_LAST_REMINDER_TS);
         _storageBackend.deleteValue(KEY_INTAKE_COUNT);
         _storageBackend.deleteValue(KEY_IS_PAUSED);
         _storageBackend.deleteValue(KEY_ELAPSED_SEC);
         _storageBackend.deleteValue(KEY_PAUSED_TIMER_OFFSET_S);
         _storageBackend.deleteValue(KEY_PAUSE_START_TIMER_S);
-        _storageBackend.deleteValue(KEY_LAST_LAP_SNAPSHOT);
+        _storageBackend.deleteValue(KEY_PAUSE_START_CLOCK_TS);
+        _storageBackend.deleteValue(LEGACY_KEY_INTAKE_LOG);
+        _storageBackend.deleteValue(LEGACY_KEY_LAST_LAP_SNAPSHOT);
     }
 
     function hasActiveSession() as Boolean {

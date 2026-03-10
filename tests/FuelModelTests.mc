@@ -114,4 +114,33 @@ class FuelModelTests {
         Test.assertMessage(surplusDeficitG10 < 0, "Surplus intake must remain visible as a negative deficit.");
         return true;
     }
+
+    (:test)
+    static function missingTimerTickKeepsSessionState(logger as Test.Logger) as Boolean {
+        var clock = new MockClock(8000);
+        var props = new MockPropertiesBackend();
+        props.setValue("carbsTargetGph", 60);
+        props.setValue("doseG", 25);
+        props.setValue("startDelayMin", 0);
+
+        var model = buildModel(clock, props);
+        var activeInfo = new MockActivityInfo(8000);
+        activeInfo.setTimerSeconds(900);
+        model.compute(activeInfo);
+
+        var elapsedBeforeGap = model.getElapsedActiveSec();
+        var deficitBeforeGap = model.getDeficitG10();
+
+        var missingTimerInfo = new MockActivityInfo(8000);
+        model.compute(missingTimerInfo);
+
+        logger.debug("elapsedBeforeGap=" + elapsedBeforeGap.format("%d"));
+        logger.debug("deficitBeforeGapG10=" + deficitBeforeGap.format("%d"));
+
+        Test.assertMessage(model.isSessionActive(), "A missing timer tick must not tear down the active session.");
+        Test.assertEqual(elapsedBeforeGap, model.getElapsedActiveSec());
+        Test.assertEqual(deficitBeforeGap, model.getDeficitG10());
+        Test.assertMessage(!model.isReminderDue(), "A missing timer tick should suppress the reminder instead of retriggering it.");
+        return true;
+    }
 }

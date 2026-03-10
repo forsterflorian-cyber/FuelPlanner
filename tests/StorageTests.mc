@@ -1,4 +1,5 @@
 using Toybox.Test;
+import Toybox.Activity;
 import Toybox.Lang;
 
 class StorageTests {
@@ -15,7 +16,7 @@ class StorageTests {
     }
 
     (:test)
-    static function lapStorageWritesCurrentValues(logger as Test.Logger) as Boolean {
+    static function onTimerLapBuffersCurrentSession(logger as Test.Logger) as Boolean {
         var storageBackend = new MockStorageBackend();
         var props = new MockPropertiesBackend();
         props.setValue("carbsTargetGph", 60);
@@ -35,28 +36,22 @@ class StorageTests {
         model.compute(info);
         model.onTimerLap();
 
-        var snapshot = storage.getLastLapSnapshot();
-        Test.assertMessage(snapshot != null, "onTimerLap should persist a lap snapshot.");
-        if (snapshot == null) {
-            return false;
-        }
+        var restoredStorage = buildStorage(props, storageBackend);
+        var restoredModel = buildModel(restoredStorage, new MockClock(1400));
+        restoredModel.loadSession();
 
-        var sessionId = snapshot["sessionId"] as Number;
-        var elapsedActiveSec = snapshot["elapsedActiveSec"] as Number;
-        var consumedTotalG10 = snapshot["consumedTotalG10"] as Number;
-        var deficitG10 = snapshot["deficitG10"] as Number;
+        logger.debug("lapRestoredElapsedActiveSec=" + restoredModel.getElapsedActiveSec().format("%d"));
+        logger.debug("lapRestoredDeficitG10=" + restoredModel.getDeficitG10().format("%d"));
 
-        logger.debug("lapSessionId=" + sessionId.format("%d"));
-        logger.debug("lapDeficitG10=" + deficitG10.format("%d"));
-
-        Test.assertMessage(sessionId == 1000, "Lap snapshot should keep the session id.");
-        Test.assertEqual(1000, sessionId);
-        Test.assertMessage(elapsedActiveSec == 1800, "Lap snapshot should keep the active elapsed time.");
-        Test.assertEqual(1800, elapsedActiveSec);
-        Test.assertMessage(consumedTotalG10 == 200, "Lap snapshot should keep consumed carbs in g10.");
-        Test.assertEqual(200, consumedTotalG10);
-        Test.assertMessage(deficitG10 == 100, "Lap snapshot should keep the current deficit in g10.");
-        Test.assertEqual(100, deficitG10);
+        Test.assertMessage(restoredModel.isSessionActive(), "onTimerLap should keep the session recoverable.");
+        Test.assertMessage(restoredModel.getElapsedActiveSec() == 1800, "Buffered session should keep active elapsed time.");
+        Test.assertEqual(1800, restoredModel.getElapsedActiveSec());
+        Test.assertMessage(restoredModel.getConsumedTotalG10() == 200, "Buffered session should keep consumed carbs in g10.");
+        Test.assertEqual(200, restoredModel.getConsumedTotalG10());
+        Test.assertMessage(restoredModel.getIntakeCount() == 1, "Buffered session should keep the intake count.");
+        Test.assertEqual(1, restoredModel.getIntakeCount());
+        Test.assertMessage(restoredModel.getDeficitG10() == 100, "Buffered session should recompute the deficit after reload.");
+        Test.assertEqual(100, restoredModel.getDeficitG10());
         return true;
     }
 
@@ -96,6 +91,81 @@ class StorageTests {
         Test.assertEqual(1, secondModel.getIntakeCount());
         Test.assertMessage(secondStorage.getStartTimestamp() == 1234, "Start timestamp must survive a crash/reload.");
         Test.assertEqual(1234, secondStorage.getStartTimestamp());
+        return true;
+    }
+
+    (:test)
+    static function pausedReloadKeepsPausedStateWithoutExplicitTimerState(logger as Test.Logger) as Boolean {
+        var storageBackend = new MockStorageBackend();
+        var props = new MockPropertiesBackend();
+        props.setValue("carbsTargetGph", 60);
+        props.setValue("doseG", 25);
+        props.setValue("startDelayMin", 0);
+
+        var firstStorage = buildStorage(props, storageBackend);
+        var firstClock = new MockClock(1000);
+        var firstModel = buildModel(firstStorage, firstClock);
+        var info = new MockActivityInfo(1000);
+
+        info.setTimerSeconds(600);
+        firstModel.compute(info);
+
+        firstClock.setNow(1200);
+        info.timerState = Activity.TIMER_STATE_PAUSED;
+        info.setTimerSeconds(600);
+        firstModel.compute(info);
+        firstModel.saveSession();
+
+        var restoredStorage = buildStorage(props, storageBackend);
+        var restoredClock = new MockClock(1500);
+        var restoredModel = buildModel(restoredStorage, restoredClock);
+        restoredModel.loadSession();
+
+        var reloadedInfo = new MockActivityInfo(1000);
+        reloadedInfo.setTimerSeconds(600);
+        restoredModel.compute(reloadedInfo);
+
+        logger.debug("pausedAfterReload=" + boolToAscii(restoredModel.isPaused()));
+        logger.debug("elapsedAfterReload=" + restoredModel.getElapsedActiveSec().format("%d"));
+
+        Test.assertMessage(restoredModel.isPaused(), "A reloaded paused session must stay paused until the timer actually advances again.");
+        Test.assertEqual(600, restoredModel.getElapsedActiveSec());
+        return true;
+    }
+
+    (:test)
+    static function finishedSessionDoesNotRestoreAfterReload(logger as Test.Logger) as Boolean {
+        var storageBackend = new MockStorageBackend();
+        var props = new MockPropertiesBackend();
+        props.setValue("carbsTargetGph", 60);
+        props.setValue("doseG", 25);
+        props.setValue("startDelayMin", 0);
+
+        var storage = buildStorage(props, storageBackend);
+        var clock = new MockClock(5000);
+        var model = buildModel(storage, clock);
+        var info = new MockActivityInfo(1234);
+
+        info.setTimerSeconds(1200);
+        model.compute(info);
+        clock.setNow(5100);
+        model.recordIntake(25);
+
+        info.timerState = Activity.TIMER_STATE_STOPPED;
+        model.compute(info);
+        model.saveSession();
+
+        logger.debug("finishedSessionStorageActive=" + boolToAscii(storage.hasActiveSession()));
+        logger.debug("finishedSessionConsumedG10=" + model.getConsumedTotalG10().format("%d"));
+
+        Test.assertMessage(!storage.hasActiveSession(), "A finished session must be removed from recoverable storage.");
+        Test.assertEqual(250, model.getConsumedTotalG10());
+
+        var restoredStorage = buildStorage(props, storageBackend);
+        var restoredModel = buildModel(restoredStorage, new MockClock(5200));
+        restoredModel.loadSession();
+
+        Test.assertMessage(!restoredModel.isSessionActive(), "Finished sessions must not reload as live recoverable sessions.");
         return true;
     }
 }
