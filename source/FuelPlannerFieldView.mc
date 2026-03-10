@@ -110,6 +110,8 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     }
 
     function onLayout(dc as Dc) as Void {
+        _lastFieldWidth = dc.getWidth();
+        _lastFieldHeight = dc.getHeight();
     }
 
     (:testsupport)
@@ -249,10 +251,10 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         _strOnTarget = loadString(Rez.Strings.LabelOnTarget, "On target");
         _strRateTargetPrefix = loadString(Rez.Strings.LabelRateTargetPrefix, "Plan");
         _strRateAutoCarbsSuffix = loadString(Rez.Strings.LabelRateAutoCarbsSuffix, "% carbs");
-        _strRateAutoNoData = loadString(Rez.Strings.LabelRateAutoNoData, "auto: no calorie data");
+        _strRateAutoNoData = loadString(Rez.Strings.LabelRateAutoNoData, "Auto (no cal data)");
         _strAutoFlowStatus = loadString(Rez.Strings.LabelAutoFlowStatus, "AUTO-FLOW");
         _strRecovery = loadString(Rez.Strings.LabelRecovery, "Recovery");
-        _strRecoveryAction = loadString(Rez.Strings.LabelRecoveryAction, "Carbs");
+        _strRecoveryAction = loadString(Rez.Strings.LabelRecoveryAction, "Refuel");
         _strFuelingOk = loadString(Rez.Strings.LabelFuelingOk, "Fueling OK");
     }
 
@@ -268,12 +270,21 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         // Text-Farbe Weiß für maximalen Kontrast
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         
-        var font = Graphics.FONT_LARGE;
         var doseText = _model.getDoseG().format("%d") + UNIT_G;
+        var titleFont = getBestFontForHeight(dc, (h.toFloat() * 0.22f).toNumber(), false);
+        var doseFont = getBestFontForHeight(dc, (h.toFloat() * 0.14f).toNumber(), false);
+        var gap = getRowGap(h);
+        var titleH = dc.getTextDimensions(_strFuelNow, titleFont)[1];
+        var doseH = dc.getTextDimensions(doseText, doseFont)[1];
+        var totalHeight = titleH + gap + doseH;
+        var y = (h - totalHeight) / 2;
+        if (y < 0) {
+            y = 0;
+        }
 
         // Text zentriert ausgeben
-        dc.drawText(w/2, h/2 - 20, font, _strFuelNow, Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(w/2, h/2 + 20, Graphics.FONT_MEDIUM, doseText, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(w / 2, y, titleFont, _strFuelNow, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(w / 2, y + titleH + gap, doseFont, doseText, Graphics.TEXT_JUSTIFY_CENTER);
         
         // Optional: Ein weißer Rahmen zur Abgrenzung
         dc.setPenWidth(4);
@@ -773,7 +784,7 @@ private function drawDeficitGauge(dc as Dc, w as Number, h as Number,
     private function buildRateLabel() as String {
         if (_model.isCalorieModeActive()) {
             if (_model.isCaloriesAvailable()) {
-                return "auto " + _model.getCarbFractionPct().format("%d") +
+                return "Auto " + _model.getCarbFractionPct().format("%d") +
                        _strRateAutoCarbsSuffix;
             }
             return _strRateAutoNoData;

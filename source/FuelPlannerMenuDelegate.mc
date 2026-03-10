@@ -266,10 +266,14 @@ class NumberPickerDelegate extends WatchUi.Menu2InputDelegate {
         }
 
         var value = clampSetting(selected as Number);
+        var didPersist = false;
         try {
             _setter.invoke(value);
+            didPersist = true;
         } catch (e) {}
-        _item.setSubLabel(value.format("%d") + _suffix);
+        if (didPersist) {
+            _item.setSubLabel(value.format("%d") + _suffix);
+        }
         WatchUi.popView(WatchUi.SLIDE_RIGHT);
     }
 
@@ -326,8 +330,9 @@ class FixedIntervalDelegate extends WatchUi.Menu2InputDelegate {
         }
 
         _storage.setFixedIntervalMin(value);
-        _item.setSubLabel(value.format("%d") + " " + _strUnitMinutes);
-        _modeItem.setSubLabel(modeLabel(_storage.getReminderMode(), value));
+        var storedValue = _storage.getFixedIntervalMin();
+        _item.setSubLabel(storedValue.format("%d") + " " + _strUnitMinutes);
+        _modeItem.setSubLabel(modeLabel(_storage.getReminderMode(), storedValue));
         WatchUi.popView(WatchUi.SLIDE_RIGHT);
     }
 
@@ -356,6 +361,7 @@ class ClearConfirmDelegate extends WatchUi.ConfirmationDelegate {
             }
         }
         WatchUi.popView(WatchUi.SLIDE_DOWN);
+        WatchUi.requestUpdate();
         return true;
     }
 }

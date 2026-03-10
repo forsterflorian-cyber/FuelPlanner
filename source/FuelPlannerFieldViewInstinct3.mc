@@ -81,8 +81,12 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_WHITE);
         dc.fillRectangle(0, 0, w, h);
         dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(w / 2, h / 2 - 18, Graphics.FONT_MEDIUM, loadString(Rez.Strings.LabelFuelNow, "FUEL NOW"), Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(w / 2, h / 2 + 8, Graphics.FONT_TINY, _model.getDoseG().format("%d") + UNIT_G, Graphics.TEXT_JUSTIFY_CENTER);
+        var titleFont = (h < 110) ? Graphics.FONT_TINY : Graphics.FONT_MEDIUM;
+        var doseFont = (h < 110) ? Graphics.FONT_XTINY : Graphics.FONT_TINY;
+        var titleOffset = (h < 110) ? 12 : 18;
+        var doseOffset = (h < 110) ? 6 : 8;
+        dc.drawText(w / 2, h / 2 - titleOffset, titleFont, loadString(Rez.Strings.LabelFuelNow, "FUEL NOW"), Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(w / 2, h / 2 + doseOffset, doseFont, _model.getDoseG().format("%d") + UNIT_G, Graphics.TEXT_JUSTIFY_CENTER);
     }
 
     private function drawWaiting(dc as Dc, w as Number, h as Number, bgColor as Number) as Void {

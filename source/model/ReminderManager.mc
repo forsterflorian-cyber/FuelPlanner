@@ -114,6 +114,7 @@ class ReminderManager {
         var safeNextDueInSec = (nextDueInSec < 0) ? 0 : nextDueInSec;
         var safeElapsedActiveSec = (elapsedActiveSec < 0) ? 0 : elapsedActiveSec;
         var safeStartDelayMin = (startDelayMin < 0) ? 0 : startDelayMin;
+        var safeMaxSnoozeMin = (maxSnoozeMin < 0) ? 0 : maxSnoozeMin;
         var safeNowTimestamp = (nowTimestamp < 0) ? 0 : nowTimestamp;
 
         if (isPaused) {
@@ -132,7 +133,7 @@ class ReminderManager {
             return true;
         }
 
-        return (safeNowTimestamp - lastReminderTimestamp) >= (maxSnoozeMin * 60);
+        return (safeNowTimestamp - lastReminderTimestamp) >= (safeMaxSnoozeMin * 60);
     }
     
     //! Trigger reminder vibration pattern
@@ -143,23 +144,23 @@ class ReminderManager {
             return false;
         }
         
-        var success = false;
+        var delivered = false;
         
         // Try vibration
         if (_hasVibration) {
-            success = vibratePattern(getIntakeReminderPattern());
+            delivered = vibratePattern(getIntakeReminderPattern());
         }
         
         // Also flash backlight if available
         if (_hasBacklight) {
-            flashBacklight();
+            delivered = flashBacklight() || delivered;
         }
         
-        if (success) {
+        if (delivered) {
             _lastVibeTime = now;
         }
         
-        return success;
+        return delivered;
     }
     
     //! Trigger confirmation vibration (after intake recorded)
@@ -215,15 +216,17 @@ class ReminderManager {
     }
     
     //! Flash backlight
-    private function flashBacklight() as Void {
+    private function flashBacklight() as Boolean {
         try {
             if (Attention has :backlight) {
                 Attention.backlight(true);
+                return true;
             }
         } catch (e instanceof Lang.Exception) {
             // Backlight failed, continue silently
         } catch (e) {
         }
+        return false;
     }
     
     //! Check if vibration is available

@@ -2,8 +2,8 @@
     <string id="AppName">FuelPlanner</string>
 
     <!-- Settings Labels (Garmin Connect settings page) -->
-    <string id="SettingCarbsTarget">Carbs Target (g/h)</string>
-    <string id="SettingDoseSize">Gel/Dose Size (g)</string>
+    <string id="SettingCarbsTarget">Target Carbs (g/h)</string>
+    <string id="SettingDoseSize">Dose Size (g)</string>
     <string id="SettingReminderMode">Reminder Mode</string>
     <string id="SettingFixedInterval">Fixed Interval (min)</string>
     <string id="SettingStartDelay">Start Delay (min)</string>
@@ -14,7 +14,7 @@
     <!-- Reminder Modes -->
     <string id="ModeAuto">Auto (deficit)</string>
     <string id="ModeFixed">Fixed</string>
-    <string id="ModeCalorieAuto">Calorie Auto</string>
+    <string id="ModeCalorieAuto">Auto (calories)</string>
 
     <!-- Presets -->
     <string id="PresetRun">Running</string>
@@ -40,13 +40,13 @@
     <string id="LabelOnTarget">On Target</string>
 
     <!-- Field View: rate label row -->
-    <string id="LabelRateTargetPrefix">plan</string>
+    <string id="LabelRateTargetPrefix">Plan</string>
     <string id="LabelRateAutoCarbsSuffix">% carbs</string>
-    <string id="LabelRateAutoNoData">auto (no cal data)</string>
+    <string id="LabelRateAutoNoData">Auto (no cal data)</string>
     <string id="LabelEnableTouchForManual">Enable Touch for Intake</string>
     <string id="LabelAutoFlowActive">AUTO-FLOW active</string>
     <string id="LabelRecovery">Recovery</string>
-    <string id="LabelRecoveryAction">Carbs</string>
+    <string id="LabelRecoveryAction">Refuel</string>
     <string id="LabelFuelingOk">Fueling OK</string>
 
     <!-- Field View: idle screen -->
@@ -57,7 +57,7 @@
     <string id="LabelClearSession">Clear Session</string>
     <string id="LabelClearSessionSub">Reset tracking data</string>
     <string id="LabelConfirmClear">Clear session?</string>
-    <string id="LabelPresets">--- Presets ---</string>
+    <string id="LabelPresets">Presets</string>
 
     <!-- Units -->
     <string id="UnitGrams">g</string>
@@ -65,10 +65,10 @@
     <string id="UnitMinutes">min</string>
 
     <!-- FIT chart labels -->
-    <string id="FitDeficitChartTitle">Aktuelles Defizit</string>
-    <string id="FitDeficitDataLabel">Aktuelles Defizit</string>
-    <string id="FitConsumedChartTitle">Gesamtaufnahme</string>
-    <string id="FitConsumedDataLabel">Gesamtaufnahme</string>
+    <string id="FitDeficitChartTitle">Current Deficit</string>
+    <string id="FitDeficitDataLabel">Current Deficit</string>
+    <string id="FitConsumedChartTitle">Total Intake</string>
+    <string id="FitConsumedDataLabel">Total Intake</string>
     <string id="FitTargetCarbsSummaryLabel">Planned Carbs</string>
     <string id="FitActualIntakeSummaryLabel">Logged Intake</string>
     <string id="FitActualIntakeEstimateSummaryLabel">Intake (Estimate)</string>

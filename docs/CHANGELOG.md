@@ -1,45 +1,31 @@
-# Changelog - FuelPlanner
+# Changelog
 
+All notable public-facing changes to FuelPlanner are recorded here.
 
-## [0.5.0-alpha] - 2026-03-09
+## [Unreleased] - 2026-03-10
 
-[DEUTSCH]
-- Vollstaendige Annotation-Symmetrie (:full / :lite) implementiert.
-- Trennung von High-Memory (Touch) und Low-Memory (Button) Pfaden.
-- Fehlerhafte Symbol-Referenzen im Lite-Tier (Delegate/Menu) behoben.
-- Release-Build fuer Instinct 3 unter 24KB stabilisiert.
-- 14/14 Unit- und Stress-Tests erfolgreich abgeschlossen.
+[DE]
+- Lebenszyklus fuer Start, Stop und Session-Uebergaenge stabilisiert.
+- Timing der Erinnerungen rund um Startverzoegerung, Snooze und Pausen korrigiert.
+- Pause/Fortsetzen bei Timer-Stalls und Reloads robuster gemacht.
+- Session-Wiederherstellung nach Neustarts und kurzzeitig fehlenden Timer-Ticks verbessert.
 
-[ENGLISH]
-- Implemented full annotation symmetry (:full / :lite).
-- Decoupled High-Memory (Touch) and Low-Memory (Button) code paths.
-- Resolved symbol leaks in Lite-Tier (Delegate/Menu references).
-- Stabilized Instinct 3 Release-Build under 24KB.
-- Successfully completed 14/14 Unit and Stress tests.
+[EN]
+- Stabilized lifecycle handling for session start, stop, and handoff cases.
+- Fixed reminder timing around start delay, snooze, and pause handling.
+- Improved pause/resume robustness during timer stalls and reloads.
+- Improved session recovery after restarts and temporarily missing timer ticks.
 
-## [0.4.0-alpha] - 2026-03-09
+## [0.1.0] - 2026-03-06
 
-[ENGLISH]
-- Completed Memory Test Suite (Zero-leak verification for menu/intake).
-- Optimized legacy hardware support (32KB peak-load check).
-- Finalized 14/14 Unit-Test suite (Logic, Chaos, Memory).
+[DE]
+- Erste oeffentliche Beta von FuelPlanner als Connect IQ data field.
+- Auto, Fixed Interval und Calorie Auto fuer Fuelettermin-Erinnerungen hinzugefuegt.
+- Einfache Intake-Logs, Auto-Flow fuer Button-Geraete und FIT-Felder fuer Defizit und Verbrauch bereitgestellt.
+- Einstellungen ueber das On-Watch-Menue und Garmin Connect Properties angebunden.
 
-[DEUTSCH]
-- Memory-Test-Suite erfolgreich (Verifikation von Null-Leaks).
-- Optimierung fuer Legacy-Hardware (32KB Peak-Load Check).
-- Abschluss der 14/14 Unit-Test-Suite (Logik, Chaos, Memory).
-
-
-## [0.3.0-alpha] - 2026-03-09
-
-[DEUTSCH]
-- Chaos-Stress-Tests erfolgreich abgeschlossen (11/11 Tests PASS).
-- Absicherung gegen Surplus-Buchungen und fliegenden Modus-Wechsel.
-- Verifikation der Crash-Recovery (Session-Wiederherstellung).
-- UI-Logik (Gauge-Alerts) fuer Tests entkoppelt.
-
-[ENGLISH]
-- Completed Chaos Stress Tests (11/11 tests passed).
-- Validated surplus handling and mid-activity mode switching.
-- Verified crash recovery and session restoration logic.
-- Decoupled UI logic (gauge alerts) for automated testing.
+[EN]
+- Initial public beta release of FuelPlanner as a Connect IQ data field.
+- Added Auto, Fixed Interval, and Calorie Auto fueling reminders.
+- Shipped simple intake logging, Auto-Flow for button devices, and FIT fields for deficit and intake data.
+- Connected on-watch settings with Garmin Connect properties.
