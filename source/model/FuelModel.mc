@@ -226,7 +226,7 @@ class FuelModel {
             }
             _sessionRecoverable = true;
 
-            if (_isPaused) {
+            if (_sessionState == STATE_PAUSED) {
                 setSessionState(STATE_PAUSED);
             } else if (!_isStartTimestampConfirmed) {
                 setSessionState(STATE_PRIMING);
@@ -317,8 +317,8 @@ class FuelModel {
                                            timerSec as Number,
                                            timerStatePaused as Boolean,
                                            timerStateStoppedOrOff as Boolean) as Void {
-        if (!_sessionActive) {
-            setSessionState(STATE_IDLE);
+        if (_sessionState == STATE_IDLE) {
+            resetDisplayValues();
             return;
         }
 
@@ -327,11 +327,10 @@ class FuelModel {
             return;
         }
 
-        if (timerStatePaused || _isPaused) {
+        if (timerStatePaused) {
             setSessionState(STATE_PAUSED);
             return;
         }
-
         // Fallback-started session: hold in priming briefly until the timer
         // looks stable, so we do not immediately "trust" a transient start.
         if (!_isStartTimestampConfirmed &&
@@ -362,13 +361,12 @@ class FuelModel {
         resetDisplayValues();
     }
 
-    private function markSessionFinished() as Void {
-        if (!_sessionActive) {
+private function markSessionFinished() as Void {
+        if (_sessionState == STATE_IDLE) {
             return;
         }
 
         _sessionRecoverable = false;
-        setSessionState(STATE_FINISHED);
         _pauseStartTimerS = null;
         _pauseStartClockTs = null;
         _lastReminderTimestamp = 0;
@@ -377,7 +375,6 @@ class FuelModel {
         _autoIntakeEventPending = false;
         _storage.clearSession();
     }
-
     //! Main compute function — call every tick (1 Hz)
     function compute(info) as Void {
         if (info == null) {
@@ -387,7 +384,7 @@ class FuelModel {
         var timerTime = getTimerTime(info);
 
         if (timerTime == null) {
-            if (!_sessionActive) {
+            if (_sessionState == STATE_IDLE) {
                 resetDisplayValues();
                 return;
             }
@@ -437,11 +434,7 @@ class FuelModel {
                 startNewSession(null);
             }
         }
-        reconcileSessionState(activityStartTs, timerSec, false, false);
-        if (_sessionState == STATE_IDLE) {
-            resetDisplayValues();
-            return;
-        }
+   
 
         var timerStatePaused = isTimerStatePaused(info);
         var effectiveTimerSec = getEffectiveTimerSec(timerSec, timerStatePaused);
@@ -455,19 +448,18 @@ class FuelModel {
 
         var timerStateStoppedOrOff = isTimerStateStoppedOrOff(info);
 
-        detectPause(timerTime, timerStatePaused);
+        var pauseDetected = detectPause(timerTime, timerStatePaused);
 
-        reconcileSessionState(activityStartTs, timerSec, timerStatePaused, timerStateStoppedOrOff);
-
-        updateCalorieData(info);
+        reconcileSessionState(activityStartTs, timerSec, timerStatePaused || pauseDetected, timerStateStoppedOrOff);
+        if (_sessionState == STATE_IDLE) {
+            resetDisplayValues();
+            return;
+        }
+  
 
         if (_sessionState == STATE_FINISHED) {
-            calculateTargetAndDeficit();
             markSessionFinished();
-            _isReminderDue = false;
             _nextDueInSec = 0;
-            _autoIntakeLocked = false;
-            _autoIntakeEventPending = false;
             updateFitFields();
             return;
         }
@@ -494,6 +486,7 @@ class FuelModel {
         }
 
         // ACTIVE only from here on
+        updateCalorieData(info);
         calculateTargetAndDeficit();
 
 
@@ -855,48 +848,53 @@ class FuelModel {
     }
 
     //! Detect pause from explicit timer state (preferred) or timer stall fallback.
-    private function detectPause(timerTime as Number, timerStatePaused as Boolean) as Void {
-        var wasPaused = _isPaused;
+    private function detectPause(timerTime as Number, timerStatePaused as Boolean) as Boolean {
+        var wasPaused = (_sessionState == STATE_PAUSED);
+        var pauseDetected = false;
 
         if (timerStatePaused) {
-            _isPaused = true;
+            pauseDetected = true;
             _timerStallCount = 0;
             _lastTimerTime = timerTime;
         } else if (wasPaused && _pauseStartClockTs != null && _lastTimerTime == 0) {
             // After a reload we do not know whether a persisted pause has already resumed.
-            // Keep the paused state until we observe the timer move on a later tick.
-            _isPaused = true;
+            // Keep the paused candidate until we observe the timer move on a later tick.
+            pauseDetected = true;
             _timerStallCount = 1;
             _lastTimerTime = timerTime;
         } else if (wasPaused && _pauseStartClockTs != null && timerTime == _lastTimerTime) {
-            _isPaused = true;
+            pauseDetected = true;
             _timerStallCount = 1;
             _lastTimerTime = timerTime;
         } else if (_lastTimerTime > 0) {
             if (timerTime == _lastTimerTime) {
-                _timerStallCount++;
-                if (_timerStallCount >= 2) { _isPaused = true; }
+                _timerStallCount += 1;
+                if (_timerStallCount >= 2) {
+                    pauseDetected = true;
+                }
             } else {
                 _timerStallCount = 0;
-                _isPaused = false;
+                pauseDetected = false;
             }
             _lastTimerTime = timerTime;
         } else {
-            _isPaused = false;
+            pauseDetected = false;
             _lastTimerTime = timerTime;
         }
 
-        if (_isPaused) {
+        if (pauseDetected) {
             if (!wasPaused) {
                 _pauseStartClockTs = getCurrentTimestamp();
             }
-            return;
+            return true;
         }
 
         if (wasPaused && _pauseStartClockTs != null) {
             shiftReminderReferenceTimestamps(getCurrentTimestamp() - _pauseStartClockTs);
         }
         _pauseStartClockTs = null;
+
+        return false;
     }
 
     private function resetDisplayValues() as Void {
