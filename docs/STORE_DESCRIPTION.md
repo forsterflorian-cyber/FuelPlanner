@@ -2,22 +2,29 @@
 
 ## Deutsch
 
-FuelPlanner ist ein Garmin Connect IQ Datenfeld fuer einfache
-Kohlenhydratplanung waehrend Ausdaueraktivitaeten. Das Datenfeld schaetzt den
-aktuellen Bedarf, erinnert an die naechste Aufnahme und erlaubt schnelles
-Buchen einfacher Portionen direkt waehrend der Aktivitaet.
+FuelPlanner ist ein Garmin Connect IQ Datenfeld zur einfachen Steuerung der
+Kohlenhydratzufuhr waehrend Ausdaueraktivitaeten.
 
-- Auto-, Intervall- oder kalorienbasierte Erinnerungen
-- Laufende Schaetzung von Zielmenge und Defizit
-- Einfache Intake-Logs sowie Auto-Flow auf Button-Geraeten
+Das Datenfeld kombiniert aktuelle Aktivitaetsdaten mit einem Zielwert und
+zeigt an, wann die naechste Aufnahme sinnvoll ist. So lassen sich
+Energieeinbrueche vermeiden und die Zufuhr gleichmaessig ueber die Einheit
+verteilen.
+
+- Erinnerungen basierend auf Zielwert, Intervall oder Kalorien
+- Laufende Anzeige von Zielmenge und aktuellem Defizit
+- Schnelles Buchen von Standard-Portionen waehrend der Aktivitaet
+- Automatischer Ablauf fuer Button-Geraete (Auto-Flow)
 
 ## English
 
-FuelPlanner is a Garmin Connect IQ data field for simple carbohydrate fueling
-guidance during endurance activities. It estimates current carb demand,
-reminds you when to fuel, and lets you log simple intake entries during the
-activity.
+FuelPlanner is a Garmin Connect IQ data field for simple carbohydrate intake
+management during endurance activities.
 
-- Auto, interval, or calorie-based reminders
-- Ongoing carbohydrate target and deficit estimation
-- Simple intake logging with Auto-Flow on button devices
+It combines live activity data with a target intake and indicates when the
+next fueling step is due. This helps avoid energy drops and maintain a
+consistent intake throughout the session.
+
+- Reminders based on target rate, interval, or calories
+- Ongoing display of target intake and current deficit
+- Quick logging of standard intake portions during activity
+- Auto-flow support for button-based devices

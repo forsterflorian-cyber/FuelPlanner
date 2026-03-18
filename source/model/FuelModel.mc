@@ -226,7 +226,7 @@ class FuelModel {
             }
             _sessionRecoverable = true;
 
-            if (_sessionState == STATE_PAUSED) {
+            if (_isPaused) {
                 setSessionState(STATE_PAUSED);
             } else if (!_isStartTimestampConfirmed) {
                 setSessionState(STATE_PRIMING);
