@@ -15,6 +15,7 @@ module FuelModelConsts {
     const MAX_CALORIES_KCAL               = 20000;
     const MAX_ENERGY_RATE_KCAL_MIN        = 40.0f;
     const MAX_MANUAL_INTAKE_G             = 200;
+    const PRIMING_CONFIRM_SEC = 3;
 }
 
 class FuelClock {
@@ -33,12 +34,20 @@ class FuelModel {
     public const MODE_FIXED        = 1;  // fixed interval from last intake
     public const MODE_CALORIE_AUTO = 2;  // target derived from watch calorie data
 
+    // Explicit session states
+    public const STATE_IDLE = 0;
+    public const STATE_PRIMING = 1;
+    public const STATE_ACTIVE = 2;
+    public const STATE_PAUSED = 3;
+    public const STATE_FINISHED = 4;
+
     // State
     private var _storage              as StorageManager;
     private var _clock                as FuelClock;
     private var _sessionActive        as Boolean = false;
     private var _sessionRecoverable   as Boolean = false;
     private var _startTimestamp       as Number  = 0;
+    private var _sessionState as Number = STATE_IDLE;
     // Internally tracked in tenths of grams (g10)
     private var _consumedTotalG       as Number  = 0;
     private var _lastIntakeTimestamp  as Number  = 0;
@@ -215,19 +224,27 @@ class FuelModel {
             if (_intakeCount == 0 && _consumedTotalG > 0) {
                 _intakeCount = 1;
             }
-            _sessionActive = true;
             _sessionRecoverable = true;
+
+            if (_isPaused) {
+                setSessionState(STATE_PAUSED);
+            } else if (!_isStartTimestampConfirmed) {
+                setSessionState(STATE_PRIMING);
+            } else {
+                setSessionState(STATE_ACTIVE);
+            }
+
             recalculateFromCurrentState();
-        }
+            }
     }
 
     //! Save session to storage
     function saveSession() as Void {
-        if (!_sessionActive) {
+        if (_sessionState == STATE_IDLE) {
             return;
         }
 
-        if (!_sessionRecoverable) {
+        if (!_sessionRecoverable || _sessionState == STATE_FINISHED) {
             _storage.clearSession();
             return;
         }
@@ -259,8 +276,13 @@ class FuelModel {
         _lastReminderTimestamp = 0;
         _autoIntakeLocked    = false;
         _autoIntakeEventPending = false;
-        _sessionActive       = true;
-        _sessionRecoverable  = true;
+        _sessionRecoverable = true;
+
+        if (activityStartTs != null) {
+            setSessionState(STATE_ACTIVE);
+        } else {
+            setSessionState(STATE_PRIMING);
+        }
         _intakeCount         = 0;
         _lastTimerTime       = 0;
         _timerStallCount     = 0;
@@ -285,13 +307,49 @@ class FuelModel {
         saveSession();
     }
 
+    private function setSessionState(state as Number) as Void {
+        _sessionState = state;
+        _sessionActive = (state != STATE_IDLE);
+        _isPaused = (state == STATE_PAUSED);
+    }
+
+    private function reconcileSessionState(activityStartTs as Number?,
+                                           timerSec as Number,
+                                           timerStatePaused as Boolean,
+                                           timerStateStoppedOrOff as Boolean) as Void {
+        if (!_sessionActive) {
+            setSessionState(STATE_IDLE);
+            return;
+        }
+
+        if (timerStateStoppedOrOff) {
+            setSessionState(STATE_FINISHED);
+            return;
+        }
+
+        if (timerStatePaused || _isPaused) {
+            setSessionState(STATE_PAUSED);
+            return;
+        }
+
+        // Fallback-started session: hold in priming briefly until the timer
+        // looks stable, so we do not immediately "trust" a transient start.
+        if (!_isStartTimestampConfirmed &&
+            activityStartTs == null &&
+            timerSec < FuelModelConsts.PRIMING_CONFIRM_SEC) {
+            setSessionState(STATE_PRIMING);
+            return;
+        }
+
+        setSessionState(STATE_ACTIVE);
+    }
+
     function clearSessionState() as Void {
-        _sessionActive = false;
+        setSessionState(STATE_IDLE);
         _sessionRecoverable = false;
         _startTimestamp = 0;
         _consumedTotalG = 0;
         _lastIntakeTimestamp = 0;
-        _isPaused = false;
         _sessionId = 0;
         _isStartTimestampConfirmed = false;
         _intakeCount = 0;
@@ -310,7 +368,7 @@ class FuelModel {
         }
 
         _sessionRecoverable = false;
-        _isPaused = false;
+        setSessionState(STATE_FINISHED);
         _pauseStartTimerS = null;
         _pauseStartClockTs = null;
         _lastReminderTimestamp = 0;
@@ -379,8 +437,8 @@ class FuelModel {
                 startNewSession(null);
             }
         }
-
-        if (!_sessionActive) {
+        reconcileSessionState(activityStartTs, timerSec, false, false);
+        if (_sessionState == STATE_IDLE) {
             resetDisplayValues();
             return;
         }
@@ -396,11 +454,15 @@ class FuelModel {
         _elapsedActiveSec = clampElapsedActiveSec(effectiveTimerSec);
 
         var timerStateStoppedOrOff = isTimerStateStoppedOrOff(info);
-        detectPause(timerTime, timerStatePaused);
-        updateCalorieData(info);
-        calculateTargetAndDeficit();
 
-        if (timerStateStoppedOrOff) {
+        detectPause(timerTime, timerStatePaused);
+
+        reconcileSessionState(activityStartTs, timerSec, timerStatePaused, timerStateStoppedOrOff);
+
+        updateCalorieData(info);
+
+        if (_sessionState == STATE_FINISHED) {
+            calculateTargetAndDeficit();
             markSessionFinished();
             _isReminderDue = false;
             _nextDueInSec = 0;
@@ -409,7 +471,9 @@ class FuelModel {
             updateFitFields();
             return;
         }
-        if (_isPaused) {
+
+        if (_sessionState == STATE_PAUSED) {
+            calculateTargetAndDeficit();
             _isReminderDue = false;
             _nextDueInSec = 0;
             _autoIntakeLocked = false;
@@ -417,6 +481,20 @@ class FuelModel {
             updateFitFields();
             return;
         }
+
+        if (_sessionState == STATE_PRIMING) {
+            _targetTotalG = 0;
+            _deficitG = 0;
+            _nextDueInSec = 0;
+            _isReminderDue = false;
+            _autoIntakeLocked = false;
+            _autoIntakeEventPending = false;
+            updateFitFields();
+            return;
+        }
+
+        // ACTIVE only from here on
+        calculateTargetAndDeficit();
 
 
         calculateNextDue();
@@ -945,8 +1023,16 @@ class FuelModel {
 
     //! Recompute target/deficit/reminder timing from current state and settings.
     private function recalculateFromCurrentState() as Void {
+        if (_sessionState == STATE_IDLE) {
+            resetDisplayValues();
+            return;
+        }
+
         calculateTargetAndDeficit();
-        if (_isPaused) {
+
+        if (_sessionState == STATE_PRIMING ||
+            _sessionState == STATE_PAUSED ||
+            _sessionState == STATE_FINISHED) {
             _nextDueInSec = 0;
             _isReminderDue = false;
             return;
@@ -955,7 +1041,6 @@ class FuelModel {
         calculateNextDue();
         checkReminderDue();
     }
-
     (:testsupport)
     function setTouchForTest(isTouch as Boolean) as Void {
         _isTouch = isTouch;
