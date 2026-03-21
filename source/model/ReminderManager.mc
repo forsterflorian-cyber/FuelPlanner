@@ -21,6 +21,8 @@ class ReminderManager {
     private var _confirmationPattern as Array<Attention.VibeProfile>? = null;
     (:full)
     private var _snoozePattern as Array<Attention.VibeProfile>? = null;
+    (:full)
+    private var _undoPattern as Array<Attention.VibeProfile>? = null;
     
     //! Constructor
     function initialize() {
@@ -71,6 +73,22 @@ class ReminderManager {
             ] as Array<Attention.VibeProfile>;
         }
         return _snoozePattern as Array<Attention.VibeProfile>;
+    }
+
+    (:full)
+    private function getUndoPattern() as Array<Attention.VibeProfile> {
+        if (_undoPattern == null) {
+            // Triple pulse: deutlich anders als Confirmation (double pulse)
+            // Signalisiert "Rückgängig gemacht"
+            _undoPattern = [
+                new Attention.VibeProfile(30, VIBE_SHORT),
+                new Attention.VibeProfile(0, 80),
+                new Attention.VibeProfile(30, VIBE_SHORT),
+                new Attention.VibeProfile(0, 80),
+                new Attention.VibeProfile(30, VIBE_SHORT)
+            ] as Array<Attention.VibeProfile>;
+        }
+        return _undoPattern as Array<Attention.VibeProfile>;
     }
     
     //! Check device capabilities
@@ -199,6 +217,16 @@ class ReminderManager {
         }
         
         return vibratePattern(getSnoozePattern());
+    }
+
+    //! Trigger undo confirmation (triple pulse - distinct from intake confirmation)
+    (:full)
+    function triggerUndo() as Boolean {
+        if (!_hasVibration) {
+            return false;
+        }
+        
+        return vibratePattern(getUndoPattern());
     }
     
     //! Execute vibration pattern

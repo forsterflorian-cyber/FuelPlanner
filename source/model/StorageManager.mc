@@ -2,6 +2,7 @@ import Toybox.Application;
 import Toybox.Application.Storage;
 import Toybox.Application.Properties;
 import Toybox.Lang;
+import FuelPlannerLog;
 
 class StorageBackend {
     function initialize() {
@@ -81,11 +82,26 @@ class StorageManager {
 
     private var _storageBackend as StorageBackend;
     private var _propertiesBackend as PropertiesBackend;
+    private var _writeFailureCount as Number = 0;
+    private var _lastWriteFailureKey as String = "";
 
     function initialize(storageBackend as StorageBackend?,
                         propertiesBackend as PropertiesBackend?) {
         _storageBackend = (storageBackend != null) ? storageBackend : new StorageBackend();
         _propertiesBackend = (propertiesBackend != null) ? propertiesBackend : new PropertiesBackend();
+    }
+
+    function getWriteFailureCount() as Number {
+        return _writeFailureCount;
+    }
+
+    function getLastWriteFailureKey() as String {
+        return _lastWriteFailureKey;
+    }
+
+    function resetWriteFailureCount() as Void {
+        _writeFailureCount = 0;
+        _lastWriteFailureKey = "";
     }
 
     private function clamp(value as Number, min as Number, max as Number) as Number {
@@ -126,7 +142,11 @@ class StorageManager {
                                         min as Number, max as Number) as Void {
         try {
             _propertiesBackend.setValue(key, roundToInt(clamp(value, min, max)));
-        } catch (e) {}
+        } catch (e) {
+            _writeFailureCount += 1;
+            _lastWriteFailureKey = key;
+            FuelPlannerLog.logError("Storage", "Failed to set property: " + key);
+        }
     }
 
     // ========== Settings from Properties (synced via Garmin Connect) ==========
@@ -235,9 +255,19 @@ class StorageManager {
 
     function setSessionId(value as Number) as Void {
         if (value > 0) {
-            _storageBackend.setValue(KEY_SESSION_ID, value);
+            try {
+                _storageBackend.setValue(KEY_SESSION_ID, value);
+            } catch (e) {
+                _writeFailureCount += 1;
+                _lastWriteFailureKey = KEY_SESSION_ID;
+            }
         } else {
-            _storageBackend.deleteValue(KEY_SESSION_ID);
+            try {
+                _storageBackend.deleteValue(KEY_SESSION_ID);
+            } catch (e) {
+                _writeFailureCount += 1;
+                _lastWriteFailureKey = KEY_SESSION_ID;
+            }
         }
     }
 
@@ -251,9 +281,19 @@ class StorageManager {
 
     function setStartTimestamp(value as Number) as Void {
         if (value > 0) {
-            _storageBackend.setValue(KEY_START_TIMESTAMP, value);
+            try {
+                _storageBackend.setValue(KEY_START_TIMESTAMP, value);
+            } catch (e) {
+                _writeFailureCount += 1;
+                _lastWriteFailureKey = KEY_START_TIMESTAMP;
+            }
         } else {
-            _storageBackend.deleteValue(KEY_START_TIMESTAMP);
+            try {
+                _storageBackend.deleteValue(KEY_START_TIMESTAMP);
+            } catch (e) {
+                _writeFailureCount += 1;
+                _lastWriteFailureKey = KEY_START_TIMESTAMP;
+            }
         }
     }
 
@@ -266,7 +306,12 @@ class StorageManager {
     }
 
     function setIsStartTimestampConfirmed(value as Boolean) as Void {
-        _storageBackend.setValue(KEY_START_TS_CONFIRMED, value);
+        try {
+            _storageBackend.setValue(KEY_START_TS_CONFIRMED, value);
+        } catch (e) {
+            _writeFailureCount += 1;
+            _lastWriteFailureKey = KEY_START_TS_CONFIRMED;
+        }
     }
 
     function getConsumedTotal() as Number {
@@ -278,7 +323,12 @@ class StorageManager {
     }
 
     function setConsumedTotal(value as Number) as Void {
-        _storageBackend.setValue(KEY_CONSUMED_TOTAL, nonNegative(value));
+        try {
+            _storageBackend.setValue(KEY_CONSUMED_TOTAL, nonNegative(value));
+        } catch (e) {
+            _writeFailureCount += 1;
+            _lastWriteFailureKey = KEY_CONSUMED_TOTAL;
+        }
     }
 
     function getConsumedTotalG10() as Number {
@@ -292,9 +342,34 @@ class StorageManager {
 
     function setConsumedTotalG10(value as Number) as Void {
         var clamped = nonNegative(value);
-        _storageBackend.setValue(KEY_CONSUMED_TOTAL_G10, clamped);
-        // Keep legacy key in sync for downgrade compatibility.
-        _storageBackend.setValue(KEY_CONSUMED_TOTAL, clamped / 10);
+        var legacyValue = clamped / 10;
+        
+        // Beide Werte schreiben - bei Fehlschlag Inkonsistenz vermeiden
+        var newKeySuccess = false;
+        var legacyKeySuccess = false;
+        
+        try {
+            _storageBackend.setValue(KEY_CONSUMED_TOTAL_G10, clamped);
+            newKeySuccess = true;
+        } catch (e) {
+            _writeFailureCount += 1;
+            _lastWriteFailureKey = KEY_CONSUMED_TOTAL_G10;
+        }
+        
+        try {
+            _storageBackend.setValue(KEY_CONSUMED_TOTAL, legacyValue);
+            legacyKeySuccess = true;
+        } catch (e) {
+            _writeFailureCount += 1;
+            _lastWriteFailureKey = KEY_CONSUMED_TOTAL;
+        }
+        
+        // Wenn neuer Key fehlschlägt, Legacy aufräumen um Inkonsistenz zu vermeiden
+        if (!newKeySuccess && legacyKeySuccess) {
+            try {
+                _storageBackend.deleteValue(KEY_CONSUMED_TOTAL);
+            } catch (e) {}
+        }
     }
 
     function getLastIntakeTimestamp() as Number? {
@@ -307,9 +382,19 @@ class StorageManager {
 
     function setLastIntakeTimestamp(value as Number) as Void {
         if (value > 0) {
-            _storageBackend.setValue(KEY_LAST_INTAKE_TS, value);
+            try {
+                _storageBackend.setValue(KEY_LAST_INTAKE_TS, value);
+            } catch (e) {
+                _writeFailureCount += 1;
+                _lastWriteFailureKey = KEY_LAST_INTAKE_TS;
+            }
         } else {
-            _storageBackend.deleteValue(KEY_LAST_INTAKE_TS);
+            try {
+                _storageBackend.deleteValue(KEY_LAST_INTAKE_TS);
+            } catch (e) {
+                _writeFailureCount += 1;
+                _lastWriteFailureKey = KEY_LAST_INTAKE_TS;
+            }
         }
     }
 
@@ -323,9 +408,19 @@ class StorageManager {
 
     function setLastReminderTimestamp(value as Number) as Void {
         if (value > 0) {
-            _storageBackend.setValue(KEY_LAST_REMINDER_TS, value);
+            try {
+                _storageBackend.setValue(KEY_LAST_REMINDER_TS, value);
+            } catch (e) {
+                _writeFailureCount += 1;
+                _lastWriteFailureKey = KEY_LAST_REMINDER_TS;
+            }
         } else {
-            _storageBackend.deleteValue(KEY_LAST_REMINDER_TS);
+            try {
+                _storageBackend.deleteValue(KEY_LAST_REMINDER_TS);
+            } catch (e) {
+                _writeFailureCount += 1;
+                _lastWriteFailureKey = KEY_LAST_REMINDER_TS;
+            }
         }
     }
 
@@ -338,7 +433,12 @@ class StorageManager {
     }
 
     function setIsPaused(value as Boolean) as Void {
-        _storageBackend.setValue(KEY_IS_PAUSED, value);
+        try {
+            _storageBackend.setValue(KEY_IS_PAUSED, value);
+        } catch (e) {
+            _writeFailureCount += 1;
+            _lastWriteFailureKey = KEY_IS_PAUSED;
+        }
     }
 
     function getElapsedActiveSec() as Number {
@@ -350,7 +450,12 @@ class StorageManager {
     }
 
     function setElapsedActiveSec(value as Number) as Void {
-        _storageBackend.setValue(KEY_ELAPSED_SEC, nonNegative(value));
+        try {
+            _storageBackend.setValue(KEY_ELAPSED_SEC, nonNegative(value));
+        } catch (e) {
+            _writeFailureCount += 1;
+            _lastWriteFailureKey = KEY_ELAPSED_SEC;
+        }
     }
 
     function getPausedTimerOffsetSec() as Number {
@@ -362,7 +467,12 @@ class StorageManager {
     }
 
     function setPausedTimerOffsetSec(value as Number) as Void {
-        _storageBackend.setValue(KEY_PAUSED_TIMER_OFFSET_S, nonNegative(value));
+        try {
+            _storageBackend.setValue(KEY_PAUSED_TIMER_OFFSET_S, nonNegative(value));
+        } catch (e) {
+            _writeFailureCount += 1;
+            _lastWriteFailureKey = KEY_PAUSED_TIMER_OFFSET_S;
+        }
     }
 
     function getPauseStartTimerSec() as Number? {
@@ -378,10 +488,20 @@ class StorageManager {
 
     function setPauseStartTimerSec(value as Number?) as Void {
         if (value == null || value <= 0) {
-            _storageBackend.deleteValue(KEY_PAUSE_START_TIMER_S);
+            try {
+                _storageBackend.deleteValue(KEY_PAUSE_START_TIMER_S);
+            } catch (e) {
+                _writeFailureCount += 1;
+                _lastWriteFailureKey = KEY_PAUSE_START_TIMER_S;
+            }
             return;
         }
-        _storageBackend.setValue(KEY_PAUSE_START_TIMER_S, nonNegative(value));
+        try {
+            _storageBackend.setValue(KEY_PAUSE_START_TIMER_S, nonNegative(value));
+        } catch (e) {
+            _writeFailureCount += 1;
+            _lastWriteFailureKey = KEY_PAUSE_START_TIMER_S;
+        }
     }
 
     function getPauseStartClockSec() as Number? {
@@ -397,10 +517,20 @@ class StorageManager {
 
     function setPauseStartClockSec(value as Number?) as Void {
         if (value == null || value <= 0) {
-            _storageBackend.deleteValue(KEY_PAUSE_START_CLOCK_TS);
+            try {
+                _storageBackend.deleteValue(KEY_PAUSE_START_CLOCK_TS);
+            } catch (e) {
+                _writeFailureCount += 1;
+                _lastWriteFailureKey = KEY_PAUSE_START_CLOCK_TS;
+            }
             return;
         }
-        _storageBackend.setValue(KEY_PAUSE_START_CLOCK_TS, nonNegative(value));
+        try {
+            _storageBackend.setValue(KEY_PAUSE_START_CLOCK_TS, nonNegative(value));
+        } catch (e) {
+            _writeFailureCount += 1;
+            _lastWriteFailureKey = KEY_PAUSE_START_CLOCK_TS;
+        }
     }
 
     function getIntakeCount() as Number {
@@ -412,7 +542,12 @@ class StorageManager {
     }
 
     function setIntakeCount(value as Number) as Void {
-        _storageBackend.setValue(KEY_INTAKE_COUNT, nonNegative(value));
+        try {
+            _storageBackend.setValue(KEY_INTAKE_COUNT, nonNegative(value));
+        } catch (e) {
+            _writeFailureCount += 1;
+            _lastWriteFailureKey = KEY_INTAKE_COUNT;
+        }
     }
 
     // ========== Session Management ==========

@@ -3,12 +3,13 @@ import Toybox.Time;
 import Toybox.Activity;
 import Toybox.FitContributor;
 import Toybox.System;
+import FuelPlannerLog;
 
 // Module-level constants: stored in bytecode, not per-instance heap
 module FuelModelConsts {
     const FIT_UPDATE_INTERVAL_MS          = 5000;
-    const TIMER_BACKTRACK_RESET_DELTA_SEC = 10;
-    const TIMER_BACKTRACK_CONFIRM_TICKS   = 4;
+    const TIMER_BACKTRACK_RESET_DELTA_SEC = 30;  // Erhöht von 10: Verhindert falsche Session-Resets bei GPS-Aussetzern
+    const TIMER_BACKTRACK_CONFIRM_TICKS   = 6;   // Erhöht von 4: Erfordert längeren konstanten Reset für Session-Neustart
     const MAX_ELAPSED_ACTIVE_SEC          = 604800; // 7 days
     const MAX_TOTAL_G10                   = 200000; // 20,000 g
     const MAX_NEXT_DUE_SEC                = 359999; // 99h 59m 59s
@@ -89,6 +90,10 @@ class FuelModel {
     private var _latestCaloriesKcal      as Number = 0;   // cumulative kcal burned
     private var _latestEnergyExpKcalMin  as Float  = 0.0f; // current kcal/min
     private var _caloriesAvailable       as Boolean = false;
+    private var _calorieDataMissingTicks as Number = 0;
+    private var _calorieAutoSuspendedUntilSec as Number = 0; // Recovery: Wann erneut auf Calorie Auto prüfen
+    private const CALORIE_FALLBACK_TICKS = 300; // 5 Minuten bei 1Hz
+    private const CALORIE_SUSPEND_DURATION_SEC = 600; // 10 Minuten Sperre vor Recovery-Versuch
 
     // For pause detection
     private var _lastTimerTime      as Number = 0;
@@ -96,6 +101,11 @@ class FuelModel {
     private var _pausedTimerOffsetS as Number = 0;
     private var _pauseStartTimerS   as Number? = null;
     private var _timerBacktrackCount as Number = 0;
+
+    // For undo functionality
+    private var _undoAvailable      as Boolean = false;
+    private var _undoGramsG10       as Number = 0;
+    private var _undoTimestamp      as Number = 0;
 
     //! Constructor
     function initialize(storage as StorageManager, clock as FuelClock?) {
@@ -235,7 +245,7 @@ class FuelModel {
             }
 
             recalculateFromCurrentState();
-            }
+        }
     }
 
     //! Save session to storage
@@ -400,8 +410,14 @@ private function markSessionFinished() as Void {
         }
 
         var activityStartTs = getActivityStartTimestamp(info);
+        handleActivityStartDetection(activityStartTs, timerSec);
+        handleTimerState(info, timerTime, timerSec);
+        handleSessionStates(info);
+    }
 
-        // Detect a new activity.
+    //! Detect new activity or timer reset
+    private function handleActivityStartDetection(activityStartTs as Number?,
+                                                  timerSec as Number) as Void {
         if (activityStartTs != null) {
             _timerBacktrackCount = 0;
             if (_sessionActive) {
@@ -409,8 +425,6 @@ private function markSessionFinished() as Void {
                     if (_isStartTimestampConfirmed) {
                         startNewSession(activityStartTs);
                     } else {
-                        // We started from a fallback timestamp before startTime became available.
-                        // Adopt the real activity start and keep current intake/session data.
                         _startTimestamp = activityStartTs;
                         _sessionId = activityStartTs;
                         _isStartTimestampConfirmed = true;
@@ -425,8 +439,6 @@ private function markSessionFinished() as Void {
                 startNewSession(activityStartTs);
             }
         } else {
-            // Fallback: detect new activity when the timer resets/backtracks.
-            // A short timer glitch must not reset the whole session.
             if (_sessionActive && isLikelyTimerReset(timerSec)) {
                 startNewSession(null);
             } else if (!_sessionActive && timerSec > 0) {
@@ -434,28 +446,31 @@ private function markSessionFinished() as Void {
                 startNewSession(null);
             }
         }
-   
+    }
 
+    //! Handle timer state and update elapsed time
+    private function handleTimerState(info as Activity.Info?, timerTime as Number, timerSec as Number) as Void {
         var timerStatePaused = isTimerStatePaused(info);
         var effectiveTimerSec = getEffectiveTimerSec(timerSec, timerStatePaused);
         if (!timerStatePaused &&
             _elapsedActiveSec > 0 &&
             effectiveTimerSec + FuelModelConsts.TIMER_BACKTRACK_RESET_DELTA_SEC < _elapsedActiveSec) {
-            // Ignore transient timer backtracks until fallback reset detection confirms a real new session.
             effectiveTimerSec = _elapsedActiveSec;
         }
         _elapsedActiveSec = clampElapsedActiveSec(effectiveTimerSec);
 
         var timerStateStoppedOrOff = isTimerStateStoppedOrOff(info);
-
         var pauseDetected = detectPause(timerTime, timerStatePaused);
-
+        var activityStartTs = getActivityStartTimestamp(info);
         reconcileSessionState(activityStartTs, timerSec, timerStatePaused || pauseDetected, timerStateStoppedOrOff);
+    }
+
+    //! Handle session state-specific logic
+    private function handleSessionStates(info as Activity.Info?) as Void {
         if (_sessionState == STATE_IDLE) {
             resetDisplayValues();
             return;
         }
-  
 
         if (_sessionState == STATE_FINISHED) {
             markSessionFinished();
@@ -488,8 +503,6 @@ private function markSessionFinished() as Void {
         // ACTIVE only from here on
         updateCalorieData(info);
         calculateTargetAndDeficit();
-
-
         calculateNextDue();
         checkReminderDue();
         applyAutoIntakeIfDue();
@@ -504,7 +517,9 @@ private function markSessionFinished() as Void {
                 settings.isTouchScreen instanceof Boolean) {
                 return settings.isTouchScreen;
             }
-        } catch (e) {}
+        } catch (e) {
+            FuelPlannerLog.logWarn("TouchDetect", "Failed to detect touch screen");
+        }
         return false;
     }
 
@@ -586,6 +601,13 @@ private function markSessionFinished() as Void {
             return false;
         }
 
+        // Nur als Reset werten, wenn Timer wirklich auf 0 oder nahe 0 ist
+        // Verhindert falsche Resets bei GPS-Aussetzern oder Gerätesleep
+        if (rawTimerSec > 5) {
+            _timerBacktrackCount = 0;
+            return false;
+        }
+
         var delta = _elapsedActiveSec - rawTimerSec;
         if (delta < FuelModelConsts.TIMER_BACKTRACK_RESET_DELTA_SEC) {
             _timerBacktrackCount = 0;
@@ -601,6 +623,7 @@ private function markSessionFinished() as Void {
         return true;
     }
 
+    (:full)
     private function applyAutoIntakeIfDue() as Void {
         if (_isTouch) {
             _autoIntakeLocked = false;
@@ -608,6 +631,34 @@ private function markSessionFinished() as Void {
             return;
         }
 
+        if (!_isReminderDue) {
+            _autoIntakeLocked = false;
+            _autoIntakeEventPending = false;
+            return;
+        }
+
+        if (_autoIntakeLocked) {
+            return;
+        }
+
+        var intakeCountBefore = _intakeCount;
+        _autoIntakeLocked = true;
+        recordDefaultIntake();
+        if (_intakeCount <= intakeCountBefore) {
+            // Intake was not booked (e.g. unexpected validation/storage issue) -> allow retry.
+            _autoIntakeLocked = false;
+            _autoIntakeEventPending = false;
+            return;
+        }
+        _autoIntakeEventPending = true;
+        recordReminderTriggered();
+        _deficitG = _targetTotalG - _consumedTotalG;
+        calculateNextDue();
+        checkReminderDue();
+    }
+
+    (:lite)
+    private function applyAutoIntakeIfDue() as Void {
         if (!_isReminderDue) {
             _autoIntakeLocked = false;
             _autoIntakeEventPending = false;
@@ -692,13 +743,17 @@ private function markSessionFinished() as Void {
             if (fieldTargetSummary != null) {
                 fieldTargetSummary.setData(_targetTotalG.toFloat() / 10.0f);
             }
-        } catch (e) {}
+        } catch (e) {
+            FuelPlannerLog.logError("FIT", "Failed to write target summary");
+        }
 
         try {
             if (fieldActualSummary != null) {
                 fieldActualSummary.setData(_consumedTotalG.toFloat() / 10.0f);
             }
-        } catch (e) {}
+        } catch (e) {
+            FuelPlannerLog.logError("FIT", "Failed to write actual summary");
+        }
     }
 
     private function getTimerTime(info) as Number? {
@@ -728,8 +783,8 @@ private function markSessionFinished() as Void {
             if (info has :startTime && info.startTime != null) {
                 return info.startTime.value();
             }
-        } catch (e instanceof Lang.Exception) {
         } catch (e) {
+            FuelPlannerLog.logWarn("ActivityStart", "Failed to get start timestamp");
         }
         return null;
     }
@@ -746,20 +801,7 @@ private function markSessionFinished() as Void {
     }
 
     private function isTimerStateStoppedOrOff(info) as Boolean {
-        try {
-            if (!(info has :timerState)) {
-                return false;
-            }
-            if (Activity has :TIMER_STATE_STOPPED &&
-                info.timerState == Activity.TIMER_STATE_STOPPED) {
-                return true;
-            }
-            if (Activity has :TIMER_STATE_OFF &&
-                info.timerState == Activity.TIMER_STATE_OFF) {
-                return true;
-            }
-        } catch (e) {}
-        return false;
+        return FuelPlannerUtils.isTimerStateStoppedOrOff(info);
     }
 
     private function getEffectiveTimerSec(rawTimerSec as Number,
@@ -820,6 +862,34 @@ private function markSessionFinished() as Void {
                 }
             }
         } catch (e) {}
+
+        // Calorie Auto Fallback mit Recovery: Wechsel auf MODE_AUTO wenn Kalorien-Daten fehlen
+        if (_reminderMode == MODE_CALORIE_AUTO) {
+            if (_caloriesAvailable) {
+                _calorieDataMissingTicks = 0;
+                // Sperre abgelaufen? Dann aufheben
+                if (_calorieAutoSuspendedUntilSec > 0 &&
+                    _elapsedActiveSec >= _calorieAutoSuspendedUntilSec) {
+                    _calorieAutoSuspendedUntilSec = 0;
+                }
+            } else {
+                _calorieDataMissingTicks += 1;
+                if (_calorieDataMissingTicks >= CALORIE_FALLBACK_TICKS) {
+                    _reminderMode = MODE_AUTO;
+                    _calorieDataMissingTicks = 0;
+                    // Sperre für 10 Minuten setzen, dann erneut auf Calorie Auto prüfen
+                    _calorieAutoSuspendedUntilSec = _elapsedActiveSec + CALORIE_SUSPEND_DURATION_SEC;
+                }
+            }
+        }
+
+        // Recovery: Prüfe ob Kalorien wieder verfügbar sind und Sperre abgelaufen
+        if (_calorieAutoSuspendedUntilSec > 0 &&
+            _caloriesAvailable &&
+            _elapsedActiveSec >= _calorieAutoSuspendedUntilSec) {
+            _reminderMode = MODE_CALORIE_AUTO;
+            _calorieAutoSuspendedUntilSec = 0;
+        }
     }
 
     private function toNumberOrNull(value as Lang.Object?) as Number? {
@@ -930,6 +1000,7 @@ private function markSessionFinished() as Void {
             safeElapsedActiveSec = FuelModelConsts.MAX_ELAPSED_ACTIVE_SEC;
         }
 
+        // reminderMode == 2 ist MODE_CALORIE_AUTO (kann in static method nicht als Instanz-Konstante gelesen werden)
         if (reminderMode == 2 && caloriesAvailable) {
             // Target = burned carbs estimate in g10.
             var safeCaloriesKcal = latestCaloriesKcal;
@@ -1149,9 +1220,60 @@ private function markSessionFinished() as Void {
         _autoIntakeLocked    = false;
         _autoIntakeEventPending = false;
         _intakeCount        += 1;
+        
+        // Store undo state
+        _undoAvailable = true;
+        _undoGramsG10 = gramsG10;
+        _undoTimestamp = now;
+        
         recalculateFromCurrentState();
         _forceNextFitFieldUpdate = true;
         saveSession();
+    }
+
+    function undoLastIntake() as Boolean {
+        if (!_sessionActive || !_undoAvailable) {
+            return false;
+        }
+        
+        var now = getCurrentTimestamp();
+        // Allow undo within 10 seconds
+        if (now - _undoTimestamp > 10) {
+            _undoAvailable = false;
+            return false;
+        }
+        
+        _consumedTotalG = clampNonNegativeTotalG10(_consumedTotalG - _undoGramsG10);
+        _intakeCount -= 1;
+        if (_intakeCount < 0) {
+            _intakeCount = 0;
+        }
+        
+        _undoAvailable = false;
+        recalculateFromCurrentState();
+        _forceNextFitFieldUpdate = true;
+        saveSession();
+        return true;
+    }
+
+    function isUndoAvailable() as Boolean {
+        if (!_sessionActive || !_undoAvailable) {
+            return false;
+        }
+        var now = getCurrentTimestamp();
+        return (now - _undoTimestamp) <= 10;
+    }
+
+    function getUndoRemainingSec() as Number {
+        if (!_sessionActive || !_undoAvailable) {
+            return 0;
+        }
+        var now = getCurrentTimestamp();
+        var remaining = 10 - (now - _undoTimestamp);
+        if (remaining < 0) {
+            return 0;
+        }
+        return remaining;
     }
 
     function recordDefaultIntake() as Void {
@@ -1226,4 +1348,5 @@ private function markSessionFinished() as Void {
         }
         return (recoveryDeficitG10 + 5) / 10;
     }
+
 }

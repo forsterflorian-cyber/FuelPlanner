@@ -74,6 +74,11 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private var _lastBlinkTime as Number  = 0;
     private const BLINK_INTERVAL = 500;
 
+    // Font measurement cache
+    private var _fontCacheRowHeight as Number = -1;
+    private var _fontCacheAllowNumber as Boolean = false;
+    private var _fontCacheResult as Graphics.FontType = Graphics.FONT_XTINY;
+
     // Last known field size (for tap zone mapping in multi-field layouts)
     private var _lastFieldWidth as Number = 0;
     private var _lastFieldHeight as Number = 0;
@@ -114,16 +119,6 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         _lastFieldHeight = dc.getHeight();
     }
 
-    (:testsupport)
-    public static function getGaugeAlertTone(deficitG10 as Number) as String {
-        if (deficitG10 <= 0) {
-            return "GREEN";
-        }
-        if (deficitG10 >= 200) {
-            return "RED";
-        }
-        return "ORANGE";
-    }
 
     function onTimerLap() as Void {
         _model.onTimerLap();
@@ -678,6 +673,11 @@ private function drawDeficitGauge(dc as Dc, w as Number, h as Number,
             target = 1;
         }
 
+        // Cache: gleiche Höhe und allowNumber = kein erneutes Messen
+        if (target == _fontCacheRowHeight && allowNumber == _fontCacheAllowNumber) {
+            return _fontCacheResult;
+        }
+
         var hXtiny  = dc.getTextDimensions("Ag", Graphics.FONT_XTINY)[1];
         var hTiny   = dc.getTextDimensions("Ag", Graphics.FONT_TINY)[1];
         var hMedium = dc.getTextDimensions("Ag", Graphics.FONT_MEDIUM)[1];
@@ -697,6 +697,11 @@ private function drawDeficitGauge(dc as Dc, w as Number, h as Number,
         if (allowNumber && hNumber <= target && hNumber >= bestH) {
             bestFont = Graphics.FONT_NUMBER_MILD;
         }
+
+        // Cache aktualisieren
+        _fontCacheRowHeight = target;
+        _fontCacheAllowNumber = allowNumber;
+        _fontCacheResult = bestFont;
 
         return bestFont;
     }
@@ -743,7 +748,12 @@ private function drawDeficitGauge(dc as Dc, w as Number, h as Number,
             return SAFE_BOTTOM_MAX_PX;
         }
 
-        var dMax = Math.sqrt((radius * radius) - (halfText * halfText));
+        // Math.sqrt() ist in Connect IQ 3.0+ verfügbar
+        var radicand = (radius * radius) - (halfText * halfText);
+        var dMax = 0.0f;
+        if (radicand > 0.0f) {
+            dMax = Math.sqrt(radicand);
+        }
         var maxCenterY = radius + dMax;
         var inset = h.toFloat() - maxCenterY - (textHeight.toFloat() / 2.0f);
 
@@ -793,20 +803,7 @@ private function drawDeficitGauge(dc as Dc, w as Number, h as Number,
     }
 
     private function isTimerStateStoppedOrOff(info as Activity.Info) as Boolean {
-        try {
-            if (!(info has :timerState)) {
-                return false;
-            }
-            if (Activity has :TIMER_STATE_STOPPED &&
-                info.timerState == Activity.TIMER_STATE_STOPPED) {
-                return true;
-            }
-            if (Activity has :TIMER_STATE_OFF &&
-                info.timerState == Activity.TIMER_STATE_OFF) {
-                return true;
-            }
-        } catch (e) {}
-        return false;
+        return FuelPlannerUtils.isTimerStateStoppedOrOff(info);
     }
 
     //! Format seconds as m:ss or Xh:mm

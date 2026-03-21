@@ -51,23 +51,23 @@ class StressTests {
         model.compute(info);
         logFuelStatus(logger, "surplus_after_150g", model);
 
-        var gaugeAfterSurplus = FuelPlannerFieldView.getGaugeAlertTone(model.getDeficitG10());
+        var gaugeAfterSurplus = FuelPlannerUtils.getGaugeAlertTone(model.getDeficitG10(), model.getDoseG10());
 
         info.setTimerSeconds(8940);
         model.compute(info);
         logFuelStatus(logger, "surplus_before_zero_cross", model);
-        var gaugeBeforeZero = FuelPlannerFieldView.getGaugeAlertTone(model.getDeficitG10());
+        var gaugeBeforeZero = FuelPlannerUtils.getGaugeAlertTone(model.getDeficitG10(), model.getDoseG10());
 
         info.setTimerSeconds(9060);
         model.compute(info);
         logFuelStatus(logger, "surplus_after_zero_cross", model);
-        var gaugeAfterZero = FuelPlannerFieldView.getGaugeAlertTone(model.getDeficitG10());
+        var gaugeAfterZero = FuelPlannerUtils.getGaugeAlertTone(model.getDeficitG10(), model.getDoseG10());
 
         Test.assertMessage(model.getConsumedTotalG10() == 1500, "Three double doses should book exactly 150g.");
         Test.assertEqual(1500, model.getConsumedTotalG10());
-        Test.assertEqual("GREEN", gaugeAfterSurplus);
-        Test.assertEqual("GREEN", gaugeBeforeZero);
-        Test.assertEqual("ORANGE", gaugeAfterZero);
+        Test.assertEqual(0, gaugeAfterSurplus);  // GREEN = 0
+        Test.assertEqual(0, gaugeBeforeZero);    // GREEN = 0
+        Test.assertEqual(1, gaugeAfterZero);     // ORANGE = 1
         Test.assertMessage(model.getDeficitG10() == 10, "At 151 minutes the 150g surplus should have decayed to a 1g deficit.");
         Test.assertEqual(10, model.getDeficitG10());
         Test.assertMessage(!model.isReminderDue(), "A small positive deficit after a large surplus must not retrigger reminders early.");

@@ -210,18 +210,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     }
 
     private function isTimerStateStoppedOrOff(info as Activity.Info) as Boolean {
-        try {
-            if (!(info has :timerState)) {
-                return false;
-            }
-            if (Activity has :TIMER_STATE_STOPPED && info.timerState == Activity.TIMER_STATE_STOPPED) {
-                return true;
-            }
-            if (Activity has :TIMER_STATE_OFF && info.timerState == Activity.TIMER_STATE_OFF) {
-                return true;
-            }
-        } catch (e) {}
-        return false;
+        return FuelPlannerUtils.isTimerStateStoppedOrOff(info);
     }
 
     private function formatDuration(seconds as Number) as String {

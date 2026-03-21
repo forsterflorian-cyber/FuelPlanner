@@ -168,4 +168,29 @@ class StorageTests {
         Test.assertMessage(!restoredModel.isSessionActive(), "Finished sessions must not reload as live recoverable sessions.");
         return true;
     }
+
+    (:test)
+    static function consumedG10SyncsLegacyKey(logger as Test.Logger) as Boolean {
+        var storageBackend = new MockStorageBackend();
+        var props = new MockPropertiesBackend();
+        var storage = buildStorage(props, storageBackend);
+
+        // Set consumed G10 value
+        storage.setConsumedTotalG10(250);
+
+        // Verify both keys are in sync
+        var g10Value = storageBackend.getValue("consum10");
+        var legacyValue = storageBackend.getValue("consumed");
+
+        Test.assertMessage(g10Value instanceof Number, "consum10 key should be set");
+        Test.assertEqual(250, g10Value as Number);
+        Test.assertMessage(legacyValue instanceof Number, "consumed legacy key should be set");
+        Test.assertEqual(25, legacyValue as Number);
+
+        // Verify backward compatibility read
+        var readValue = storage.getConsumedTotalG10();
+        Test.assertEqual(250, readValue, "Read value should match written value");
+
+        return true;
+    }
 }

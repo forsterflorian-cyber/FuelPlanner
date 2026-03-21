@@ -56,6 +56,16 @@ class FuelPlannerFieldDelegate extends WatchUi.InputDelegate {
             return true;
         }
 
+        // Undo Zone (unterer 20% - nur wenn Undo verfügbar)
+        if (y > intakeBottom && _model.isUndoAvailable()) {
+            var success = _model.undoLastIntake();
+            if (success) {
+                _reminder.triggerUndo();
+            }
+            WatchUi.requestUpdate();
+            return true;
+        }
+
         return true;
     }
 }
