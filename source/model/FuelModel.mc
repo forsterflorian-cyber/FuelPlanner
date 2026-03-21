@@ -889,6 +889,9 @@ private function markSessionFinished() as Void {
             _elapsedActiveSec >= _calorieAutoSuspendedUntilSec) {
             _reminderMode = MODE_CALORIE_AUTO;
             _calorieAutoSuspendedUntilSec = 0;
+            // Erzwinge Neuberechnung nach Mode-Recovery
+            calculateNextDue();
+            checkReminderDue();
         }
     }
 

@@ -74,8 +74,8 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private var _lastBlinkTime as Number  = 0;
     private const BLINK_INTERVAL = 500;
 
-    // Font measurement cache
-    private var _fontCacheRowHeight as Number = -1;
+    // Font measurement cache (bucketed by height ranges for stability)
+    private var _fontCacheHeightBucket as Number = -1;
     private var _fontCacheAllowNumber as Boolean = false;
     private var _fontCacheResult as Graphics.FontType = Graphics.FONT_XTINY;
 
@@ -138,6 +138,11 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             _overlayEndTime = 0;
         } else if (autoIntakeTriggered) {
             _reminder.triggerAutoIntake();
+        }
+
+        // Overlay bei Pause sofort ausblenden
+        if (_model.isPaused()) {
+            _overlayEndTime = 0;
         }
 
         if (!_showRecoveryLayout && _model.isReminderDue() && !_model.isPaused()) {
@@ -584,6 +589,13 @@ private function drawDeficitGauge(dc as Dc, w as Number, h as Number,
     var xRight = w - gaugeW;
     var y = top;
 
+    // Theme-aware Farben
+    var bgColor = getBackgroundColor();
+    var isDark = (bgColor == Graphics.COLOR_BLACK);
+    var gaugeAlertColor = isDark ? Graphics.COLOR_ORANGE : Graphics.COLOR_DK_RED;
+    var gaugeRedColor = isDark ? Graphics.COLOR_RED : Graphics.COLOR_RED;
+    var gaugeGreenColor = COLOR_GOOD;
+
     // --- Logik für Farben und Höhen ---
     var ratio = 0.0f;
     if (doseG10 > 0) {
@@ -600,11 +612,11 @@ private function drawDeficitGauge(dc as Dc, w as Number, h as Number,
     
     // FARB-LOGIK: 
     // Wir fangen bei Orange an, sobald ein Defizit da ist.
-    var alertColor = Graphics.COLOR_ORANGE; 
+    var alertColor = gaugeAlertColor; 
     
     // Wenn wir "ganz hinten" sind (Defizit > Alarm-Schwelle) -> ROT
     if (deficitG10 >= GAUGE_ALERT_G10) {
-        alertColor = Graphics.COLOR_RED;
+        alertColor = gaugeRedColor;
     } 
 
     // --- Zeichnen ---
@@ -616,7 +628,7 @@ private function drawDeficitGauge(dc as Dc, w as Number, h as Number,
 
     // 2. Grüner Bereich (Oberer Teil - steht für "im Plan")
     if (greenH > 0) {
-        dc.setColor(COLOR_GOOD, Graphics.COLOR_TRANSPARENT);
+        dc.setColor(gaugeGreenColor, Graphics.COLOR_TRANSPARENT);
         dc.fillRectangle(xLeft, y, gaugeW, greenH);
         dc.fillRectangle(xRight, y, gaugeW, greenH);
     }
@@ -673,8 +685,9 @@ private function drawDeficitGauge(dc as Dc, w as Number, h as Number,
             target = 1;
         }
 
-        // Cache: gleiche Höhe und allowNumber = kein erneutes Messen
-        if (target == _fontCacheRowHeight && allowNumber == _fontCacheAllowNumber) {
+        // Bucket height into ranges (8px) for stable caching across minor fluctuations
+        var heightBucket = target / 8;
+        if (heightBucket == _fontCacheHeightBucket && allowNumber == _fontCacheAllowNumber) {
             return _fontCacheResult;
         }
 
@@ -699,7 +712,7 @@ private function drawDeficitGauge(dc as Dc, w as Number, h as Number,
         }
 
         // Cache aktualisieren
-        _fontCacheRowHeight = target;
+        _fontCacheHeightBucket = heightBucket;
         _fontCacheAllowNumber = allowNumber;
         _fontCacheResult = bestFont;
 
@@ -738,6 +751,16 @@ private function drawDeficitGauge(dc as Dc, w as Number, h as Number,
 
     //! Additional bottom inset needed on round screens so hint text
     //! remains in the wider part of the circle and avoids side clipping.
+    //! Newton-Raphson approximation for sqrt (fallback for CIQ 3.0)
+    private function sqrtApprox(x as Float) as Float {
+        if (x <= 0.0f) { return 0.0f; }
+        var guess = x / 2.0f;
+        for (var i = 0; i < 5; i += 1) {
+            guess = (guess + x / guess) / 2.0f;
+        }
+        return guess;
+    }
+
     private function getRoundHintBottomInset(w as Number, h as Number,
                                              textWidth as Number, textHeight as Number) as Number {
         if (w != h) { return 0; }
@@ -748,11 +771,15 @@ private function drawDeficitGauge(dc as Dc, w as Number, h as Number,
             return SAFE_BOTTOM_MAX_PX;
         }
 
-        // Math.sqrt() ist in Connect IQ 3.0+ verfügbar
+        // Math.sqrt() nicht in allen CIQ 3.0 Geräten verfügbar - Fallback nutzen
         var radicand = (radius * radius) - (halfText * halfText);
         var dMax = 0.0f;
         if (radicand > 0.0f) {
-            dMax = Math.sqrt(radicand);
+            if (Math has :sqrt) {
+                dMax = Math.sqrt(radicand);
+            } else {
+                dMax = sqrtApprox(radicand);
+            }
         }
         var maxCenterY = radius + dMax;
         var inset = h.toFloat() - maxCenterY - (textHeight.toFloat() / 2.0f);

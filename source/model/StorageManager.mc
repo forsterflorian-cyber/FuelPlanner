@@ -342,7 +342,8 @@ class StorageManager {
 
     function setConsumedTotalG10(value as Number) as Void {
         var clamped = nonNegative(value);
-        var legacyValue = clamped / 10;
+        // Legacy-Write mit Rounding statt Truncation: (251+5)/10 = 25 statt 251/10 = 25
+        var legacyValue = (clamped + 5) / 10;
         
         // Beide Werte schreiben - bei Fehlschlag Inkonsistenz vermeiden
         var newKeySuccess = false;
