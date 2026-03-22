@@ -2,29 +2,58 @@
 
 ## Deutsch
 
-FuelPlanner ist ein Garmin Connect IQ Datenfeld zur einfachen Steuerung der
-Kohlenhydratzufuhr waehrend Ausdaueraktivitaeten.
+FuelPlanner ist ein Garmin Connect IQ Datenfeld fuer gezielte Kohlenhydratzufuhr waehrend Ausdaueraktivitaeten.
 
-Das Datenfeld kombiniert aktuelle Aktivitaetsdaten mit einem Zielwert und
-zeigt an, wann die naechste Aufnahme sinnvoll ist. So lassen sich
-Energieeinbrueche vermeiden und die Zufuhr gleichmaessig ueber die Einheit
-verteilen.
+Statt nach Gefuehl zu essen, zeigt dir FuelPlanner, wann du wirklich nachlegen solltest. So vermeidest du Leistungseinbrueche und haeltst deine Energie konstant.
 
-- Erinnerungen basierend auf Zielwert, Intervall oder Kalorien
-- Laufende Anzeige von Zielmenge und aktuellem Defizit
-- Schnelles Buchen von Standard-Portionen waehrend der Aktivitaet
-- Automatischer Ablauf fuer Button-Geraete (Auto-Flow)
+So funktioniert es:
+
+* Datenfeld zur Aktivitaet hinzufuegen (z.B. Laufen oder Radfahren)
+* Zielwert in g/h festlegen
+* Erinnerung abwarten
+* Aufnahme direkt bestaetigen oder automatisch uebernehmen lassen
+
+Bedienung auf der Uhr:
+
+* Touch Geraete: tippen = Aufnahme buchen
+* Kurz danach erneut tippen = letzte Aufnahme rueckgaengig machen (Undo)
+* Bei aktiver Erinnerung: oben tippen = Snooze
+* Geraete ohne Touch:
+* * Aufnahme erfolgt automatisch nach Erinnerung (Auto-Flow)
+* * Kein manuelles Eingreifen notwendig
+* Klare Erinnerungen, wenn Fuel wirklich noetig ist
+* Anzeige von Zielmenge und aktuellem Defizit
+* Schnelle Erfassung von Gel, Drink oder Snack waehrend der Aktivitaet
+* Automatischer Ablauf auf Geraeten ohne Touch
+
+Ideal fuer:
+Laufen, Radfahren, lange Einheiten und Wettkaempfe
 
 ## English
 
-FuelPlanner is a Garmin Connect IQ data field for simple carbohydrate intake
-management during endurance activities.
+FuelPlanner is a Garmin Connect IQ data field for precise carbohydrate fueling during endurance activities.
 
-It combines live activity data with a target intake and indicates when the
-next fueling step is due. This helps avoid energy drops and maintain a
-consistent intake throughout the session.
+Instead of guessing when to eat, FuelPlanner tells you when you actually need to fuel. This helps prevent energy drops and keeps your performance stable.
 
-- Reminders based on target rate, interval, or calories
-- Ongoing display of target intake and current deficit
-- Quick logging of standard intake portions during activity
-- Auto-flow support for button-based devices
+How it works:
+
+* Add the data field to your activity (run, bike, etc.)
+* Set your target intake in g/h
+* Wait for reminders
+* Confirm intake manually or let it be applied automatically
+
+On-device interaction:
+
+* Touch devices: tap to log intake
+* Tap again shortly after = undo last intake
+* When a reminder is active: tap the top area to snooze
+* Non-touch devices:
+* * Intake is applied automatically after reminders (auto-flow)
+* * No manual interaction required
+* Clear reminders when fueling is actually needed
+* Live view of target intake and current deficit
+* Quick logging of gels, drinks, or snacks during activity
+* Automatic flow on non-touch devices
+
+Ideal for:
+Running, cycling, long sessions, and races

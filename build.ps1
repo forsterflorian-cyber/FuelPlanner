@@ -104,5 +104,22 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "Data Field built: bin\FuelPlanner-DataField.iq" -ForegroundColor Green
 
+# --- Build Fenix 6 Data Field (memory-constrained) ---
+Write-Host "`nBuilding Fenix 6 Data Field (memory-constrained)..." -ForegroundColor Yellow
+$dfFenix6Args = $javaArgs + @(
+    "-f", "fenix6.jungle",
+    "-o", "bin\FuelPlanner-DataField-Fenix6.iq",
+    "-e",                          # export mode = .iq file for store
+    "-y", $KeyPath,
+    "-w"                           # warnings
+)
+& $javaExe @dfFenix6Args
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Fenix 6 Data Field build FAILED (exit $LASTEXITCODE)"
+    exit $LASTEXITCODE
+}
+Write-Host "Fenix 6 Data Field built: bin\FuelPlanner-DataField-Fenix6.iq" -ForegroundColor Green
+
 Write-Host "`nDone! Upload these files to the Connect IQ Store:" -ForegroundColor Cyan
-Write-Host "  bin\FuelPlanner-DataField.iq"
+Write-Host "  bin\FuelPlanner-DataField.iq (standard)"
+Write-Host "  bin\FuelPlanner-DataField-Fenix6.iq (Fenix 6 memory-optimized)"

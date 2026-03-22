@@ -10,22 +10,6 @@ class FuelPlannerFieldView extends WatchUi.DataField {
 
     private var _model as FuelModel;
     private var _reminder as ReminderManager;
-    private var _strAppName as String = "";
-    private var _strWaiting as String = "";
-    private var _strPaused as String = "";
-    private var _strFuelNow as String = "";
-    private var _strTapPrefix as String = "";
-    private var _strNext as String = "";
-    private var _strBehind as String = "";
-    private var _strAhead as String = "";
-    private var _strOnTarget as String = "";
-    private var _strRateTargetPrefix as String = "";
-    private var _strRateAutoCarbsSuffix as String = "";
-    private var _strRateAutoNoData as String = "";
-    private var _strAutoFlowStatus as String = "";
-    private var _strRecovery as String = "";
-    private var _strRecoveryAction as String = "";
-    private var _strFuelingOk as String = "";
     private var _showRecoveryLayout as Boolean = false;
 
     // Colors
@@ -36,31 +20,11 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private const COLOR_DIM     = Graphics.COLOR_LT_GRAY;
     private const COLOR_RECOVERY = Graphics.COLOR_ORANGE;
 
-    // Vertical flow layout constants (relative to field size)
-    private const SAFE_TOP_RATIO = 0.08f;
-    private const SAFE_TOP_MIN_PX = 12;
-    private const SAFE_TOP_MAX_PX = 36;
-
-    private const SAFE_BOTTOM_TOUCH_RATIO = 0.08f;
-    private const SAFE_BOTTOM_BUTTON_RATIO = 0.12f;
-    private const SAFE_BOTTOM_SQUARE_BONUS_RATIO = 0.015f;
-    private const SAFE_BOTTOM_MIN_PX = 14;
-    private const SAFE_BOTTOM_MAX_PX = 48;
-
-    private const ROW_GAP_RATIO = 0.028f;
-    private const ROW_GAP_MIN_PX = 4;
-    private const ROW_GAP_MAX_PX = 16;
-
-    private const UNIT_GAP_RATIO = 0.01f;
-    private const UNIT_GAP_MIN_PX = 1;
-    private const UNIT_GAP_MAX_PX = 5;
-    private const UNIT_NUDGE_UP_RATIO = 0.006f;
-    private const UNIT_NUDGE_UP_MIN_PX = 1;
-    private const UNIT_NUDGE_UP_MAX_PX = 3;
-
-    private const ROUND_EDGE_PAD_RATIO = 0.03f;
-    private const ROUND_EDGE_PAD_MIN_PX = 6;
-    private const ROUND_EDGE_PAD_MAX_PX = 14;
+    // Vertical flow layout constants
+    private const SAFE_TOP_PX = 16;
+    private const SAFE_BOTTOM_PX = 24;
+    private const ROW_GAP_PX = 6;
+    private const UNIT_GAP_PX = 3;
 
     // Deficit gauge constants (responsive edge indicator)
     private const GAUGE_WIDTH_RATIO = 0.15f;
@@ -74,10 +38,6 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private var _lastBlinkTime as Number  = 0;
     private const BLINK_INTERVAL = 500;
 
-    // Font measurement cache (bucketed by height ranges for stability)
-    private var _fontCacheHeightBucket as Number = -1;
-    private var _fontCacheAllowNumber as Boolean = false;
-    private var _fontCacheResult as Graphics.FontType = Graphics.FONT_XTINY;
 
     // Last known field size (for tap zone mapping in multi-field layouts)
     private var _lastFieldWidth as Number = 0;
@@ -111,7 +71,6 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         DataField.initialize();
         _model    = model;
         _reminder = reminder;
-        loadStrings();
     }
 
     function onLayout(dc as Dc) as Void {
@@ -239,24 +198,6 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         return fallback;
     }
 
-    private function loadStrings() as Void {
-        _strAppName = loadString(Rez.Strings.AppName, "FuelPlanner");
-        _strWaiting = loadString(Rez.Strings.LabelWaiting, "Waiting for activity...");
-        _strPaused = loadString(Rez.Strings.LabelPaused, "PAUSED");
-        _strFuelNow = loadString(Rez.Strings.LabelFuelNow, "FUEL NOW");
-        _strTapPrefix = loadString(Rez.Strings.LabelTapPrefix, "Tap");
-        _strNext = loadString(Rez.Strings.LabelNext, "Next");
-        _strBehind = loadString(Rez.Strings.LabelBehind, "Behind");
-        _strAhead = loadString(Rez.Strings.LabelAhead, "Ahead");
-        _strOnTarget = loadString(Rez.Strings.LabelOnTarget, "On target");
-        _strRateTargetPrefix = loadString(Rez.Strings.LabelRateTargetPrefix, "Plan");
-        _strRateAutoCarbsSuffix = loadString(Rez.Strings.LabelRateAutoCarbsSuffix, "% carbs");
-        _strRateAutoNoData = loadString(Rez.Strings.LabelRateAutoNoData, "Auto (no cal data)");
-        _strAutoFlowStatus = loadString(Rez.Strings.LabelAutoFlowStatus, "AUTO-FLOW");
-        _strRecovery = loadString(Rez.Strings.LabelRecovery, "Recovery");
-        _strRecoveryAction = loadString(Rez.Strings.LabelRecoveryAction, "Refuel");
-        _strFuelingOk = loadString(Rez.Strings.LabelFuelingOk, "Fueling OK");
-    }
 
     //! Zeichnet ein auffälliges Vollbild-Overlay
     private function drawReminderOverlay(dc as Dc) as Void {
@@ -274,7 +215,8 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         var titleFont = getBestFontForHeight(dc, (h.toFloat() * 0.22f).toNumber(), false);
         var doseFont = getBestFontForHeight(dc, (h.toFloat() * 0.14f).toNumber(), false);
         var gap = getRowGap(h);
-        var titleH = dc.getTextDimensions(_strFuelNow, titleFont)[1];
+        var strFuelNow = loadString(Rez.Strings.LabelFuelNow, "FUEL NOW");
+        var titleH = dc.getTextDimensions(strFuelNow, titleFont)[1];
         var doseH = dc.getTextDimensions(doseText, doseFont)[1];
         var totalHeight = titleH + gap + doseH;
         var y = (h - totalHeight) / 2;
@@ -283,7 +225,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         }
 
         // Text zentriert ausgeben
-        dc.drawText(w / 2, y, titleFont, _strFuelNow, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(w / 2, y, titleFont, strFuelNow, Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(w / 2, y + titleH + gap, doseFont, doseText, Graphics.TEXT_JUSTIFY_CENTER);
         
         // Optional: Ein weißer Rahmen zur Abgrenzung
@@ -295,11 +237,11 @@ class FuelPlannerFieldView extends WatchUi.DataField {
                                    textColor as Number, dimColor as Number) as Void {
         dc.setColor(textColor, Graphics.COLOR_TRANSPARENT);
         dc.drawText(cx, h / 2 - h / 13, Graphics.FONT_MEDIUM,
-                    _strAppName,
+                    loadString(Rez.Strings.AppName, "FuelPlanner"),
                     Graphics.TEXT_JUSTIFY_CENTER);
         dc.setColor(dimColor, Graphics.COLOR_TRANSPARENT);
         dc.drawText(cx, h / 2 + h / 20, Graphics.FONT_TINY,
-                    _strWaiting,
+                    loadString(Rez.Strings.LabelWaiting, "Waiting for activity..."),
                     Graphics.TEXT_JUSTIFY_CENTER);
     }
 
@@ -311,12 +253,12 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             showRecoveryHint = recoveryDeficit > RECOVERY_MIN_G;
         }
         var panelColor = showRecoveryHint ? COLOR_RECOVERY : COLOR_GOOD;
-        var titleText = showRecoveryHint ? _strRecovery : _strFuelingOk;
+        var titleText = showRecoveryHint ? loadString(Rez.Strings.LabelRecovery, "Recovery") : loadString(Rez.Strings.LabelFuelingOk, "Fueling OK");
         var valueText = "";
         var noteText = "";
         if (showRecoveryHint && recoveryDeficit != null) {
             valueText = "+" + recoveryDeficit.format("%d") + UNIT_G;
-            noteText = _strRecoveryAction;
+            noteText = loadString(Rez.Strings.LabelRecoveryAction, "Refuel");
         }
 
         dc.setColor(panelColor, panelColor);
@@ -354,326 +296,127 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         }
     }
 
-    //! Main layout rendered as a vertical flow from top to bottom.
+    //! Main layout - simplified for memory optimization
     private function drawMainLayout(dc as Dc, w as Number, h as Number,
                                     cx as Number, textColor as Number,
                                     dimColor as Number, touchEnabled as Boolean) as Void {
-        var isReminderDue = _model.isReminderDue();
-        var nextDueSec    = _model.getDisplayNextDueInSec();
-        var isPaused      = _model.isPaused();
-        var doseG         = _model.getDoseG();
-        var doseG10       = _model.getDoseG10();
+        var safeTop = SAFE_TOP_PX;
+        var gap = ROW_GAP_PX;
+        var y = safeTop;
+        //var doseG = _model.getDoseG();
 
-        var showHint  = (touchEnabled && h >= 140);
-        var showMeta  = (h >= 115);
-        var showLabel = (h >= 90);
-        var drawLabel = showLabel;
-        var drawMeta  = showMeta;
-        var drawHint  = showHint;
-
-        var gap = getRowGap(h);
-        var safeTop = getSafeTopInset(h);
-        var safeBottom = getSafeBottomInset(w, h, touchEnabled);
-        var baseRows = 3;
-        if (drawLabel) { baseRows += 1; }
-        if (drawMeta) { baseRows += 1; }
-        if (drawHint) { baseRows += 1; }
-
-        var rowHeight = h - safeTop - safeBottom - ((baseRows - 1) * gap);
-        if (rowHeight < baseRows) {
-            rowHeight = baseRows;
-        }
-        rowHeight = rowHeight / baseRows;
-
-        var fontStatus = getBestFontForHeight(dc, rowHeight, false);
-        var fontNumber = getBestFontForHeight(dc, (rowHeight.toFloat() * 1.55f).toNumber(), true);
-        var fontUnit   = getBestFontForHeight(dc, (rowHeight.toFloat() * 0.75f).toNumber(), false);
-        var fontLabel  = getBestFontForHeight(dc, (rowHeight.toFloat() * 0.65f).toNumber(), false);
-        var fontMeta   = getBestFontForHeight(dc, (rowHeight.toFloat() * 0.7f).toNumber(), false);
-        var fontHint   = getBestFontForHeight(dc, (rowHeight.toFloat() * 0.65f).toNumber(), false);
-
-        // Row 1: status
+        // Status row
         var statusText;
         var statusColor;
-        if (isPaused) {
-            statusText  = _strPaused;
+        if (_model.isPaused()) {
+            statusText = loadString(Rez.Strings.LabelPaused, "PAUSED");
             statusColor = COLOR_WARNING;
-        } else if (isReminderDue) {
-            if (touchEnabled) {
-                statusText = _blinkState
-                    ? _strFuelNow
-                    : _strTapPrefix + doseG + UNIT_G;
-            } else {
-                statusText = _strAutoFlowStatus;
-            }
+        } else if (_model.isReminderDue()) {
+            statusText = touchEnabled ? loadString(Rez.Strings.LabelFuelNow, "FUEL NOW") : loadString(Rez.Strings.LabelAutoFlowStatus, "AUTO-FLOW");
             statusColor = COLOR_ALERT;
         } else {
-            statusText  = _strNext + " " + formatDuration(nextDueSec);
-            if (nextDueSec < 60) {
-                statusColor = COLOR_ALERT;
-            } else if (nextDueSec < 180) {
-                statusColor = COLOR_WARNING;
-            } else {
-                statusColor = COLOR_GOOD;
-            }
+            statusText = loadString(Rez.Strings.LabelNext, "Next") + " " + formatDuration(_model.getDisplayNextDueInSec());
+            statusColor = COLOR_GOOD;
         }
+        dc.setColor(statusColor, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(cx, y, Graphics.FONT_TINY, statusText, Graphics.TEXT_JUSTIFY_CENTER);
+        y += 20 + gap;
 
-        // Row 2: consumed / target number
-        var consumedG10 = _model.getConsumedTotalG10();
-        var targetG10   = _model.getTargetTotalG10();
-        var consumedG   = (consumedG10 + 5) / 10;
-        var targetG     = (targetG10 + 5) / 10;
-        var numStr      = consumedG.format("%d") + "/" + targetG.format("%d");
-        var numDims  = dc.getTextDimensions(numStr, fontNumber);
-        var unitDims = dc.getTextDimensions(UNIT_G, fontUnit);
-        var unitGap  = getUnitGap(w);
-        var totalW   = numDims[0] + unitGap + unitDims[0];
-        var numX     = cx - totalW / 2;
+        // Numbers row
+        var consumedG = (_model.getConsumedTotalG10() + 5) / 10;
+        var targetG = (_model.getTargetTotalG10() + 5) / 10;
+        var numStr = consumedG.format("%d") + "/" + targetG.format("%d");
+        dc.setColor(textColor, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(cx, y, Graphics.FONT_MEDIUM, numStr, Graphics.TEXT_JUSTIFY_CENTER);
+        y += 30 + gap;
 
-        // Row 3: target rate label
-        var rateLabel = "";
-        if (showLabel) {
-            rateLabel = buildRateLabel();
-        }
-
-        // Row 4: deficit/ahead
+        // Deficit row
         var deficitG10 = _model.getDeficitG10();
         var deficitText;
         var deficitColor;
         if (deficitG10 > 5) {
-            var behindG = (deficitG10 + 5) / 10;
-            deficitText  = _strBehind + " " + behindG.format("%d") + UNIT_G;
-            deficitColor = (deficitG10 > doseG10) ? COLOR_ALERT : COLOR_WARNING;
+            deficitText = loadString(Rez.Strings.LabelBehind, "Behind") + " " + ((deficitG10 + 5) / 10).format("%d") + UNIT_G;
+            deficitColor = COLOR_WARNING;
         } else if (deficitG10 < -5) {
-            var aheadG = ((-deficitG10) + 5) / 10;
-            deficitText  = _strAhead + " " + aheadG.format("%d") + UNIT_G;
+            deficitText = loadString(Rez.Strings.LabelAhead, "Ahead") + " " + (((-deficitG10) + 5) / 10).format("%d") + UNIT_G;
             deficitColor = COLOR_GOOD;
         } else {
-            deficitText  = _strOnTarget;
+            deficitText = loadString(Rez.Strings.LabelOnTarget, "On target");
             deficitColor = COLOR_GOOD;
         }
-
-        drawDeficitGauge(dc, w, h, deficitG10, doseG10, dimColor, touchEnabled);
-
-        // Row 5: elapsed time and count
-        var timeText = "";
-        if (showMeta) {
-            var elapsedMin  = _model.getElapsedActiveSec() / 60;
-            var hrs         = elapsedMin / 60;
-            var mins        = elapsedMin % 60;
-            timeText = (hrs > 0)
-                ? hrs.format("%d") + "h" + mins.format("%02d")
-                : mins.format("%d") + "m";
-            var intakeCount = _model.getIntakeCount();
-            timeText += SEP_PIPE + intakeCount.format("%d") + "x";
-        }
-
-        // Row 6: interaction hint
-        var hintText = "";
-        if (drawHint) {
-            hintText = _strTapPrefix + doseG + UNIT_G;
-        }
-
-        // Pre-measure row heights for flow layout and overflow handling.
-        var statusH  = dc.getTextDimensions(statusText, fontStatus)[1];
-        var numberH  = numDims[1];
-        if (unitDims[1] > numberH) { numberH = unitDims[1]; }
-        var labelH   = drawLabel ? dc.getTextDimensions(rateLabel, fontLabel)[1] : 0;
-        var deficitH = dc.getTextDimensions(deficitText, fontUnit)[1];
-        var metaH    = drawMeta ? dc.getTextDimensions(timeText, fontMeta)[1] : 0;
-        var hintH    = (drawHint && hintText != "") ? dc.getTextDimensions(hintText, fontHint)[1] : 0;
-
-        if (drawHint && hintText != "" && w == h) {
-            var hintWidth = dc.getTextDimensions(hintText, fontHint)[0];
-            var roundHintSafeBottom = getRoundHintBottomInset(w, h, hintWidth, hintH);
-            if (roundHintSafeBottom > safeBottom) {
-                safeBottom = roundHintSafeBottom;
-            }
-        }
-        var availableHeight = h - safeTop - safeBottom;
-        if (availableHeight < 0) { availableHeight = 0; }
-
-        // If it does not fit, progressively hide optional rows from bottom.
-        var flowGap   = gap;
-        while (true) {
-            var requiredHeight = getRequiredMainHeight(
-                statusH,
-                numberH,
-                drawLabel ? labelH : 0,
-                deficitH,
-                drawMeta ? metaH : 0,
-                drawHint ? hintH : 0,
-                flowGap
-            );
-            if (requiredHeight <= availableHeight) { break; }
-            if (drawMeta) {
-                drawMeta = false;
-                continue;
-            }
-            if (drawLabel) {
-                drawLabel = false;
-                continue;
-            }
-            if (flowGap > ROW_GAP_MIN_PX) {
-                flowGap -= 1;
-                continue;
-            }
-            if (drawHint) {
-                drawHint = false;
-                continue;
-            }
-            break;
-        }
-
-        // Draw from top to bottom with explicit offsets.
-        var y = safeTop;
-
-        dc.setColor(statusColor, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, y, fontStatus, statusText, Graphics.TEXT_JUSTIFY_CENTER);
-        y += statusH + flowGap;
-
-        // Vertically center the "g" unit against the number row.
-        var unitNudge = getUnitVerticalNudge(h);
-        var unitY = y + (numberH - unitDims[1]) / 2 - unitNudge;
-        dc.setColor(textColor, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(numX, y, fontNumber, numStr, Graphics.TEXT_JUSTIFY_LEFT);
-        dc.drawText(numX + numDims[0] + unitGap, unitY, fontUnit, UNIT_G, Graphics.TEXT_JUSTIFY_LEFT);
-        y += numberH + flowGap;
-
-        if (drawLabel) {
-            dc.setColor(dimColor, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, y, fontLabel, rateLabel, Graphics.TEXT_JUSTIFY_CENTER);
-            y += labelH + flowGap;
-        }
-
         dc.setColor(deficitColor, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, y, fontUnit, deficitText, Graphics.TEXT_JUSTIFY_CENTER);
-        y += deficitH + flowGap;
+        dc.drawText(cx, y, Graphics.FONT_TINY, deficitText, Graphics.TEXT_JUSTIFY_CENTER);
+        y += 20 + gap;
 
-        if (drawMeta) {
-            dc.setColor(dimColor, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, y, fontMeta, timeText, Graphics.TEXT_JUSTIFY_CENTER);
-            y += metaH + flowGap;
-        }
+        // Time row
+        var elapsedMin = _model.getElapsedActiveSec() / 60;
+        var timeText = (elapsedMin / 60).format("%d") + "h" + (elapsedMin % 60).format("%02d") + SEP_PIPE + _model.getIntakeCount().format("%d") + "x";
+        dc.setColor(dimColor, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(cx, y, Graphics.FONT_TINY, timeText, Graphics.TEXT_JUSTIFY_CENTER);
 
-        if (drawHint && hintText != "") {
-            dc.setColor(dimColor, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, y, fontHint, hintText, Graphics.TEXT_JUSTIFY_CENTER);
-        }
+        drawDeficitGauge(dc, w, h, deficitG10, _model.getDoseG10(), dimColor, touchEnabled);
     }
 
 //! Draw responsive edge gauges on both sides: green when on/ahead, red proportional to deficit.
-//! Balken füllen sich von unten nach oben: 
-//! Oben Grün (Plan), unten Orange/Rot (Defizit), bündig am Displayrand.
 private function drawDeficitGauge(dc as Dc, w as Number, h as Number, 
                                   deficitG10 as Number, doseG10 as Number, 
                                   dimColor as Number, touchEnabled as Boolean) as Void {
-    if (w < 150 || h < 110) {
-        return;
-    }
+    if (w < 150 || h < 110) { return; }
     
-    // 1. Breite der Balken
     var gaugeW = (w * GAUGE_WIDTH_RATIO).toNumber();
     if (gaugeW < GAUGE_MIN_W_PX) { gaugeW = GAUGE_MIN_W_PX; }
     else if (gaugeW > GAUGE_MAX_W_PX) { gaugeW = GAUGE_MAX_W_PX; }
 
-    // 2. Vertikaler Bereich (Safe Inset beachten)
     var top = getSafeTopInset(h);
     var bottomInset = getSafeBottomInset(w, h, touchEnabled);
     var gaugeH = h - top - bottomInset;
-
     if (gaugeH < GAUGE_MIN_H_PX) { return; }
 
-    // 3. X-Positionen OHNE Randabstand (direkt am Displayrand)
-    var xLeft = 0;
     var xRight = w - gaugeW;
     var y = top;
 
-    // Theme-aware Farben
-    var bgColor = getBackgroundColor();
-    var isDark = (bgColor == Graphics.COLOR_BLACK);
-    var gaugeAlertColor = isDark ? Graphics.COLOR_ORANGE : Graphics.COLOR_DK_RED;
-    var gaugeRedColor = isDark ? Graphics.COLOR_RED : Graphics.COLOR_RED;
-    var gaugeGreenColor = COLOR_GOOD;
-
-    // --- Logik für Farben und Höhen ---
+    // Calculate fill ratio
     var ratio = 0.0f;
     if (doseG10 > 0) {
-        // Berechnet wie viel % der Portion aktuell fehlen
         ratio = deficitG10.toFloat() / doseG10.toFloat();
+        if (ratio < 0.0f) { ratio = 0.0f; }
+        if (ratio > 1.0f) { ratio = 1.0f; }
     }
-    
-    // Begrenzung auf 0 bis 100% der Balkenhöhe
-    if (ratio < 0.0f) { ratio = 0.0f; }
-    if (ratio > 1.0f) { ratio = 1.0f; }
 
     var redH = (gaugeH.toFloat() * ratio).toNumber();
     var greenH = gaugeH - redH;
-    
-    // FARB-LOGIK: 
-    // Wir fangen bei Orange an, sobald ein Defizit da ist.
-    var alertColor = gaugeAlertColor; 
-    
-    // Wenn wir "ganz hinten" sind (Defizit > Alarm-Schwelle) -> ROT
-    if (deficitG10 >= GAUGE_ALERT_G10) {
-        alertColor = gaugeRedColor;
-    } 
 
-    // --- Zeichnen ---
-    
-    // 1. Hintergrund (Hohlraum/Track)
+    // Draw background track
     dc.setColor(dimColor, Graphics.COLOR_TRANSPARENT);
-    dc.fillRectangle(xLeft, y, gaugeW, gaugeH);
+    dc.fillRectangle(0, y, gaugeW, gaugeH);
     dc.fillRectangle(xRight, y, gaugeW, gaugeH);
 
-    // 2. Grüner Bereich (Oberer Teil - steht für "im Plan")
+    // Draw green portion (on target)
     if (greenH > 0) {
-        dc.setColor(gaugeGreenColor, Graphics.COLOR_TRANSPARENT);
-        dc.fillRectangle(xLeft, y, gaugeW, greenH);
+        dc.setColor(COLOR_GOOD, Graphics.COLOR_TRANSPARENT);
+        dc.fillRectangle(0, y, gaugeW, greenH);
         dc.fillRectangle(xRight, y, gaugeW, greenH);
     }
 
-    // 3. Warn Bereich (Unterer Teil - füllt sich bei Defizit auf)
+    // Draw deficit portion
     if (redH > 0) {
+        var alertColor = (deficitG10 >= GAUGE_ALERT_G10) ? Graphics.COLOR_RED : Graphics.COLOR_ORANGE;
         dc.setColor(alertColor, Graphics.COLOR_TRANSPARENT);
-        dc.fillRectangle(xLeft, y + greenH, gaugeW, redH);
+        dc.fillRectangle(0, y + greenH, gaugeW, redH);
         dc.fillRectangle(xRight, y + greenH, gaugeW, redH);
     }
 }
 
     private function getSafeTopInset(h as Number) as Number {
-        var inset = (h * SAFE_TOP_RATIO).toNumber();
-        if (inset < SAFE_TOP_MIN_PX) {
-            inset = SAFE_TOP_MIN_PX;
-        } else if (inset > SAFE_TOP_MAX_PX) {
-            inset = SAFE_TOP_MAX_PX;
-        }
-        return inset;
+        return SAFE_TOP_PX;
     }
 
     private function getSafeBottomInset(w as Number, h as Number, touchEnabled as Boolean) as Number {
-        var ratio = touchEnabled ? SAFE_BOTTOM_TOUCH_RATIO : SAFE_BOTTOM_BUTTON_RATIO;
-        if (w == h) {
-            ratio += SAFE_BOTTOM_SQUARE_BONUS_RATIO;
-        }
-
-        var inset = (h * ratio).toNumber();
-        if (inset < SAFE_BOTTOM_MIN_PX) {
-            inset = SAFE_BOTTOM_MIN_PX;
-        } else if (inset > SAFE_BOTTOM_MAX_PX) {
-            inset = SAFE_BOTTOM_MAX_PX;
-        }
-        return inset;
+        return SAFE_BOTTOM_PX;
     }
 
     private function getRowGap(h as Number) as Number {
-        var gap = (h * ROW_GAP_RATIO).toNumber();
-        if (gap < ROW_GAP_MIN_PX) {
-            gap = ROW_GAP_MIN_PX;
-        } else if (gap > ROW_GAP_MAX_PX) {
-            gap = ROW_GAP_MAX_PX;
-        }
-        return gap;
+        return ROW_GAP_PX;
     }
 
     //! Select best fitting font for a target row height.
@@ -683,12 +426,6 @@ private function drawDeficitGauge(dc as Dc, w as Number, h as Number,
         var target = rowHeight;
         if (target < 1) {
             target = 1;
-        }
-
-        // Bucket height into ranges (8px) for stable caching across minor fluctuations
-        var heightBucket = target / 8;
-        if (heightBucket == _fontCacheHeightBucket && allowNumber == _fontCacheAllowNumber) {
-            return _fontCacheResult;
         }
 
         var hXtiny  = dc.getTextDimensions("Ag", Graphics.FONT_XTINY)[1];
@@ -711,86 +448,25 @@ private function drawDeficitGauge(dc as Dc, w as Number, h as Number,
             bestFont = Graphics.FONT_NUMBER_MILD;
         }
 
-        // Cache aktualisieren
-        _fontCacheHeightBucket = heightBucket;
-        _fontCacheAllowNumber = allowNumber;
-        _fontCacheResult = bestFont;
-
         return bestFont;
     }
 
     private function getUnitGap(w as Number) as Number {
-        var gap = (w * UNIT_GAP_RATIO).toNumber();
-        if (gap < UNIT_GAP_MIN_PX) {
-            gap = UNIT_GAP_MIN_PX;
-        } else if (gap > UNIT_GAP_MAX_PX) {
-            gap = UNIT_GAP_MAX_PX;
-        }
-        return gap;
+        return UNIT_GAP_PX;
     }
 
     private function getUnitVerticalNudge(h as Number) as Number {
-        var nudge = (h * UNIT_NUDGE_UP_RATIO).toNumber();
-        if (nudge < UNIT_NUDGE_UP_MIN_PX) {
-            nudge = UNIT_NUDGE_UP_MIN_PX;
-        } else if (nudge > UNIT_NUDGE_UP_MAX_PX) {
-            nudge = UNIT_NUDGE_UP_MAX_PX;
-        }
-        return nudge;
+        return 2;
     }
 
     private function getRoundEdgePadding(w as Number) as Number {
-        var pad = (w * ROUND_EDGE_PAD_RATIO).toNumber();
-        if (pad < ROUND_EDGE_PAD_MIN_PX) {
-            pad = ROUND_EDGE_PAD_MIN_PX;
-        } else if (pad > ROUND_EDGE_PAD_MAX_PX) {
-            pad = ROUND_EDGE_PAD_MAX_PX;
-        }
-        return pad;
-    }
-
-    //! Additional bottom inset needed on round screens so hint text
-    //! remains in the wider part of the circle and avoids side clipping.
-    //! Newton-Raphson approximation for sqrt (fallback for CIQ 3.0)
-    private function sqrtApprox(x as Float) as Float {
-        if (x <= 0.0f) { return 0.0f; }
-        var guess = x / 2.0f;
-        for (var i = 0; i < 5; i += 1) {
-            guess = (guess + x / guess) / 2.0f;
-        }
-        return guess;
+        return 8;
     }
 
     private function getRoundHintBottomInset(w as Number, h as Number,
                                              textWidth as Number, textHeight as Number) as Number {
         if (w != h) { return 0; }
-
-        var radius = (w.toFloat() / 2.0f);
-        var halfText = (textWidth.toFloat() / 2.0f) + getRoundEdgePadding(w).toFloat();
-        if (halfText >= radius) {
-            return SAFE_BOTTOM_MAX_PX;
-        }
-
-        // Math.sqrt() nicht in allen CIQ 3.0 Geräten verfügbar - Fallback nutzen
-        var radicand = (radius * radius) - (halfText * halfText);
-        var dMax = 0.0f;
-        if (radicand > 0.0f) {
-            if (Math has :sqrt) {
-                dMax = Math.sqrt(radicand);
-            } else {
-                dMax = sqrtApprox(radicand);
-            }
-        }
-        var maxCenterY = radius + dMax;
-        var inset = h.toFloat() - maxCenterY - (textHeight.toFloat() / 2.0f);
-
-        var insetPx = inset.toNumber();
-        if (insetPx < 0) {
-            insetPx = 0;
-        } else if (insetPx > SAFE_BOTTOM_MAX_PX) {
-            insetPx = SAFE_BOTTOM_MAX_PX;
-        }
-        return insetPx;
+        return SAFE_BOTTOM_PX;
     }
 
     private function getRequiredMainHeight(statusH as Number, numberH as Number,
@@ -822,11 +498,11 @@ private function drawDeficitGauge(dc as Dc, w as Number, h as Number,
         if (_model.isCalorieModeActive()) {
             if (_model.isCaloriesAvailable()) {
                 return "Auto " + _model.getCarbFractionPct().format("%d") +
-                       _strRateAutoCarbsSuffix;
+                       loadString(Rez.Strings.LabelRateAutoCarbsSuffix, "% carbs");
             }
-            return _strRateAutoNoData;
+            return loadString(Rez.Strings.LabelRateAutoNoData, "Auto (no cal data)");
         }
-        return _strRateTargetPrefix + " " + _model.getCarbsTargetGph().format("%d") + UNIT_GPH;
+        return loadString(Rez.Strings.LabelRateTargetPrefix, "Plan") + " " + _model.getCarbsTargetGph().format("%d") + UNIT_GPH;
     }
 
     private function isTimerStateStoppedOrOff(info as Activity.Info) as Boolean {

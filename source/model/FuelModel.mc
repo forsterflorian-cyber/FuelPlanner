@@ -103,8 +103,11 @@ class FuelModel {
     private var _timerBacktrackCount as Number = 0;
 
     // For undo functionality
+    (:full)
     private var _undoAvailable      as Boolean = false;
+    (:full)
     private var _undoGramsG10       as Number = 0;
+    (:full)
     private var _undoTimestamp      as Number = 0;
 
     //! Constructor
@@ -509,6 +512,12 @@ private function markSessionFinished() as Void {
         updateFitFields();
     }
 
+    (:lite)
+    private function detectTouchScreen() as Boolean {
+        return false;
+    }
+
+    (:full)
     private function detectTouchScreen() as Boolean {
         try {
             var settings = System.getDeviceSettings();
@@ -523,12 +532,19 @@ private function markSessionFinished() as Void {
         return false;
     }
 
+    (:full)
     private function clampSetting(value as Number, min as Number, max as Number) as Number {
         if (value < min) { return min; }
         if (value > max) { return max; }
         return value;
     }
 
+    (:lite)
+    private function clampSetting(value as Number, min as Number, max as Number) as Number {
+        return value;
+    }
+
+    (:full)
     private function clampElapsedActiveSec(value as Number) as Number {
         if (value < 0) {
             return 0;
@@ -539,6 +555,12 @@ private function markSessionFinished() as Void {
         return value;
     }
 
+    (:lite)
+    private function clampElapsedActiveSec(value as Number) as Number {
+        return value;
+    }
+
+    (:full)
     private function clampTotalG10(value as Number) as Number {
         if (value > FuelModelConsts.MAX_TOTAL_G10) {
             return FuelModelConsts.MAX_TOTAL_G10;
@@ -549,6 +571,12 @@ private function markSessionFinished() as Void {
         return value;
     }
 
+    (:lite)
+    private function clampTotalG10(value as Number) as Number {
+        return value;
+    }
+
+    (:full)
     private function clampNonNegativeTotalG10(value as Number) as Number {
         if (value < 0) {
             return 0;
@@ -559,6 +587,12 @@ private function markSessionFinished() as Void {
         return value;
     }
 
+    (:lite)
+    private function clampNonNegativeTotalG10(value as Number) as Number {
+        return value;
+    }
+
+    (:full)
     private function clampNextDueSec(value as Number) as Number {
         if (value < 0) {
             return 0;
@@ -569,6 +603,12 @@ private function markSessionFinished() as Void {
         return value;
     }
 
+    (:lite)
+    private function clampNextDueSec(value as Number) as Number {
+        return value;
+    }
+
+    (:full)
     private function shiftReminderReferenceTimestamps(pausedDurationSec as Number) as Void {
         if (pausedDurationSec <= 0) {
             return;
@@ -582,6 +622,11 @@ private function markSessionFinished() as Void {
         }
     }
 
+    (:lite)
+    private function shiftReminderReferenceTimestamps(pausedDurationSec as Number) as Void {
+    }
+
+    (:full)
     private function getSnoozeRemainingSec(nowTimestamp as Number) as Number {
         if (_lastReminderTimestamp <= 0) {
             return 0;
@@ -595,6 +640,12 @@ private function markSessionFinished() as Void {
         return clampNextDueSec(snoozeSec - elapsedSinceReminder);
     }
 
+    (:lite)
+    private function getSnoozeRemainingSec(nowTimestamp as Number) as Number {
+        return 0;
+    }
+
+    (:full)
     private function isLikelyTimerReset(rawTimerSec as Number) as Boolean {
         if (_elapsedActiveSec <= 0) {
             _timerBacktrackCount = 0;
@@ -620,6 +671,24 @@ private function markSessionFinished() as Void {
         }
 
         _timerBacktrackCount = 0;
+        return true;
+    }
+
+    (:lite)
+    private function isLikelyTimerReset(rawTimerSec as Number) as Boolean {
+        if (_elapsedActiveSec <= 0) {
+            return false;
+        }
+
+        if (rawTimerSec > 5) {
+            return false;
+        }
+
+        var delta = _elapsedActiveSec - rawTimerSec;
+        if (delta < FuelModelConsts.TIMER_BACKTRACK_RESET_DELTA_SEC) {
+            return false;
+        }
+
         return true;
     }
 
@@ -756,6 +825,7 @@ private function markSessionFinished() as Void {
         }
     }
 
+    (:full)
     private function getTimerTime(info) as Number? {
         try {
             if (info has :timerTime) {
@@ -778,6 +848,20 @@ private function markSessionFinished() as Void {
         return null;
     }
 
+    (:lite)
+    private function getTimerTime(info) as Number? {
+        try {
+            if (info has :timerTime) {
+                var timerTime = getNonNegativeNumberOrNull(info.timerTime);
+                if (timerTime != null) {
+                    return timerTime;
+                }
+            }
+        } catch (e) {}
+        return null;
+    }
+
+    (:full)
     private function getActivityStartTimestamp(info) as Number? {
         try {
             if (info has :startTime && info.startTime != null) {
@@ -789,6 +873,17 @@ private function markSessionFinished() as Void {
         return null;
     }
 
+    (:lite)
+    private function getActivityStartTimestamp(info) as Number? {
+        try {
+            if (info has :startTime && info.startTime != null) {
+                return info.startTime.value();
+            }
+        } catch (e) {}
+        return null;
+    }
+
+    (:full)
     private function isTimerStatePaused(info) as Boolean {
         try {
             if (info has :timerState &&
@@ -800,10 +895,22 @@ private function markSessionFinished() as Void {
         return false;
     }
 
+    (:lite)
+    private function isTimerStatePaused(info) as Boolean {
+        return false;
+    }
+
+    (:full)
     private function isTimerStateStoppedOrOff(info) as Boolean {
         return FuelPlannerUtils.isTimerStateStoppedOrOff(info);
     }
 
+    (:lite)
+    private function isTimerStateStoppedOrOff(info) as Boolean {
+        return false;
+    }
+
+    (:full)
     private function getEffectiveTimerSec(rawTimerSec as Number,
                                           timerStatePaused as Boolean) as Number {
         if (timerStatePaused) {
@@ -835,6 +942,13 @@ private function markSessionFinished() as Void {
         return effectiveSec;
     }
 
+    (:lite)
+    private function getEffectiveTimerSec(rawTimerSec as Number,
+                                          timerStatePaused as Boolean) as Number {
+        return rawTimerSec;
+    }
+
+    (:full)
     private function updateCalorieData(info) as Void {
         try {
             if (info has :calories) {
@@ -895,6 +1009,25 @@ private function markSessionFinished() as Void {
         }
     }
 
+    (:lite)
+    private function updateCalorieData(info) as Void {
+        try {
+            if (info has :calories) {
+                var calories = getNonNegativeNumberOrNull(info.calories);
+                if (calories != null) {
+                    if (calories > FuelModelConsts.MAX_CALORIES_KCAL) {
+                        calories = FuelModelConsts.MAX_CALORIES_KCAL;
+                    }
+                    if (!_caloriesAvailable || calories >= _latestCaloriesKcal) {
+                        _latestCaloriesKcal = calories;
+                    }
+                    _caloriesAvailable = true;
+                }
+            }
+        } catch (e) {}
+    }
+
+    (:lite)
     private function toNumberOrNull(value as Lang.Object?) as Number? {
         if (value instanceof Number) {
             return value;
@@ -902,6 +1035,15 @@ private function markSessionFinished() as Void {
         return null;
     }
 
+    (:full)
+    private function toNumberOrNull(value as Lang.Object?) as Number? {
+        if (value instanceof Number) {
+            return value;
+        }
+        return null;
+    }
+
+    (:lite)
     private function getNonNegativeNumberOrNull(value as Lang.Object?) as Number? {
         var numberValue = toNumberOrNull(value);
         if (numberValue != null && numberValue >= 0) {
@@ -910,6 +1052,27 @@ private function markSessionFinished() as Void {
         return null;
     }
 
+    (:full)
+    private function getNonNegativeNumberOrNull(value as Lang.Object?) as Number? {
+        var numberValue = toNumberOrNull(value);
+        if (numberValue != null && numberValue >= 0) {
+            return numberValue;
+        }
+        return null;
+    }
+
+    (:lite)
+    private function toFloatOrNull(value as Lang.Object?) as Float? {
+        if (value instanceof Float) {
+            return value;
+        }
+        if (value instanceof Number) {
+            return value.toFloat();
+        }
+        return null;
+    }
+
+    (:full)
     private function toFloatOrNull(value as Lang.Object?) as Float? {
         if (value instanceof Float) {
             return value;
@@ -921,6 +1084,7 @@ private function markSessionFinished() as Void {
     }
 
     //! Detect pause from explicit timer state (preferred) or timer stall fallback.
+    (:full)
     private function detectPause(timerTime as Number, timerStatePaused as Boolean) as Boolean {
         var wasPaused = (_sessionState == STATE_PAUSED);
         var pauseDetected = false;
@@ -967,6 +1131,14 @@ private function markSessionFinished() as Void {
         }
         _pauseStartClockTs = null;
 
+        return false;
+    }
+
+    (:lite)
+    private function detectPause(timerTime as Number, timerStatePaused as Boolean) as Boolean {
+        if (timerStatePaused) {
+            return true;
+        }
         return false;
     }
 
@@ -1070,6 +1242,7 @@ private function markSessionFinished() as Void {
         return deficitG10;
     }
 
+    (:full)
     private function calculateTargetAndDeficit() as Void {
         _targetTotalG = clampNonNegativeTotalG10(FuelModel.calculateTargetTotalG10(
             _elapsedActiveSec,
@@ -1093,7 +1266,35 @@ private function markSessionFinished() as Void {
         ));
     }
 
+    (:lite)
+    private function calculateTargetAndDeficit() as Void {
+        _targetTotalG = _consumedTotalG;
+        _deficitG = 0;
+    }
+
     //! Recompute target/deficit/reminder timing from current state and settings.
+    (:full)
+    private function recalculateFromCurrentState() as Void {
+        if (_sessionState == STATE_IDLE) {
+            resetDisplayValues();
+            return;
+        }
+
+        calculateTargetAndDeficit();
+
+        if (_sessionState == STATE_PRIMING ||
+            _sessionState == STATE_PAUSED ||
+            _sessionState == STATE_FINISHED) {
+            _nextDueInSec = 0;
+            _isReminderDue = false;
+            return;
+        }
+
+        calculateNextDue();
+        checkReminderDue();
+    }
+
+    (:lite)
     private function recalculateFromCurrentState() as Void {
         if (_sessionState == STATE_IDLE) {
             resetDisplayValues();
@@ -1119,6 +1320,7 @@ private function markSessionFinished() as Void {
     }
 
     //! Calculate time until next intake is due
+    (:full)
     private function calculateNextDue() as Void {
         var safeStartDelayMin = (_startDelayMin >= 0)
             ? _startDelayMin
@@ -1174,7 +1376,52 @@ private function markSessionFinished() as Void {
         }
     }
 
+    (:lite)
+    private function calculateNextDue() as Void {
+        var safeStartDelayMin = (_startDelayMin >= 0)
+            ? _startDelayMin
+            : _storage.MIN_START_DELAY_MIN;
+        var safeDoseG10 = (_doseG > 0)
+            ? _doseG * 10
+            : _storage.MIN_DOSE_G * 10;
+        var safeCarbsRateGph10 = (_carbsTargetGph > 0)
+            ? _carbsTargetGph * 10
+            : _storage.MIN_CARBS_TARGET_GPH * 10;
+
+        var startDelaySec = safeStartDelayMin * 60;
+
+        if (_consumedTotalG == 0 && _elapsedActiveSec < startDelaySec) {
+            _nextDueInSec = startDelaySec - _elapsedActiveSec;
+            return;
+        }
+
+        if (_reminderMode == MODE_FIXED) {
+            // Fixed interval from last intake; first reminder after delay + one full interval
+            var safeIntervalMin = (_fixedIntervalMin > 0)
+                ? _fixedIntervalMin
+                : _storage.MIN_FIXED_INTERVAL_MIN;
+            var intervalSec = safeIntervalMin * 60;
+            if (_consumedTotalG == 0) {
+                _nextDueInSec = clampNextDueSec((startDelaySec + intervalSec) - _elapsedActiveSec);
+            } else {
+                var now = getCurrentTimestamp();
+                var safeLastIntakeTimestamp = (_lastIntakeTimestamp > 0) ? _lastIntakeTimestamp : now;
+                _nextDueInSec = clampNextDueSec(intervalSec - (now - safeLastIntakeTimestamp));
+            }
+            return;
+        }
+
+        // MODE_AUTO and MODE_CALORIE_AUTO: deficit-based (all g10)
+        if (_deficitG >= safeDoseG10) {
+            _nextDueInSec = 0;
+        } else {
+            var deficitNeededG10 = safeDoseG10 - _deficitG;
+            _nextDueInSec = clampNextDueSec(((deficitNeededG10 * 3600) + safeCarbsRateGph10 - 1) / safeCarbsRateGph10);
+        }
+    }
+
     //! Check if reminder should fire
+    (:full)
     private function checkReminderDue() as Void {
         _isReminderDue = ReminderManager.shouldVibrate(
             _nextDueInSec,
@@ -1188,6 +1435,12 @@ private function markSessionFinished() as Void {
         );
     }
 
+    (:lite)
+    private function checkReminderDue() as Void {
+        _isReminderDue = (_nextDueInSec <= 0 && !_isPaused && _consumedTotalG > 0 && _elapsedActiveSec >= _startDelayMin * 60);
+    }
+
+    (:full)
     function recordReminderTriggered() as Void {
         _lastReminderTimestamp = getCurrentTimestamp();
         _isReminderDue = false;
@@ -1195,6 +1448,14 @@ private function markSessionFinished() as Void {
         saveSession();
     }
 
+    (:lite)
+    function recordReminderTriggered() as Void {
+        _lastReminderTimestamp = getCurrentTimestamp();
+        _isReminderDue = false;
+        saveSession();
+    }
+
+    (:full)
     function snoozeReminder() as Void {
         if (!_sessionActive) {
             return;
@@ -1205,6 +1466,17 @@ private function markSessionFinished() as Void {
         saveSession();
     }
 
+    (:lite)
+    function snoozeReminder() as Void {
+        if (!_sessionActive) {
+            return;
+        }
+        _lastReminderTimestamp = getCurrentTimestamp();
+        _isReminderDue = false;
+        saveSession();
+    }
+
+    (:full)
     function recordIntake(grams as Number) as Void {
         if (!_sessionActive) { return; }
         if (grams <= 0) { return; }
@@ -1234,6 +1506,31 @@ private function markSessionFinished() as Void {
         saveSession();
     }
 
+    (:lite)
+    function recordIntake(grams as Number) as Void {
+        if (!_sessionActive) { return; }
+        if (grams <= 0) { return; }
+        var safeGrams = grams;
+        if (safeGrams > FuelModelConsts.MAX_MANUAL_INTAKE_G) {
+            safeGrams = FuelModelConsts.MAX_MANUAL_INTAKE_G;
+        }
+
+        var gramsG10 = gramsToG10(safeGrams);
+        if (gramsG10 <= 0) { return; }
+        var now              = getCurrentTimestamp();
+        _consumedTotalG      = clampNonNegativeTotalG10(_consumedTotalG + gramsG10);
+        _lastIntakeTimestamp = now;
+        _lastReminderTimestamp = 0;
+        _isReminderDue       = false;
+        _autoIntakeLocked    = false;
+        _autoIntakeEventPending = false;
+        _intakeCount        += 1;
+        
+        recalculateFromCurrentState();
+        saveSession();
+    }
+
+    (:full)
     function undoLastIntake() as Boolean {
         if (!_sessionActive || !_undoAvailable) {
             return false;
@@ -1259,6 +1556,12 @@ private function markSessionFinished() as Void {
         return true;
     }
 
+    (:lite)
+    function undoLastIntake() as Boolean {
+        return false;
+    }
+
+    (:full)
     function isUndoAvailable() as Boolean {
         if (!_sessionActive || !_undoAvailable) {
             return false;
@@ -1267,6 +1570,12 @@ private function markSessionFinished() as Void {
         return (now - _undoTimestamp) <= 10;
     }
 
+    (:lite)
+    function isUndoAvailable() as Boolean {
+        return false;
+    }
+
+    (:full)
     function getUndoRemainingSec() as Number {
         if (!_sessionActive || !_undoAvailable) {
             return 0;
@@ -1279,6 +1588,17 @@ private function markSessionFinished() as Void {
         return remaining;
     }
 
+    (:lite)
+    function getUndoRemainingSec() as Number {
+        return 0;
+    }
+
+    (:full)
+    function recordDefaultIntake() as Void {
+        recordIntake(_doseG);
+    }
+
+    (:lite)
     function recordDefaultIntake() as Void {
         recordIntake(_doseG);
     }
@@ -1287,6 +1607,16 @@ private function markSessionFinished() as Void {
         return _clock.now();
     }
 
+    (:full)
+    function onTimerLap() as Void {
+        if (!_sessionActive) {
+            return;
+        }
+
+        saveSession();
+    }
+
+    (:lite)
     function onTimerLap() as Void {
         if (!_sessionActive) {
             return;
@@ -1305,7 +1635,10 @@ private function markSessionFinished() as Void {
     function isSessionActive()      as Boolean { return _sessionActive; }
     function isPaused()             as Boolean { return _isPaused; }
     function getElapsedActiveSec()  as Number  { return _elapsedActiveSec; }
+    (:full)
     function getElapsedActiveHours()as Float   { return _elapsedActiveSec.toFloat() / 3600.0f; }
+    (:lite)
+    function getElapsedActiveHours()as Float   { return 0.0f; }
     function getConsumedTotalG10()  as Number  { return _consumedTotalG; }
     function getTargetTotalG10()    as Number  { return _targetTotalG; }
     function getDeficitG10()        as Number  { return _deficitG; }
@@ -1336,10 +1669,17 @@ private function markSessionFinished() as Void {
         return true;
     }
 
+    (:full)
     function getIntakeCount() as Number {
         return _intakeCount;
     }
 
+    (:lite)
+    function getIntakeCount() as Number {
+        return 0;
+    }
+
+    (:full)
     function getRecoveryDeficit() as Number? {
         if (!_sessionActive || _elapsedActiveSec <= 0) {
             return null;
@@ -1350,6 +1690,11 @@ private function markSessionFinished() as Void {
             return null;
         }
         return (recoveryDeficitG10 + 5) / 10;
+    }
+
+    (:lite)
+    function getRecoveryDeficit() as Number? {
+        return null;
     }
 
 }
