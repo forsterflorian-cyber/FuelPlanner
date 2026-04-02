@@ -8,7 +8,7 @@
     <string id="SettingFixedInterval">Fixed Interval (min)</string>
     <string id="SettingStartDelay">Start Delay (min)</string>
     <string id="SettingSnoozeTime">Snooze Time (min)</string>
-    <string id="SettingFullScreenAlerts">Full-Screen Alerts</string>
+    <string id="SettingFullScreenAlerts">Native Full-Screen Alerts</string>
     <string id="SettingCarbFraction">Carb % of kcal</string>
     <string id="SettingSportPreset">Sport Preset</string>
 

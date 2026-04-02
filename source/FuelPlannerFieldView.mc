@@ -103,7 +103,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     //! Called every second with activity info
     function compute(info as Activity.Info) as Void {
         _model.compute(info);
-        _showRecoveryLayout = isTimerStateStoppedOrOff(info);
+        _showRecoveryLayout = shouldShowRecoveryLayout(info);
 
         var autoIntakeTriggered = _model.consumeAutoIntakeEvent();
         if (_showRecoveryLayout) {
@@ -135,6 +135,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         var now = System.getTimer();
         var w  = dc.getWidth();
         var h  = dc.getHeight();
+        _showRecoveryLayout = _model.isStoppedSession();
         _lastFieldWidth = w;
         _lastFieldHeight = h;
         dc.setColor(Graphics.COLOR_TRANSPARENT, bgColor);
@@ -208,6 +209,16 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             }
         } catch (e) {}
         return fallback;
+    }
+
+    private function shouldShowRecoveryLayout(info as Activity.Info?) as Boolean {
+        if (_model.isStoppedSession()) {
+            return true;
+        }
+        if (info == null) {
+            return false;
+        }
+        return isTimerStateStoppedOrOff(info);
     }
 
 

@@ -297,6 +297,49 @@ class IntegrationTests {
     }
 
     (:test)
+    static function stoppedSessionRecoveryAfterRestart(logger as Test.Logger) as Boolean {
+        var clock = new MockClock(55000);
+        var props = new MockPropertiesBackend();
+        props.setValue("carbsTargetGph", 60);
+        props.setValue("doseG", 25);
+        props.setValue("startDelayMin", 0);
+
+        var storageBackend = new MockStorageBackend();
+        var storage = new StorageManager(storageBackend, props);
+
+        var model1 = new FuelModel(storage, clock);
+        model1.setTouchForTest(true);
+
+        var info = new MockActivityInfo(55000);
+        info.setTimerSeconds(0);
+        model1.compute(info);
+
+        clock.advance(1);
+        info.advanceTimerSeconds(1);
+        model1.compute(info);
+
+        for (var i = 0; i < 900; i += 1) {
+            clock.advance(1);
+            info.advanceTimerSeconds(1);
+            model1.compute(info);
+        }
+
+        model1.recordIntake(25);
+        info.timerState = Activity.TIMER_STATE_STOPPED;
+        model1.compute(info);
+        model1.saveSession();
+
+        var model2 = new FuelModel(storage, clock);
+        model2.setTouchForTest(true);
+        model2.loadSession();
+
+        Test.assertMessage(model2.isStoppedSession(), "Stopped session should restore as stopped after restart.");
+        Test.assertMessage(!model2.isSessionActive(), "Stopped session should not restore as active.");
+        Test.assertMessage(model2.getRecoveryDeficit() != null, "Stopped session should keep recovery metrics available after restart.");
+        return true;
+    }
+
+    (:test)
     static function calorieAutoFallbackIntegration(logger as Test.Logger) as Boolean {
         var clock = new MockClock(60000);
         var props = new MockPropertiesBackend();

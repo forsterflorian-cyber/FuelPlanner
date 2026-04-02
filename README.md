@@ -68,6 +68,7 @@ Carb Fraction: carb share used in Calorie Auto mode
 Fixed Interval: reminder interval in Fixed mode
 Start Delay: delay before reminders begin
 Snooze Time: reminder snooze duration
+Native Full-Screen Alerts: available only on supported full-tier devices; lite and memory-optimized tiers use the local in-field overlay
 Presets
 Run
 Bike

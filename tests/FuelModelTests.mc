@@ -275,6 +275,18 @@ class FuelModelTests {
     }
 
     (:test)
+    static function dataFieldAlertRequiresNativeCapability(logger as Test.Logger) as Boolean {
+        var clock = new MockClock(3500);
+        var props = new MockPropertiesBackend();
+        props.setValue("dataFieldAlertEnabled", 1);
+
+        var model = buildModel(clock, props);
+        Test.assertMessage(model.supportsNativeDataFieldAlert(), "FR955 full-tier test target should expose native data field alerts.");
+        Test.assertMessage(model.isDataFieldAlertEnabled(), "Effective alert state should be enabled on supported devices when the setting is on.");
+        return true;
+    }
+
+    (:test)
     static function undoIntake(logger as Test.Logger) as Boolean {
         var clock = new MockClock(1000);
         var props = new MockPropertiesBackend();

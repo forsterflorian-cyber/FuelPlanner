@@ -28,7 +28,7 @@
         <settingConfig type="numeric" min="1" max="15" />
     </setting>
 
-    <setting propertyKey="@Properties.dataFieldAlertEnabled" title="Full-Screen Alerts">
+    <setting propertyKey="@Properties.dataFieldAlertEnabled" title="Native Full-Screen Alerts (supported devices only)">
         <settingConfig type="list">
             <listEntry value="0">Disabled</listEntry>
             <listEntry value="1">Enabled</listEntry>

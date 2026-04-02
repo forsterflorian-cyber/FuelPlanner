@@ -204,7 +204,7 @@ class FuelPlannerApp extends Application.AppBase {
             _storage = new StorageManager(null, null);
         }
         var storage = _storage as StorageManager;
-        var menu = new FuelPlannerMenu(storage);
+        var menu = new FuelPlannerMenu(storage, _model);
         var inputDelegate = new FuelPlannerMenuDelegate(storage, menu, _model);
         return [menu, inputDelegate];
     }

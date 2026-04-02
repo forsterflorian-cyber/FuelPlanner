@@ -9,7 +9,7 @@
     <string id="SettingFixedInterval">Festes Intervall (min)</string>
     <string id="SettingStartDelay">Startverzoegerung (min)</string>
     <string id="SettingSnoozeTime">Schlummer-Zeit (min)</string>
-    <string id="SettingFullScreenAlerts">Vollbild-Alarme</string>
+    <string id="SettingFullScreenAlerts">Native Vollbild-Alarme</string>
     <string id="SettingCarbFraction">KH % der kcal</string>
     <string id="SettingSportPreset">Sport-Vorlage</string>
 

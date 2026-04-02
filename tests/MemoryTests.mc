@@ -128,7 +128,7 @@ class MemoryTests {
         info.setTimerSeconds(60);
         model.compute(info);
 
-        var menu = new FuelPlannerMenu(storage);
+        var menu = new FuelPlannerMenu(storage, null);
         var delegate = new FuelPlannerMenuDelegate(storage, menu, null);
         var reminder = new SilentReminderManager();
         var view = new TestFuelPlannerFieldView(model, reminder);
@@ -151,7 +151,7 @@ class MemoryTests {
 
         var peak = updatePeak(printMemoryStats("loop_live_start"), 0, 0);
         for (var i = 0; i < 50; i += 1) {
-            var menu = new FuelPlannerMenu(storage);
+            var menu = new FuelPlannerMenu(storage, null);
             var delegate = new FuelPlannerMenuDelegate(storage, menu, null);
 
             clock.advance(1);
@@ -202,7 +202,7 @@ class MemoryTests {
 
         var reminder = new ForcedReminderManager();
         var view = new TestFuelPlannerFieldView(model, reminder);
-        var menu = new FuelPlannerMenu(storage);
+        var menu = new FuelPlannerMenu(storage, null);
         var delegate = new FuelPlannerMenuDelegate(storage, menu, null);
 
         var peak = updatePeak(printMemoryStats("peak_before_compute"), 0, 0);

@@ -3,6 +3,7 @@ import Toybox.Time;
 import Toybox.Activity;
 import Toybox.FitContributor;
 import Toybox.System;
+import Toybox.WatchUi;
 import FuelPlannerLog;
 
 // Module-level constants: stored in bytecode, not per-instance heap
@@ -1986,7 +1987,18 @@ class FuelModel {
     function getDoseG10()           as Number  { return _doseG * 10; }
     function getReminderMode()      as Number  { return _reminderMode; }
     function getFixedIntervalMin()  as Number  { return _fixedIntervalMin; }
-    function isDataFieldAlertEnabled() as Boolean { return _dataFieldAlertEnabled; }
+    function isStoppedSession()     as Boolean { return _sessionState == STATE_FINISHED; }
+    (:full)
+    function supportsNativeDataFieldAlert() as Boolean {
+        return WatchUi.DataField has :showAlert;
+    }
+    (:lite)
+    function supportsNativeDataFieldAlert() as Boolean {
+        return false;
+    }
+    function isDataFieldAlertEnabled() as Boolean {
+        return _dataFieldAlertEnabled && supportsNativeDataFieldAlert();
+    }
     function getCarbFractionPct()   as Number  { return _carbFractionPct; }
     function isCaloriesAvailable()  as Boolean { return _caloriesAvailable; }
     function isCalorieModeActive()  as Boolean { return _reminderMode == MODE_CALORIE_AUTO; }

@@ -13,7 +13,7 @@ class FuelPlannerMenu extends WatchUi.Menu2 {
     var intervalItem as WatchUi.MenuItem;
     var delayItem   as WatchUi.MenuItem;
     var snoozeItem  as WatchUi.MenuItem;
-    var alertItem   as WatchUi.MenuItem;
+    var alertItem   as WatchUi.MenuItem?;
 
     private var _strLabelMenuTitle as String = "";
     private var _strSettingCarbsTarget as String = "";
@@ -42,7 +42,7 @@ class FuelPlannerMenu extends WatchUi.Menu2 {
     private var _strUnitGrams as String = "";
     private var _strUnitMinutes as String = "";
 
-    function initialize(storage as StorageManager) {
+    function initialize(storage as StorageManager, model as FuelModel?) {
         loadStrings();
         Menu2.initialize({:title => _strLabelMenuTitle});
 
@@ -88,11 +88,13 @@ class FuelPlannerMenu extends WatchUi.Menu2 {
             :snoozeTime, {});
         addItem(snoozeItem);
 
-        alertItem = new WatchUi.MenuItem(
-            _strSettingFullScreenAlerts,
-            toggleLabel(storage.getDataFieldAlertEnabled()),
-            :fullScreenAlerts, {});
-        addItem(alertItem);
+        if (model != null && (model as FuelModel).supportsNativeDataFieldAlert()) {
+            alertItem = new WatchUi.MenuItem(
+                _strSettingFullScreenAlerts,
+                toggleLabel(storage.getDataFieldAlertEnabled()),
+                :fullScreenAlerts, {});
+            addItem(alertItem as WatchUi.MenuItem);
+        }
 
         addItem(new WatchUi.MenuItem(
             _strLabelPresets, "", :separator, {}));

@@ -48,7 +48,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
 
     function compute(info as Activity.Info) as Void {
         _model.compute(info);
-        _showRecoveryLayout = isTimerStateStoppedOrOff(info);
+        _showRecoveryLayout = shouldShowRecoveryLayout(info);
 
         if (_showRecoveryLayout) {
             _overlayEndTime = 0;
@@ -74,6 +74,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
 
         var w = dc.getWidth();
         var h = dc.getHeight();
+        _showRecoveryLayout = _model.isStoppedSession();
 
         if (System.getTimer() < _overlayEndTime) {
             drawOverlay(dc, w, h);
@@ -303,6 +304,16 @@ class FuelPlannerFieldView extends WatchUi.DataField {
 
     private function isTimerStateStoppedOrOff(info as Activity.Info) as Boolean {
         return FuelPlannerUtils.isTimerStateStoppedOrOff(info);
+    }
+
+    private function shouldShowRecoveryLayout(info as Activity.Info?) as Boolean {
+        if (_model.isStoppedSession()) {
+            return true;
+        }
+        if (info == null) {
+            return false;
+        }
+        return isTimerStateStoppedOrOff(info);
     }
 
     private function formatDuration(seconds as Number) as String {
