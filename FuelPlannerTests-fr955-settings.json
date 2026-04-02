@@ -99,6 +99,27 @@
     "configMax" : 15,
     "configMaxLength" : null
   }, {
+    "key" : "dataFieldAlertEnabled",
+    "valueType" : "number",
+    "defaultValue" : 0,
+    "configTitle" : "SettingFullScreenAlerts",
+    "configPrompt" : null,
+    "configType" : "list",
+    "configError" : null,
+    "configHelpUrl" : null,
+    "configReadonly" : false,
+    "configRequired" : false,
+    "configOptions" : [ {
+      "display" : "LabelDisabled",
+      "value" : 0
+    }, {
+      "display" : "LabelEnabled",
+      "value" : 1
+    } ],
+    "configMin" : null,
+    "configMax" : null,
+    "configMaxLength" : null
+  }, {
     "key" : "carbFractionPct",
     "valueType" : "number",
     "defaultValue" : 60,
@@ -121,6 +142,7 @@
       "LabelLapUndoShort" : "LAP undo",
       "LabelFuelingOk" : "Versorgung ok",
       "FitDeficitChartTitle" : "Aktuelles Defizit",
+      "LabelEnabled" : "Aktiv",
       "SettingFixedInterval" : "Festes Intervall (min)",
       "LabelRateAutoNoData" : "Auto (keine kcal-Daten)",
       "LabelHoldPrefix" : "DOWN +",
@@ -156,6 +178,7 @@
       "UnitMinutes" : "min",
       "LabelClearSession" : "Sitzung loeschen",
       "LabelPaused" : "PAUSIERT",
+      "SettingFullScreenAlerts" : "Vollbild-Alarme",
       "PresetRunSub" : "60g/h, 25g Gel",
       "LabelConfirmClear" : "Sitzung loeschen?",
       "LabelRecovery" : "Erholung",
@@ -164,6 +187,7 @@
       "PresetHikeSub" : "40g/h, 20g Gel",
       "LabelAutoFlowStatus" : "AUTO-FLOW",
       "LabelLapUndoHint" : "LAP halten Undo",
+      "LabelDisabled" : "Aus",
       "LabelBehind" : "Hinter",
       "SettingDoseSize" : "Portionsgroesse (g)",
       "ModeAuto" : "Auto (Defizit)",
@@ -176,6 +200,7 @@
       "LabelLapUndoShort" : "LAP undo",
       "LabelFuelingOk" : "Fueling OK",
       "FitDeficitChartTitle" : "Current Deficit",
+      "LabelEnabled" : "Enabled",
       "SettingFixedInterval" : "Fixed Interval (min)",
       "LabelRateAutoNoData" : "Auto (no cal data)",
       "LabelHoldPrefix" : "DOWN +",
@@ -221,6 +246,7 @@
       "$literal14$" : "Schlummer-Zeit (min)",
       "LabelClearSession" : "Clear Session",
       "LabelPaused" : "PAUSED",
+      "SettingFullScreenAlerts" : "Full-Screen Alerts",
       "$literal6$" : "Kohlenhydrat-Ziel (g/h)",
       "PresetRunSub" : "60g/h, 25g gel",
       "LabelConfirmClear" : "Clear session?",
@@ -231,6 +257,7 @@
       "PresetHikeSub" : "40g/h, 20g gel",
       "LabelAutoFlowStatus" : "AUTO-FLOW",
       "LabelLapUndoHint" : "LAP hold undo",
+      "LabelDisabled" : "Disabled",
       "LabelBehind" : "Behind",
       "$literal1$" : "Gel Size (g)",
       "$literal13$" : "Startverzögerung (min)",

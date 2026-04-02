@@ -13,6 +13,7 @@ class FuelPlannerMenu extends WatchUi.Menu2 {
     var intervalItem as WatchUi.MenuItem;
     var delayItem   as WatchUi.MenuItem;
     var snoozeItem  as WatchUi.MenuItem;
+    var alertItem   as WatchUi.MenuItem;
 
     private var _strLabelMenuTitle as String = "";
     private var _strSettingCarbsTarget as String = "";
@@ -22,6 +23,7 @@ class FuelPlannerMenu extends WatchUi.Menu2 {
     private var _strSettingFixedInterval as String = "";
     private var _strSettingStartDelay as String = "";
     private var _strSettingSnoozeTime as String = "";
+    private var _strSettingFullScreenAlerts as String = "";
     private var _strLabelPresets as String = "";
     private var _strPresetRun as String = "";
     private var _strPresetRunSub as String = "";
@@ -34,6 +36,8 @@ class FuelPlannerMenu extends WatchUi.Menu2 {
     private var _strModeAuto as String = "";
     private var _strModeFixed as String = "";
     private var _strModeCalorieAuto as String = "";
+    private var _strEnabled as String = "";
+    private var _strDisabled as String = "";
     private var _strUnitGramsPerHour as String = "";
     private var _strUnitGrams as String = "";
     private var _strUnitMinutes as String = "";
@@ -84,6 +88,12 @@ class FuelPlannerMenu extends WatchUi.Menu2 {
             :snoozeTime, {});
         addItem(snoozeItem);
 
+        alertItem = new WatchUi.MenuItem(
+            _strSettingFullScreenAlerts,
+            toggleLabel(storage.getDataFieldAlertEnabled()),
+            :fullScreenAlerts, {});
+        addItem(alertItem);
+
         addItem(new WatchUi.MenuItem(
             _strLabelPresets, "", :separator, {}));
         addItem(new WatchUi.MenuItem(
@@ -129,6 +139,7 @@ class FuelPlannerMenu extends WatchUi.Menu2 {
         _strSettingFixedInterval = loadString(Rez.Strings.SettingFixedInterval, "Fixed interval");
         _strSettingStartDelay = loadString(Rez.Strings.SettingStartDelay, "Start delay");
         _strSettingSnoozeTime = loadString(Rez.Strings.SettingSnoozeTime, "Snooze time");
+        _strSettingFullScreenAlerts = loadString(Rez.Strings.SettingFullScreenAlerts, "Full-screen alerts");
         _strLabelPresets = loadString(Rez.Strings.LabelPresets, "Presets");
         _strPresetRun = loadString(Rez.Strings.PresetRun, "Run");
         _strPresetRunSub = loadString(Rez.Strings.PresetRunSub, "60 g/h, 25 g");
@@ -141,6 +152,8 @@ class FuelPlannerMenu extends WatchUi.Menu2 {
         _strModeAuto = loadString(Rez.Strings.ModeAuto, "Auto");
         _strModeFixed = loadString(Rez.Strings.ModeFixed, "Fixed");
         _strModeCalorieAuto = loadString(Rez.Strings.ModeCalorieAuto, "Auto (Calories)");
+        _strEnabled = loadString(Rez.Strings.LabelEnabled, "Enabled");
+        _strDisabled = loadString(Rez.Strings.LabelDisabled, "Disabled");
         _strUnitGramsPerHour = loadString(Rez.Strings.UnitGramsPerHour, "g/h");
         _strUnitGrams = loadString(Rez.Strings.UnitGrams, "g");
         _strUnitMinutes = loadString(Rez.Strings.UnitMinutes, "min");
@@ -152,6 +165,10 @@ class FuelPlannerMenu extends WatchUi.Menu2 {
             return _strModeFixed + " " + intervalMin.format("%d") + " " + _strUnitMinutes;
         }
         return _strModeCalorieAuto;
+    }
+
+    private function toggleLabel(value as Number) as String {
+        return (value != 0) ? _strEnabled : _strDisabled;
     }
 }
 

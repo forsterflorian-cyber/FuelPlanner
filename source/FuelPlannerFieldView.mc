@@ -4,6 +4,7 @@ import Toybox.Math;
 import Toybox.WatchUi;
 import Toybox.System;
 import Toybox.Lang;
+import FuelPlannerLog;
 //! Data Field View for FuelPlanner - responsive, top-to-bottom layout
 (:full)
 class FuelPlannerFieldView extends WatchUi.DataField {
@@ -119,8 +120,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         if (!_showRecoveryLayout && _model.isReminderDue() && !_model.isPaused()) {
             if (_reminder.triggerReminder()) { // Liefert true, wenn der Alarm gerade ausgelöst wurde
                 _model.recordReminderTriggered();
-                // Starte den Overlay-Timer für 3 Sekunden
-                _overlayEndTime = System.getTimer() + OVERLAY_DURATION_MS;
+                presentReminderNotification();
             }
         }       
         var now = System.getTimer();
@@ -231,12 +231,15 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         
         var strFuelNow = loadString(Rez.Strings.LabelFuelNow, "FUEL NOW");
         var doseText = _model.getDoseG().format("%d") + UNIT_G;
+        var reasonText = buildReminderReasonText();
         var titleFont = getBestFontForBox(dc, strFuelNow, contentW, getScaledValue(h, 0.20f, 24, 56), false);
         var doseFont = getBestFontForBox(dc, doseText, contentW, getScaledValue(h, 0.14f, 18, 40), true);
+        var reasonFont = getBestFontForBox(dc, reasonText, contentW, getScaledValue(h, 0.09f, 12, 22), false);
         var gap = getRowGap(h);
         var titleH = dc.getTextDimensions(strFuelNow, titleFont)[1];
         var doseH = dc.getTextDimensions(doseText, doseFont)[1];
-        var totalHeight = titleH + gap + doseH;
+        var reasonH = dc.getTextDimensions(reasonText, reasonFont)[1];
+        var totalHeight = titleH + gap + doseH + gap + reasonH;
         var y = (h - totalHeight) / 2;
         if (y < 0) {
             y = 0;
@@ -245,10 +248,33 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         // Text zentriert ausgeben
         dc.drawText(w / 2, y, titleFont, strFuelNow, Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(w / 2, y + titleH + gap, doseFont, doseText, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(w / 2, y + titleH + gap + doseH + gap, reasonFont, reasonText, Graphics.TEXT_JUSTIFY_CENTER);
         
         // Optional: Ein weißer Rahmen zur Abgrenzung
         dc.setPenWidth(4);
         dc.drawRectangle(2, 2, w-4, h-4);
+    }
+
+    private function presentReminderNotification() as Void {
+        _overlayEndTime = System.getTimer() + OVERLAY_DURATION_MS;
+        if (!_model.isDataFieldAlertEnabled()) {
+            return;
+        }
+
+        if (!(WatchUi.DataField has :showAlert)) {
+            FuelPlannerLog.logError("Alert", "DataField.showAlert unavailable on this device");
+            return;
+        }
+
+        var titleText = loadString(Rez.Strings.LabelFuelNow, "FUEL NOW");
+        var doseText = _model.getDoseG().format("%d") + UNIT_G;
+        var reasonText = buildReminderReasonText();
+
+        try {
+            showAlert(new FuelPlannerReminderAlert(titleText, doseText, reasonText));
+        } catch (e) {
+            FuelPlannerLog.logError("Alert", "Failed to show DataFieldAlert");
+        }
     }
     //! Waiting screen before activity starts
     private function drawNoSession(dc as Dc, cx as Number, h as Number,
@@ -662,6 +688,31 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             return loadString(Rez.Strings.LabelRateAutoNoData, "Auto (no cal data)");
         }
         return loadString(Rez.Strings.LabelRateTargetPrefix, "Plan") + " " + _model.getCarbsTargetGph().format("%d") + UNIT_GPH;
+    }
+
+    private function buildDeficitText() as String {
+        var deficitG10 = _model.getDeficitG10();
+        if (deficitG10 > 5) {
+            return loadString(Rez.Strings.LabelBehind, "Behind") + " " + ((deficitG10 + 5) / 10).format("%d") + UNIT_G;
+        }
+        if (deficitG10 < -5) {
+            return loadString(Rez.Strings.LabelAhead, "Ahead") + " " + (((-deficitG10) + 5) / 10).format("%d") + UNIT_G;
+        }
+        return loadString(Rez.Strings.LabelOnTarget, "On target");
+    }
+
+    private function buildReminderReasonText() as String {
+        if (_model.getReminderMode() == 1) {
+            return loadString(Rez.Strings.ModeFixed, "Fixed") + " " +
+                   _model.getFixedIntervalMin().format("%d") + " " +
+                   loadString(Rez.Strings.UnitMinutes, "min");
+        }
+
+        var deficitText = buildDeficitText();
+        if (deficitText != loadString(Rez.Strings.LabelOnTarget, "On target")) {
+            return deficitText;
+        }
+        return buildRateLabel();
     }
 
     private function isTimerStateStoppedOrOff(info as Activity.Info) as Boolean {

@@ -9,6 +9,7 @@
     <string id="SettingFixedInterval">Festes Intervall (min)</string>
     <string id="SettingStartDelay">Startverzoegerung (min)</string>
     <string id="SettingSnoozeTime">Schlummer-Zeit (min)</string>
+    <string id="SettingFullScreenAlerts">Vollbild-Alarme</string>
     <string id="SettingCarbFraction">KH % der kcal</string>
     <string id="SettingSportPreset">Sport-Vorlage</string>
 
@@ -49,6 +50,8 @@
     <string id="LabelRecovery">Erholung</string>
     <string id="LabelRecoveryAction">KH auffuellen</string>
     <string id="LabelFuelingOk">Versorgung ok</string>
+    <string id="LabelEnabled">Aktiv</string>
+    <string id="LabelDisabled">Aus</string>
 
     <!-- Field View: idle screen -->
     <string id="LabelWaiting">Aktivitaet starten</string>

@@ -77,6 +77,7 @@ class FuelModel {
     private var _fixedIntervalMin  as Number = 20;
     private var _startDelayMin     as Number = 15;
     private var _maxSnoozeMin      as Number = 5;
+    private var _dataFieldAlertEnabled as Boolean = false;
     private var _carbFractionPct   as Number = 60;  // % of kcal from carbs (40-80)
 
     // Last reminder timestamp (for snooze)
@@ -156,6 +157,7 @@ class FuelModel {
             _storage.MIN_MAX_SNOOZE_MIN,
             _storage.MAX_MAX_SNOOZE_MIN
         );
+        _dataFieldAlertEnabled = _storage.getDataFieldAlertEnabled() != 0;
         _carbFractionPct  = clampSetting(
             _storage.getCarbFractionPct(),
             _storage.MIN_CARB_FRACTION_PCT,
@@ -1690,6 +1692,13 @@ class FuelModel {
         return warningLeadSec;
     }
 
+    private function getRoundedPositiveDeficitG10() as Number {
+        if (_deficitG <= 5) {
+            return 0;
+        }
+        return ((_deficitG + 5) / 10) * 10;
+    }
+
     function getRingAlertTone() as Number {
         if (!_sessionActive && _sessionState != STATE_FINISHED) {
             return RING_TONE_GREEN;
@@ -1704,8 +1713,17 @@ class FuelModel {
             return RING_TONE_RED;
         }
 
-        if (_reminderMode != MODE_FIXED && _deficitG >= getSafeDoseG10()) {
-            return RING_TONE_RED;
+        if (_reminderMode != MODE_FIXED) {
+            var safeDoseG10 = getSafeDoseG10();
+            var roundedDeficitG10 = getRoundedPositiveDeficitG10();
+            if (roundedDeficitG10 >= safeDoseG10) {
+                return RING_TONE_RED;
+            }
+
+            var warningDeficitG10 = ((safeDoseG10 * 7) + 9) / 10;
+            if (roundedDeficitG10 >= warningDeficitG10) {
+                return RING_TONE_YELLOW;
+            }
         }
 
         var warningLeadSec = getRingWarningLeadSec(getPlannedIntakeCycleSec());
@@ -1948,6 +1966,8 @@ class FuelModel {
     function getDoseG()             as Number  { return _doseG; }
     function getDoseG10()           as Number  { return _doseG * 10; }
     function getReminderMode()      as Number  { return _reminderMode; }
+    function getFixedIntervalMin()  as Number  { return _fixedIntervalMin; }
+    function isDataFieldAlertEnabled() as Boolean { return _dataFieldAlertEnabled; }
     function getCarbFractionPct()   as Number  { return _carbFractionPct; }
     function isCaloriesAvailable()  as Boolean { return _caloriesAvailable; }
     function isCalorieModeActive()  as Boolean { return _reminderMode == MODE_CALORIE_AUTO; }

@@ -18,6 +18,8 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
     private var _strSettingStartDelay as String = "";
     private var _strSettingSnoozeTime as String = "";
     private var _strLabelConfirmClear as String = "";
+    private var _strEnabled as String = "";
+    private var _strDisabled as String = "";
     private var _strUnitGramsPerHour as String = "";
     private var _strUnitGrams as String = "";
     private var _strUnitMinutes as String = "";
@@ -57,6 +59,8 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
         _strSettingStartDelay = loadString(Rez.Strings.SettingStartDelay, "Start delay");
         _strSettingSnoozeTime = loadString(Rez.Strings.SettingSnoozeTime, "Snooze time");
         _strLabelConfirmClear = loadString(Rez.Strings.LabelConfirmClear, "Clear session?");
+        _strEnabled = loadString(Rez.Strings.LabelEnabled, "Enabled");
+        _strDisabled = loadString(Rez.Strings.LabelDisabled, "Disabled");
         _strUnitGramsPerHour = loadString(Rez.Strings.UnitGramsPerHour, "g/h");
         _strUnitGrams = loadString(Rez.Strings.UnitGrams, "g");
         _strUnitMinutes = loadString(Rez.Strings.UnitMinutes, "min");
@@ -85,6 +89,10 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
             return _strModeFixed + " " + intervalMin.format("%d") + _suffixMinutes;
         }
         return _strModeCalorieAuto;
+    }
+
+    private function toggleLabel(value as Number) as String {
+        return (value != 0) ? _strEnabled : _strDisabled;
     }
 
     function onSelect(item as WatchUi.MenuItem) as Void {
@@ -175,6 +183,13 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
                         new Lang.Method(_storage, :setMaxSnoozeMin), _suffixMinutes,
                         _storage.MIN_MAX_SNOOZE_MIN, _storage.MAX_MAX_SNOOZE_MIN,
                         _model));
+                break;
+
+            case :fullScreenAlerts:
+                var newAlertState = (_storage.getDataFieldAlertEnabled() == 0) ? 1 : 0;
+                _storage.setDataFieldAlertEnabled(newAlertState);
+                item.setSubLabel(toggleLabel(_storage.getDataFieldAlertEnabled()));
+                refreshLiveModel();
                 break;
 
             case :presetRun:

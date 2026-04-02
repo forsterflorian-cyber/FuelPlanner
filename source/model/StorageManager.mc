@@ -69,6 +69,8 @@ class StorageManager {
     public const MAX_START_DELAY_MIN        = 60;
     public const MIN_MAX_SNOOZE_MIN         = 1;
     public const MAX_MAX_SNOOZE_MIN         = 15;
+    public const MIN_DATA_FIELD_ALERT_ENABLED = 0;
+    public const MAX_DATA_FIELD_ALERT_ENABLED = 1;
     public const MIN_CARB_FRACTION_PCT      = 40;
     public const MAX_CARB_FRACTION_PCT      = 80;
 
@@ -78,6 +80,7 @@ class StorageManager {
     public const DEFAULT_FIXED_INTERVAL_MIN = 20;
     public const DEFAULT_START_DELAY_MIN    = 15;
     public const DEFAULT_MAX_SNOOZE_MIN     = 5;
+    public const DEFAULT_DATA_FIELD_ALERT_ENABLED = 0;
     public const DEFAULT_CARB_FRACTION_PCT  = 60;  // 60% of kcal from carbs
 
     private var _storageBackend as StorageBackend;
@@ -237,6 +240,24 @@ class StorageManager {
 
     function setMaxSnoozeMin(value as Number) as Void {
         setClampedProperty("maxSnoozeMin", value, MIN_MAX_SNOOZE_MIN, MAX_MAX_SNOOZE_MIN);
+    }
+
+    function getDataFieldAlertEnabled() as Number {
+        return getClampedProperty(
+            "dataFieldAlertEnabled",
+            DEFAULT_DATA_FIELD_ALERT_ENABLED,
+            MIN_DATA_FIELD_ALERT_ENABLED,
+            MAX_DATA_FIELD_ALERT_ENABLED
+        );
+    }
+
+    function setDataFieldAlertEnabled(value as Number) as Void {
+        setClampedProperty(
+            "dataFieldAlertEnabled",
+            value,
+            MIN_DATA_FIELD_ALERT_ENABLED,
+            MAX_DATA_FIELD_ALERT_ENABLED
+        );
     }
 
     function getCarbFractionPct() as Number {

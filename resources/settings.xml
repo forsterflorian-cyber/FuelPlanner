@@ -28,6 +28,13 @@
         <settingConfig type="numeric" min="1" max="15" />
     </setting>
 
+    <setting propertyKey="@Properties.dataFieldAlertEnabled" title="Full-Screen Alerts">
+        <settingConfig type="list">
+            <listEntry value="0">Disabled</listEntry>
+            <listEntry value="1">Enabled</listEntry>
+        </settingConfig>
+    </setting>
+
     <setting propertyKey="@Properties.carbFractionPct" title="Carb % of calories">
         <settingConfig type="numeric" min="40" max="80" />
     </setting>

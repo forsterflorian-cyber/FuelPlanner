@@ -247,6 +247,27 @@ class FuelModelTests {
     }
 
     (:test)
+    static function ringToneCalorieAutoTurnsRedWhenBehindDose(logger as Test.Logger) as Boolean {
+        var clock = new MockClock(3000);
+        var props = new MockPropertiesBackend();
+        props.setValue("reminderMode", 2);
+        props.setValue("doseG", 25);
+        props.setValue("carbFractionPct", 60);
+        props.setValue("startDelayMin", 0);
+
+        var model = buildModel(clock, props);
+        var info = new MockActivityInfo(3000);
+        info.setTimerSeconds(600);
+        info.setCalories(187);
+        info.setEnergyExpenditure(12.0f);
+        model.compute(info);
+
+        Test.assertEqual(281, model.getDeficitG10());
+        Test.assertEqual(2, model.getRingTone());
+        return true;
+    }
+
+    (:test)
     static function undoIntake(logger as Test.Logger) as Boolean {
         var clock = new MockClock(1000);
         var props = new MockPropertiesBackend();
