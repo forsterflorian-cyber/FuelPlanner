@@ -170,6 +170,54 @@ class StorageTests {
     }
 
     (:test)
+    static function finishedSessionCleanupRunsOnceAndKeepsRecovery(logger as Test.Logger) as Boolean {
+        var storageBackend = new MockStorageBackend();
+        var props = new MockPropertiesBackend();
+        props.setValue("carbsTargetGph", 60);
+        props.setValue("doseG", 25);
+        props.setValue("startDelayMin", 0);
+
+        var storage = buildStorage(props, storageBackend);
+        var clock = new MockClock(7000);
+        var model = buildModel(storage, clock);
+        var info = new MockActivityInfo(7000);
+
+        info.setTimerSeconds(1800);
+        model.compute(info);
+        clock.setNow(7060);
+        model.recordIntake(20);
+        model.compute(info);
+
+        var deletesBeforeFinish = storageBackend.getDeleteCount();
+
+        info.timerState = Activity.TIMER_STATE_STOPPED;
+        model.compute(info);
+
+        var deletesAfterFirstStop = storageBackend.getDeleteCount();
+        var recoveryAfterFirstStop = model.getRecoveryDeficit();
+
+        model.compute(info);
+
+        var deletesAfterSecondStop = storageBackend.getDeleteCount();
+        var recoveryAfterSecondStop = model.getRecoveryDeficit();
+
+        logger.debug("deletesBeforeFinish=" + deletesBeforeFinish.format("%d"));
+        logger.debug("deletesAfterFirstStop=" + deletesAfterFirstStop.format("%d"));
+        logger.debug("deletesAfterSecondStop=" + deletesAfterSecondStop.format("%d"));
+        logger.debug("recoveryAfterFirstStop=" + ((recoveryAfterFirstStop != null) ? recoveryAfterFirstStop.format("%d") : "null"));
+        logger.debug("recoveryAfterSecondStop=" + ((recoveryAfterSecondStop != null) ? recoveryAfterSecondStop.format("%d") : "null"));
+
+        Test.assertMessage(deletesAfterFirstStop > deletesBeforeFinish, "Finishing should clear the recoverable session once.");
+        Test.assertMessage(
+            deletesAfterSecondStop == deletesAfterFirstStop,
+            "Repeated stopped ticks must not rerun terminal session cleanup."
+        );
+        Test.assertMessage(recoveryAfterFirstStop != null, "Finished sessions should keep the recovery summary available.");
+        Test.assertEqual(recoveryAfterFirstStop, recoveryAfterSecondStop);
+        return true;
+    }
+
+    (:test)
     static function consumedG10SyncsLegacyKey(logger as Test.Logger) as Boolean {
         var storageBackend = new MockStorageBackend();
         var props = new MockPropertiesBackend();
@@ -189,7 +237,7 @@ class StorageTests {
 
         // Verify backward compatibility read
         var readValue = storage.getConsumedTotalG10();
-        Test.assertEqual(250, readValue, "Read value should match written value");
+        Test.assertEqual(250, readValue);
 
         return true;
     }

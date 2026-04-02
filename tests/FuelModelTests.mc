@@ -146,7 +146,6 @@ class FuelModelTests {
 
     (:test)
     static function storageFailureTracking(logger as Test.Logger) as Boolean {
-        var clock = new MockClock(1000);
         var props = new MockPropertiesBackend();
         var storageBackend = new MockStorageBackend();
         var storage = new StorageManager(storageBackend, props);
@@ -191,21 +190,58 @@ class FuelModelTests {
     }
 
     (:test)
-    static function gaugeAlertTone(logger as Test.Logger) as Boolean {
-        // GREEN: no deficit
-        Test.assertEqual(0, FuelPlannerUtils.getGaugeAlertTone(0, 250));
-        Test.assertEqual(0, FuelPlannerUtils.getGaugeAlertTone(-100, 250));
+    static function ringToneHonorsStartDelayAndApproachWindow(logger as Test.Logger) as Boolean {
+        var clock = new MockClock(1000);
+        var props = new MockPropertiesBackend();
+        props.setValue("carbsTargetGph", 60);
+        props.setValue("doseG", 25);
+        props.setValue("startDelayMin", 15);
 
-        // ORANGE: deficit but less than dose
-        Test.assertEqual(1, FuelPlannerUtils.getGaugeAlertTone(100, 250));
-        Test.assertEqual(1, FuelPlannerUtils.getGaugeAlertTone(125, 250));
+        var model = buildModel(clock, props);
+        var info = new MockActivityInfo(1000);
 
-        // RED: deficit >= dose
-        Test.assertEqual(2, FuelPlannerUtils.getGaugeAlertTone(250, 250));
-        Test.assertEqual(2, FuelPlannerUtils.getGaugeAlertTone(300, 250));
+        info.setTimerSeconds(600);
+        model.compute(info);
+        Test.assertEqual(0, model.getRingTone());
 
-        // Edge: dose = 0
-        Test.assertEqual(2, FuelPlannerUtils.getGaugeAlertTone(100, 0));
+        info.setTimerSeconds(1200);
+        model.compute(info);
+        Test.assertEqual(1, model.getRingTone());
+
+        info.setTimerSeconds(1500);
+        model.compute(info);
+        Test.assertEqual(2, model.getRingTone());
+
+        return true;
+    }
+
+    (:test)
+    static function ringToneUsesFixedIntervalWindow(logger as Test.Logger) as Boolean {
+        var clock = new MockClock(2000);
+        var props = new MockPropertiesBackend();
+        props.setValue("reminderMode", 1);
+        props.setValue("fixedIntervalMin", 20);
+        props.setValue("doseG", 25);
+        props.setValue("startDelayMin", 0);
+
+        var model = buildModel(clock, props);
+        var info = new MockActivityInfo(2000);
+        info.setTimerSeconds(60);
+        model.compute(info);
+        model.recordIntake(25);
+
+        clock.advance(1);
+        info.setTimerSeconds(900);
+        model.compute(info);
+        Test.assertEqual(0, model.getRingTone());
+
+        info.setTimerSeconds(960);
+        model.compute(info);
+        Test.assertEqual(1, model.getRingTone());
+
+        info.setTimerSeconds(1260);
+        model.compute(info);
+        Test.assertEqual(2, model.getRingTone());
 
         return true;
     }
@@ -225,16 +261,16 @@ class FuelModelTests {
 
         // Record intake
         model.recordIntake(25);
-        Test.assertEqual(250, model.getConsumedTotalG10(), "Consumed should be 250 (25g)");
-        Test.assertEqual(1, model.getIntakeCount(), "Intake count should be 1");
+        Test.assertEqual(250, model.getConsumedTotalG10());
+        Test.assertEqual(1, model.getIntakeCount());
         Test.assertMessage(model.isUndoAvailable(), "Undo should be available immediately after intake");
 
         // Undo within 10 seconds
         clock.advance(5);
         var undoSuccess = model.undoLastIntake();
         Test.assertMessage(undoSuccess, "Undo should succeed within 10 seconds");
-        Test.assertEqual(0, model.getConsumedTotalG10(), "Consumed should be 0 after undo");
-        Test.assertEqual(0, model.getIntakeCount(), "Intake count should be 0 after undo");
+        Test.assertEqual(0, model.getConsumedTotalG10());
+        Test.assertEqual(0, model.getIntakeCount());
         Test.assertMessage(!model.isUndoAvailable(), "Undo should not be available after undo");
 
         return true;
@@ -264,7 +300,7 @@ class FuelModelTests {
         // Try to undo
         var undoSuccess = model.undoLastIntake();
         Test.assertMessage(!undoSuccess, "Undo should fail after timeout");
-        Test.assertEqual(250, model.getConsumedTotalG10(), "Consumed should remain unchanged");
+        Test.assertEqual(250, model.getConsumedTotalG10());
 
         return true;
     }
@@ -330,7 +366,7 @@ class FuelModelTests {
         // Advance 7 more seconds (total 10)
         clock.advance(7);
         var remainingAfter10 = model.getUndoRemainingSec();
-        Test.assertEqual(0, remainingAfter10, "Undo should have 0 seconds remaining after 10 seconds");
+        Test.assertEqual(0, remainingAfter10);
 
         return true;
     }
@@ -349,7 +385,7 @@ class FuelModelTests {
         info.setTimerSeconds(60);
 
         // Initial: MODE_CALORIE_AUTO
-        Test.assertEqual(2, model.getReminderMode(), "Should start in Calorie Auto mode");
+        Test.assertEqual(2, model.getReminderMode());
 
         // Simulate 5 minutes without calorie data (300 ticks)
         for (var i = 0; i < 305; i += 1) {
@@ -359,7 +395,7 @@ class FuelModelTests {
         }
 
         // Should have fallen back to MODE_AUTO
-        Test.assertEqual(0, model.getReminderMode(), "Should have fallen back to MODE_AUTO");
+        Test.assertEqual(0, model.getReminderMode());
 
         // Simulate 10 more minutes (600 seconds) - recovery window opens
         for (var i = 0; i < 600; i += 1) {
@@ -373,7 +409,7 @@ class FuelModelTests {
         model.compute(info);
 
         // Should have recovered to MODE_CALORIE_AUTO
-        Test.assertEqual(2, model.getReminderMode(), "Should have recovered to MODE_CALORIE_AUTO after calorie data returns");
+        Test.assertEqual(2, model.getReminderMode());
 
         return true;
     }

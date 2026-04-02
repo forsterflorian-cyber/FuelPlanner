@@ -15,12 +15,11 @@ So funktioniert es:
 
 Bedienung auf der Uhr:
 
-* Touch Geraete: tippen = Aufnahme buchen
-* Kurz danach erneut tippen = letzte Aufnahme rueckgaengig machen (Undo)
+* Touch Geraete: mittig tippen = Aufnahme buchen
+* Touch Geraete: unten tippen = letzte Aufnahme rueckgaengig machen (Undo)
 * Bei aktiver Erinnerung: oben tippen = Snooze
-* Geraete ohne Touch:
-* * Aufnahme erfolgt automatisch nach Erinnerung (Auto-Flow)
-* * Kein manuelles Eingreifen notwendig
+* Geraete ohne Touch: Aufnahme erfolgt automatisch nach Erinnerung (Auto-Flow)
+* Geraete ohne Touch: kein manuelles Eingreifen notwendig
 * Klare Erinnerungen, wenn Fuel wirklich noetig ist
 * Anzeige von Zielmenge und aktuellem Defizit
 * Schnelle Erfassung von Gel, Drink oder Snack waehrend der Aktivitaet
@@ -44,12 +43,11 @@ How it works:
 
 On-device interaction:
 
-* Touch devices: tap to log intake
-* Tap again shortly after = undo last intake
+* Touch devices: tap the center area to log intake
+* Touch devices: tap the bottom area to undo the last intake
 * When a reminder is active: tap the top area to snooze
-* Non-touch devices:
-* * Intake is applied automatically after reminders (auto-flow)
-* * No manual interaction required
+* Non-touch devices: intake is applied automatically after reminders (auto-flow)
+* Non-touch devices: no manual interaction required
 * Clear reminders when fueling is actually needed
 * Live view of target intake and current deficit
 * Quick logging of gels, drinks, or snacks during activity

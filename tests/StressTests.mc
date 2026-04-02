@@ -51,23 +51,23 @@ class StressTests {
         model.compute(info);
         logFuelStatus(logger, "surplus_after_150g", model);
 
-        var gaugeAfterSurplus = FuelPlannerUtils.getGaugeAlertTone(model.getDeficitG10(), model.getDoseG10());
+        var gaugeAfterSurplus = model.getRingTone();
 
         info.setTimerSeconds(8940);
         model.compute(info);
         logFuelStatus(logger, "surplus_before_zero_cross", model);
-        var gaugeBeforeZero = FuelPlannerUtils.getGaugeAlertTone(model.getDeficitG10(), model.getDoseG10());
+        var gaugeBeforeZero = model.getRingTone();
 
         info.setTimerSeconds(9060);
         model.compute(info);
         logFuelStatus(logger, "surplus_after_zero_cross", model);
-        var gaugeAfterZero = FuelPlannerUtils.getGaugeAlertTone(model.getDeficitG10(), model.getDoseG10());
+        var gaugeAfterZero = model.getRingTone();
 
         Test.assertMessage(model.getConsumedTotalG10() == 1500, "Three double doses should book exactly 150g.");
         Test.assertEqual(1500, model.getConsumedTotalG10());
         Test.assertEqual(0, gaugeAfterSurplus);  // GREEN = 0
         Test.assertEqual(0, gaugeBeforeZero);    // GREEN = 0
-        Test.assertEqual(1, gaugeAfterZero);     // ORANGE = 1
+        Test.assertEqual(0, gaugeAfterZero);     // GREEN = 0
         Test.assertMessage(model.getDeficitG10() == 10, "At 151 minutes the 150g surplus should have decayed to a 1g deficit.");
         Test.assertEqual(10, model.getDeficitG10());
         Test.assertMessage(!model.isReminderDue(), "A small positive deficit after a large surplus must not retrigger reminders early.");

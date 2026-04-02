@@ -111,7 +111,7 @@ class MemoryTests {
         ];
         return {
             "statusText" => statusText,
-            "tone" => FuelPlannerFieldView.getGaugeAlertTone(model.getDeficitG10()),
+            "tone" => model.getRingTone(),
             "behindText" => model.getDeficitG10().format("%d"),
             "metrics" => metrics
         };
@@ -224,7 +224,7 @@ class MemoryTests {
             peak["totalMemory"] as Number
         );
         System.println(
-            "peak_render_snapshot tone=" + (frameSnapshot["tone"] as String) +
+            "peak_render_snapshot tone=" + (frameSnapshot["tone"] as Number).format("%d") +
             " metricsCount=" + ((frameSnapshot["metrics"] as Array<Number>).size()).format("%d")
         );
         frameSnapshot = null;
@@ -275,7 +275,7 @@ class MemoryTests {
                 printFuelStatus("render_frame_" + i.format("%d"), model);
                 System.println(
                     "render_snapshot_" + i.format("%d") +
-                    " tone=" + (frameSnapshot["tone"] as String) +
+                    " tone=" + (frameSnapshot["tone"] as Number).format("%d") +
                     " metricsCount=" + ((frameSnapshot["metrics"] as Array<Number>).size()).format("%d")
                 );
                 peak = updatePeak(

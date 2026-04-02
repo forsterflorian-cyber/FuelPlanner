@@ -27,7 +27,8 @@ FuelPlanner currently targets these Garmin device families:
 Forerunner  
 255, 255 Music, 255S, 255S Music, 265, 265S, 745, 945, 945 LTE, 955, 965
 Fenix  
-6, 6 Pro, 6S, 6S Pro, 6X Pro, 7, 7 Pro, 7S, 7S Pro, 7X, 7X Pro
+6 Pro, 6S, 6S Pro, 6X Pro, 7, 7 Pro, 7S, 7S Pro, 7X, 7X Pro
+The Fenix 6 family is shipped through the separate memory-optimized store package.
 Epix  
 2, 2 Pro (42mm, 47mm, 51mm)
 Instinct  
@@ -42,15 +43,15 @@ Garmin simulator or supported device
 developer key for local builds
 Build
 ```bash
-monkeyc -f monkey.jungle -o bin/FuelPlanner.prg -y <developer_key>
+monkeyc -f monkey.jungle -o FuelPlanner.prg -y <developer_key>
 ```
 Run in simulator
 ```bash
-monkeydo bin/FuelPlanner.prg <device>
+monkeydo FuelPlanner.prg <device>
 ```
 Build with PowerShell script
 ```powershell
-.\build.ps1 -Device fr955
+.\build.ps1
 ```
 Usage
 Add as a data field
@@ -94,13 +95,18 @@ FuelPlanner/
 Development
 Common commands
 ```powershell
-.\build.ps1 -Device fenix7
-.\build.ps1 -Test
+.\build.ps1
+.\build.ps1 -Test -Device fr955
 .\build.ps1 -Clean
+```
+Release packages
+```text
+FuelPlanner-DataField.iq        -> standard package for non-Fenix 6 targets
+FuelPlanner-DataField-Fenix6.iq -> memory-optimized package for the Fenix 6 family
 ```
 Test build
 ```bash
-monkeyc -f monkey.tests.jungle -o bin/FuelPlannerTests.prg -y <developer_key>
+monkeyc -f monkey.tests.jungle -o FuelPlannerTests-fr955.prg -d fr955 -t -y <developer_key>
 ```
 Status
 FuelPlanner is in active development and focused on robustness, session handling, and practical usability during real training.

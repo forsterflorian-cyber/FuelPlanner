@@ -200,7 +200,10 @@ class FuelPlannerApp extends Application.AppBase {
 
     (:full)
     public function getSettingsView() as [Views] or [Views, InputDelegates] or Null {
-        var storage = new StorageManager(null, null);
+        if (_storage == null) {
+            _storage = new StorageManager(null, null);
+        }
+        var storage = _storage as StorageManager;
         var menu = new FuelPlannerMenu(storage);
         var inputDelegate = new FuelPlannerMenuDelegate(storage, menu, _model);
         return [menu, inputDelegate];

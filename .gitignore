@@ -1,6 +1,8 @@
 # Garmin Connect IQ build output
 bin/
-
+external-mir/
+internal-mir/
+gen/
 # Screenshots / temp files
 *.png
 *.jpg

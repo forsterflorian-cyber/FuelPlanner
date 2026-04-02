@@ -126,7 +126,7 @@ class IntegrationTests {
         }
 
         var deficitAfterPauseTime = model.getDeficitG10();
-        Test.assertEqual(deficitWhilePaused, deficitAfterPauseTime, "Deficit should not change while paused");
+        Test.assertEqual(deficitWhilePaused, deficitAfterPauseTime);
 
         // Resume
         info.timerState = null;
@@ -156,7 +156,6 @@ class IntegrationTests {
 
         var sys = buildFullSystem(clock, props);
         var model = sys["model"] as FuelModel;
-        var storage = sys["storage"] as StorageManager;
 
         // Start activity
         var info = new MockActivityInfo(30000);
@@ -174,13 +173,13 @@ class IntegrationTests {
             model.compute(info);
         }
 
-        Test.assertEqual(60, model.getCarbsTargetGph(), "Initial target should be 60 g/h");
+        Test.assertEqual(60, model.getCarbsTargetGph());
 
         // Change settings externally (e.g., from Garmin Connect)
         props.setValue("carbsTargetGph", 90);
         model.onSettingsChanged();
 
-        Test.assertEqual(90, model.getCarbsTargetGph(), "Target should update to 90 g/h");
+        Test.assertEqual(90, model.getCarbsTargetGph());
         Test.assertMessage(model.isSessionActive(), "Session should still be active after settings change");
 
         return true;
@@ -224,7 +223,6 @@ class IntegrationTests {
         Test.assertMessage(model.isReminderDue(), "Reminder should be due after 25 minutes");
 
         // Simulate auto-intake
-        var autoTriggered = model.consumeAutoIntakeEvent();
         // Note: Auto-intake happens in compute(), so we need to tick again
         clock.advance(1);
         info.advanceTimerSeconds(1);
@@ -283,9 +281,9 @@ class IntegrationTests {
 
         // Phase 3: Verify recovery
         Test.assertMessage(model2.isSessionActive(), "Session should be recovered");
-        Test.assertEqual(consumedBeforeCrash, model2.getConsumedTotalG10(), "Consumed should be restored");
-        Test.assertEqual(elapsedBeforeCrash, model2.getElapsedActiveSec(), "Elapsed should be restored");
-        Test.assertEqual(2, model2.getIntakeCount(), "Intake count should be restored");
+        Test.assertEqual(consumedBeforeCrash, model2.getConsumedTotalG10());
+        Test.assertEqual(elapsedBeforeCrash, model2.getElapsedActiveSec());
+        Test.assertEqual(2, model2.getIntakeCount());
 
         // Phase 4: Continue session
         info = new MockActivityInfo(50000);
@@ -319,7 +317,7 @@ class IntegrationTests {
         model.compute(info);
 
         // Initial: MODE_CALORIE_AUTO
-        Test.assertEqual(2, model.getReminderMode(), "Should start in Calorie Auto mode");
+        Test.assertEqual(2, model.getReminderMode());
 
         // Simulate 6 minutes without calorie data (360 ticks)
         // Fallback should happen at tick 300 (5 minutes)
@@ -337,7 +335,7 @@ class IntegrationTests {
 
         Test.assertMessage(fallbackTick >= 0, "Should have fallen back to MODE_AUTO");
         Test.assertMessage(fallbackTick <= 300, "Fallback should happen at or before 300 ticks");
-        Test.assertEqual(0, model.getReminderMode(), "Should be in MODE_AUTO after fallback");
+        Test.assertEqual(0, model.getReminderMode());
 
         // Continue with MODE_AUTO
         Test.assertMessage(model.isSessionActive(), "Session should still be active");
@@ -372,20 +370,20 @@ class IntegrationTests {
             model.compute(info);
         }
 
-        Test.assertEqual(300, model.getTargetTotalG10(), "Target should be 300 (30g) after 30 minutes");
+        Test.assertEqual(300, model.getTargetTotalG10());
 
         // Record 3 intakes of 25g = 75g consumed
         model.recordIntake(25);
         model.recordIntake(25);
         model.recordIntake(25);
 
-        Test.assertEqual(750, model.getConsumedTotalG10(), "Consumed should be 750 (75g)");
-        Test.assertEqual(3, model.getIntakeCount(), "Intake count should be 3");
+        Test.assertEqual(750, model.getConsumedTotalG10());
+        Test.assertEqual(3, model.getIntakeCount());
 
         // Deficit should be negative (surplus)
         var deficitG10 = model.getDeficitG10();
         Test.assertMessage(deficitG10 < 0, "Should have surplus (negative deficit)");
-        Test.assertEqual(-450, deficitG10, "Deficit should be -450 (surplus 45g)");
+        Test.assertEqual(-450, deficitG10);
 
         return true;
     }
@@ -430,7 +428,7 @@ class IntegrationTests {
         // So reminder might not be due yet depending on mode
         logger.debug("elapsedSec=" + model.getElapsedActiveSec().format("%d"));
         logger.debug("deficitG10=" + model.getDeficitG10().format("%d"));
-        logger.debug("isReminderDue=" + model.isReminderDue().format("%s"));
+        logger.debug("isReminderDue=" + boolToAscii(model.isReminderDue()));
 
         return true;
     }

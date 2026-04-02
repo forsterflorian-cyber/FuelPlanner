@@ -149,6 +149,16 @@ class StorageManager {
         }
     }
 
+    private function deleteStorageValue(key as String) as Void {
+        try {
+            _storageBackend.deleteValue(key);
+        } catch (e) {
+            _writeFailureCount += 1;
+            _lastWriteFailureKey = key;
+            FuelPlannerLog.logError("Storage", "Failed to delete value: " + key);
+        }
+    }
+
     // ========== Settings from Properties (synced via Garmin Connect) ==========
 
     function getCarbsTargetGph() as Number {
@@ -262,12 +272,7 @@ class StorageManager {
                 _lastWriteFailureKey = KEY_SESSION_ID;
             }
         } else {
-            try {
-                _storageBackend.deleteValue(KEY_SESSION_ID);
-            } catch (e) {
-                _writeFailureCount += 1;
-                _lastWriteFailureKey = KEY_SESSION_ID;
-            }
+            deleteStorageValue(KEY_SESSION_ID);
         }
     }
 
@@ -288,12 +293,7 @@ class StorageManager {
                 _lastWriteFailureKey = KEY_START_TIMESTAMP;
             }
         } else {
-            try {
-                _storageBackend.deleteValue(KEY_START_TIMESTAMP);
-            } catch (e) {
-                _writeFailureCount += 1;
-                _lastWriteFailureKey = KEY_START_TIMESTAMP;
-            }
+            deleteStorageValue(KEY_START_TIMESTAMP);
         }
     }
 
@@ -390,12 +390,7 @@ class StorageManager {
                 _lastWriteFailureKey = KEY_LAST_INTAKE_TS;
             }
         } else {
-            try {
-                _storageBackend.deleteValue(KEY_LAST_INTAKE_TS);
-            } catch (e) {
-                _writeFailureCount += 1;
-                _lastWriteFailureKey = KEY_LAST_INTAKE_TS;
-            }
+            deleteStorageValue(KEY_LAST_INTAKE_TS);
         }
     }
 
@@ -416,12 +411,7 @@ class StorageManager {
                 _lastWriteFailureKey = KEY_LAST_REMINDER_TS;
             }
         } else {
-            try {
-                _storageBackend.deleteValue(KEY_LAST_REMINDER_TS);
-            } catch (e) {
-                _writeFailureCount += 1;
-                _lastWriteFailureKey = KEY_LAST_REMINDER_TS;
-            }
+            deleteStorageValue(KEY_LAST_REMINDER_TS);
         }
     }
 
@@ -489,12 +479,7 @@ class StorageManager {
 
     function setPauseStartTimerSec(value as Number?) as Void {
         if (value == null || value <= 0) {
-            try {
-                _storageBackend.deleteValue(KEY_PAUSE_START_TIMER_S);
-            } catch (e) {
-                _writeFailureCount += 1;
-                _lastWriteFailureKey = KEY_PAUSE_START_TIMER_S;
-            }
+            deleteStorageValue(KEY_PAUSE_START_TIMER_S);
             return;
         }
         try {
@@ -518,12 +503,7 @@ class StorageManager {
 
     function setPauseStartClockSec(value as Number?) as Void {
         if (value == null || value <= 0) {
-            try {
-                _storageBackend.deleteValue(KEY_PAUSE_START_CLOCK_TS);
-            } catch (e) {
-                _writeFailureCount += 1;
-                _lastWriteFailureKey = KEY_PAUSE_START_CLOCK_TS;
-            }
+            deleteStorageValue(KEY_PAUSE_START_CLOCK_TS);
             return;
         }
         try {
@@ -554,21 +534,21 @@ class StorageManager {
     // ========== Session Management ==========
 
     function clearSession() as Void {
-        _storageBackend.deleteValue(KEY_SESSION_ID);
-        _storageBackend.deleteValue(KEY_START_TIMESTAMP);
-        _storageBackend.deleteValue(KEY_START_TS_CONFIRMED);
-        _storageBackend.deleteValue(KEY_CONSUMED_TOTAL);
-        _storageBackend.deleteValue(KEY_CONSUMED_TOTAL_G10);
-        _storageBackend.deleteValue(KEY_LAST_INTAKE_TS);
-        _storageBackend.deleteValue(KEY_LAST_REMINDER_TS);
-        _storageBackend.deleteValue(KEY_INTAKE_COUNT);
-        _storageBackend.deleteValue(KEY_IS_PAUSED);
-        _storageBackend.deleteValue(KEY_ELAPSED_SEC);
-        _storageBackend.deleteValue(KEY_PAUSED_TIMER_OFFSET_S);
-        _storageBackend.deleteValue(KEY_PAUSE_START_TIMER_S);
-        _storageBackend.deleteValue(KEY_PAUSE_START_CLOCK_TS);
-        _storageBackend.deleteValue(LEGACY_KEY_INTAKE_LOG);
-        _storageBackend.deleteValue(LEGACY_KEY_LAST_LAP_SNAPSHOT);
+        deleteStorageValue(KEY_SESSION_ID);
+        deleteStorageValue(KEY_START_TIMESTAMP);
+        deleteStorageValue(KEY_START_TS_CONFIRMED);
+        deleteStorageValue(KEY_CONSUMED_TOTAL);
+        deleteStorageValue(KEY_CONSUMED_TOTAL_G10);
+        deleteStorageValue(KEY_LAST_INTAKE_TS);
+        deleteStorageValue(KEY_LAST_REMINDER_TS);
+        deleteStorageValue(KEY_INTAKE_COUNT);
+        deleteStorageValue(KEY_IS_PAUSED);
+        deleteStorageValue(KEY_ELAPSED_SEC);
+        deleteStorageValue(KEY_PAUSED_TIMER_OFFSET_S);
+        deleteStorageValue(KEY_PAUSE_START_TIMER_S);
+        deleteStorageValue(KEY_PAUSE_START_CLOCK_TS);
+        deleteStorageValue(LEGACY_KEY_INTAKE_LOG);
+        deleteStorageValue(LEGACY_KEY_LAST_LAP_SNAPSHOT);
     }
 
     function hasActiveSession() as Boolean {

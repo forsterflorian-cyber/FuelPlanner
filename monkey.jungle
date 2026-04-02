@@ -5,4 +5,9 @@ base.sourcePath = source
 
 # Full tier keeps standard code paths and excludes lite-only alternates.
 base.excludeAnnotations = test;testsupport;lite;instinct
-fenix6s.excludeAnnotations = test;testsupport;full;instinct
+fr165.excludeAnnotations = test;testsupport;full;instinct
+fr165m.excludeAnnotations = test;testsupport;full;instinct
+fr245.excludeAnnotations = test;testsupport;full;instinct
+fr245m.excludeAnnotations = test;testsupport;full;instinct
+fr645.excludeAnnotations = test;testsupport;full;instinct
+fr645m.excludeAnnotations = test;testsupport;full;instinct

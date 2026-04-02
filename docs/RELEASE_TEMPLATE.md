@@ -8,11 +8,12 @@
 
 ## Verification
 
-- `monkeyc -f monkey.jungle -o bin\FuelPlanner-fr955.prg -y developer_key -d fr955 -w`
-- `monkeyc -f monkey.jungle -o bin\FuelPlanner-DataField.iq -e -y developer_key -w`
-- Confirm `README.md` device matrix matches `manifest.xml`.
+- `.\build.ps1`
+- `.\build.ps1 -Test -Device fr955`
+- Confirm `README.md` device matrix matches `manifest.xml` and `manifest-fenix6.xml`.
 - Confirm `docs/CHANGELOG.md` and `docs/STORE_DESCRIPTION.md` are updated.
 - Confirm no new device-specific code paths were added.
+- Accepted waiver: launcher icon scaling warnings on 60px/65px/70px targets are known and accepted for this release.
 
 ## Release Notes
 

@@ -1,0 +1,85 @@
+{
+  "datafields" : [ {
+    "id" : 0,
+    "chart-visible" : true,
+    "activity-visible" : true,
+    "lap-visible" : false,
+    "chart-title-key" : "FitDeficitChartTitle",
+    "label-key" : "FitDeficitDataLabel",
+    "unit-label-key" : "UnitGrams",
+    "sort-order" : 0,
+    "precision" : 1,
+    "fill-color" : "rgba(255, 107, 0, 1.0)"
+  }, {
+    "id" : 1,
+    "chart-visible" : true,
+    "activity-visible" : true,
+    "lap-visible" : false,
+    "chart-title-key" : "FitConsumedChartTitle",
+    "label-key" : "FitConsumedDataLabel",
+    "unit-label-key" : "UnitGrams",
+    "sort-order" : 1,
+    "precision" : 1,
+    "fill-color" : "rgba(0, 170, 85, 1.0)"
+  }, {
+    "id" : 2,
+    "chart-visible" : false,
+    "activity-visible" : true,
+    "lap-visible" : false,
+    "chart-title-key" : null,
+    "label-key" : "FitTargetCarbsSummaryLabel",
+    "unit-label-key" : "UnitGrams",
+    "sort-order" : 2,
+    "precision" : 1,
+    "fill-color" : null
+  }, {
+    "id" : 3,
+    "chart-visible" : false,
+    "activity-visible" : true,
+    "lap-visible" : false,
+    "chart-title-key" : null,
+    "label-key" : "FitActualIntakeSummaryLabel",
+    "unit-label-key" : "UnitGrams",
+    "sort-order" : 3,
+    "precision" : 1,
+    "fill-color" : null
+  } ],
+  "strings" : {
+    "de-DE" : {
+      "FitDeficitChartTitle" : "Aktuelles Defizit",
+      "FitDeficitDataLabel" : "Aktuelles Defizit",
+      "UnitGrams" : "g",
+      "FitConsumedChartTitle" : "Gesamtaufnahme",
+      "FitConsumedDataLabel" : "Gesamtaufnahme",
+      "FitTargetCarbsSummaryLabel" : "Geplante KH",
+      "FitActualIntakeSummaryLabel" : "Gebuchte KH"
+    },
+    "de-AT" : {
+      "FitDeficitChartTitle" : "Aktuelles Defizit",
+      "FitDeficitDataLabel" : "Aktuelles Defizit",
+      "UnitGrams" : "g",
+      "FitConsumedChartTitle" : "Gesamtaufnahme",
+      "FitConsumedDataLabel" : "Gesamtaufnahme",
+      "FitTargetCarbsSummaryLabel" : "Geplante KH",
+      "FitActualIntakeSummaryLabel" : "Gebuchte KH"
+    },
+    "de-CH" : {
+      "FitDeficitChartTitle" : "Aktuelles Defizit",
+      "FitDeficitDataLabel" : "Aktuelles Defizit",
+      "UnitGrams" : "g",
+      "FitConsumedChartTitle" : "Gesamtaufnahme",
+      "FitConsumedDataLabel" : "Gesamtaufnahme",
+      "FitTargetCarbsSummaryLabel" : "Geplante KH",
+      "FitActualIntakeSummaryLabel" : "Gebuchte KH"
+    },
+    "default" : {
+      "FitDeficitChartTitle" : "Current Deficit",
+      "FitDeficitDataLabel" : "Current Deficit",
+      "UnitGrams" : "g",
+      "FitConsumedChartTitle" : "Total Intake",
+      "FitConsumedDataLabel" : "Total Intake",
+      "FitTargetCarbsSummaryLabel" : "Planned Carbs",
+      "FitActualIntakeSummaryLabel" : "Logged Intake"
+    }
+  }
+}

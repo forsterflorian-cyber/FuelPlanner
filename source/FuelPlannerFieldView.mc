@@ -26,12 +26,12 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private const ROW_GAP_PX = 6;
     private const UNIT_GAP_PX = 3;
 
-    // Deficit gauge constants (responsive edge indicator)
-    private const GAUGE_WIDTH_RATIO = 0.15f;
-    private const GAUGE_MIN_W_PX = 6;
-    private const GAUGE_MAX_W_PX = 45;
-    private const GAUGE_MIN_H_PX = 8;
-    private const GAUGE_ALERT_G10 = 200; // 20g
+    // Outer ring constants
+    private const RING_STROKE_RATIO = 0.045f;
+    private const RING_STROKE_MIN_PX = 8;
+    private const RING_STROKE_MAX_PX = 18;
+    private const RING_PADDING_MIN_PX = 4;
+    private const RING_PADDING_MAX_PX = 12;
 
     // Blink state for "FUEL NOW" indicator
     private var _blinkState    as Boolean = false;
@@ -48,6 +48,18 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private const UNIT_GPH = " g/h";
     private const SEP_PIPE = " | ";
     private const RECOVERY_MIN_G = 10;
+    private const CONTENT_SIDE_RATIO = 0.10f;
+    private const CONTENT_VERTICAL_RATIO = 0.09f;
+    private const CONTENT_GAP_RATIO = 0.025f;
+    private const STATUS_ROW_RATIO = 0.13f;
+    private const PRIMARY_ROW_RATIO = 0.26f;
+    private const DEFICIT_ROW_RATIO = 0.12f;
+    private const META_ROW_RATIO = 0.10f;
+    private const RATE_ROW_RATIO = 0.09f;
+    private const CONTENT_MIN_SIDE_PX = 12;
+    private const CONTENT_MIN_TOP_PX = 14;
+    private const CONTENT_MIN_BOTTOM_PX = 18;
+    private const RATE_ROW_MIN_HEIGHT_PX = 12;
 
     //Eating overlay config
     private var _overlayEndTime as Number = 0;
@@ -140,13 +152,13 @@ class FuelPlannerFieldView extends WatchUi.DataField {
 
         var touchEnabled = isTouchEnabled();
 
-        if (!_model.isSessionActive()) {
-            drawNoSession(dc, cx, h, textColor, dimColor);
+        if (_showRecoveryLayout) {
+            drawRecoveryLayout(dc, w, h, cx);
             return;
         }
 
-        if (_showRecoveryLayout) {
-            drawRecoveryLayout(dc, w, h, cx);
+        if (!_model.isSessionActive()) {
+            drawNoSession(dc, cx, h, textColor, dimColor);
             return;
         }
 
@@ -203,6 +215,12 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private function drawReminderOverlay(dc as Dc) as Void {
         var w = dc.getWidth();
         var h = dc.getHeight();
+        var contentInset = getScaledValue(w, 0.08f, 12, 30);
+        var contentW = w - (contentInset * 2);
+        if (contentW < 40) {
+            contentW = 40;
+            contentInset = (w - contentW) / 2;
+        }
         
         // Hintergrund: Aggressives Rot oder Orange
         dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_RED);
@@ -211,11 +229,11 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         // Text-Farbe Weiß für maximalen Kontrast
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         
-        var doseText = _model.getDoseG().format("%d") + UNIT_G;
-        var titleFont = getBestFontForHeight(dc, (h.toFloat() * 0.22f).toNumber(), false);
-        var doseFont = getBestFontForHeight(dc, (h.toFloat() * 0.14f).toNumber(), false);
-        var gap = getRowGap(h);
         var strFuelNow = loadString(Rez.Strings.LabelFuelNow, "FUEL NOW");
+        var doseText = _model.getDoseG().format("%d") + UNIT_G;
+        var titleFont = getBestFontForBox(dc, strFuelNow, contentW, getScaledValue(h, 0.20f, 24, 56), false);
+        var doseFont = getBestFontForBox(dc, doseText, contentW, getScaledValue(h, 0.14f, 18, 40), true);
+        var gap = getRowGap(h);
         var titleH = dc.getTextDimensions(strFuelNow, titleFont)[1];
         var doseH = dc.getTextDimensions(doseText, doseFont)[1];
         var totalHeight = titleH + gap + doseH;
@@ -235,14 +253,25 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     //! Waiting screen before activity starts
     private function drawNoSession(dc as Dc, cx as Number, h as Number,
                                    textColor as Number, dimColor as Number) as Void {
+        var w = dc.getWidth();
+        var sideInset = getContentSideInset(w);
+        var contentW = w - (sideInset * 2);
+        var titleText = loadString(Rez.Strings.AppName, "FuelPlanner");
+        var noteText = loadString(Rez.Strings.LabelWaiting, "Waiting for activity...");
+        var titleFont = getBestFontForBox(dc, titleText, contentW, getScaledValue(h, 0.18f, 20, 42), false);
+        var noteFont = getBestFontForBox(dc, noteText, contentW, getScaledValue(h, 0.10f, 12, 24), false);
+        var gap = getRowGap(h);
+        var titleH = dc.getTextDimensions(titleText, titleFont)[1];
+        var noteH = dc.getTextDimensions(noteText, noteFont)[1];
+        var y = (h - (titleH + gap + noteH)) / 2;
+        if (y < 0) {
+            y = 0;
+        }
+
         dc.setColor(textColor, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, h / 2 - h / 13, Graphics.FONT_MEDIUM,
-                    loadString(Rez.Strings.AppName, "FuelPlanner"),
-                    Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx, y, titleFont, titleText, Graphics.TEXT_JUSTIFY_CENTER);
         dc.setColor(dimColor, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, h / 2 + h / 20, Graphics.FONT_TINY,
-                    loadString(Rez.Strings.LabelWaiting, "Waiting for activity..."),
-                    Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx, y + titleH + gap, noteFont, noteText, Graphics.TEXT_JUSTIFY_CENTER);
     }
 
     private function drawRecoveryLayout(dc as Dc, w as Number, h as Number,
@@ -264,9 +293,14 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         dc.setColor(panelColor, panelColor);
         dc.fillRectangle(0, 0, w, h);
 
-        var titleFont = getBestFontForHeight(dc, (h.toFloat() * 0.15f).toNumber(), false);
-        var valueFont = getBestFontForHeight(dc, (h.toFloat() * 0.30f).toNumber(), true);
-        var noteFont  = getBestFontForHeight(dc, (h.toFloat() * 0.11f).toNumber(), false);
+        var sideInset = getScaledValue(w, CONTENT_SIDE_RATIO, CONTENT_MIN_SIDE_PX, 36);
+        var contentW = w - (sideInset * 2);
+        var titleHeight = showRecoveryHint
+            ? getScaledValue(h, 0.13f, 18, 36)
+            : getScaledValue(h, 0.17f, 22, 42);
+        var titleFont = getBestFontForBox(dc, titleText, contentW, titleHeight, false);
+        var valueFont = getBestFontForBox(dc, valueText, contentW, getScaledValue(h, 0.24f, 24, 64), true);
+        var noteFont  = getBestFontForBox(dc, noteText, contentW, getScaledValue(h, 0.10f, 12, 24), false);
         var gap = getRowGap(h);
 
         var titleH = dc.getTextDimensions(titleText, titleFont)[1];
@@ -300,10 +334,20 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private function drawMainLayout(dc as Dc, w as Number, h as Number,
                                     cx as Number, textColor as Number,
                                     dimColor as Number, touchEnabled as Boolean) as Void {
-        var safeTop = SAFE_TOP_PX;
-        var gap = ROW_GAP_PX;
-        var y = safeTop;
-        //var doseG = _model.getDoseG();
+        var sideInset = getContentSideInset(w);
+        var contentW = w - (sideInset * 2);
+        if (contentW < 40) {
+            contentW = 40;
+            sideInset = (w - contentW) / 2;
+        }
+        var contentTop = getContentTopInset(h);
+        var contentBottom = h - getContentBottomInset(w, h, touchEnabled);
+        var contentH = contentBottom - contentTop;
+        if (contentH < 40) {
+            contentH = h;
+            contentTop = 0;
+        }
+        var gap = getRowGap(h);
 
         // Status row
         var statusText;
@@ -318,17 +362,11 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             statusText = loadString(Rez.Strings.LabelNext, "Next") + " " + formatDuration(_model.getDisplayNextDueInSec());
             statusColor = COLOR_GOOD;
         }
-        dc.setColor(statusColor, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, y, Graphics.FONT_TINY, statusText, Graphics.TEXT_JUSTIFY_CENTER);
-        y += 20 + gap;
 
         // Numbers row
         var consumedG = (_model.getConsumedTotalG10() + 5) / 10;
         var targetG = (_model.getTargetTotalG10() + 5) / 10;
         var numStr = consumedG.format("%d") + "/" + targetG.format("%d");
-        dc.setColor(textColor, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, y, Graphics.FONT_MEDIUM, numStr, Graphics.TEXT_JUSTIFY_CENTER);
-        y += 30 + gap;
 
         // Deficit row
         var deficitG10 = _model.getDeficitG10();
@@ -344,68 +382,89 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             deficitText = loadString(Rez.Strings.LabelOnTarget, "On target");
             deficitColor = COLOR_GOOD;
         }
-        dc.setColor(deficitColor, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, y, Graphics.FONT_TINY, deficitText, Graphics.TEXT_JUSTIFY_CENTER);
-        y += 20 + gap;
 
         // Time row
         var elapsedMin = _model.getElapsedActiveSec() / 60;
         var timeText = (elapsedMin / 60).format("%d") + "h" + (elapsedMin % 60).format("%02d") + SEP_PIPE + _model.getIntakeCount().format("%d") + "x";
+        var rateText = buildRateLabel();
+        var showRateRow = contentH >= 150;
+
+        // Keep the typography inside a centered inner column so we can later
+        // swap the side bars for a perimeter ring without moving the text again.
+        var statusFont = getBestFontForBox(dc, statusText, contentW, getScaledValue(contentH, STATUS_ROW_RATIO, 14, 32), false);
+        var primaryFont = getBestFontForBox(dc, numStr, contentW, getScaledValue(contentH, PRIMARY_ROW_RATIO, 24, 60), true);
+        var deficitFont = getBestFontForBox(dc, deficitText, contentW, getScaledValue(contentH, DEFICIT_ROW_RATIO, 14, 28), false);
+        var metaFont = getBestFontForBox(dc, timeText, contentW, getScaledValue(contentH, META_ROW_RATIO, 12, 22), false);
+        var rateFont = getBestFontForBox(dc, rateText, contentW, getScaledValue(contentH, RATE_ROW_RATIO, 12, 20), false);
+
+        var statusH = dc.getTextDimensions(statusText, statusFont)[1];
+        var primaryH = dc.getTextDimensions(numStr, primaryFont)[1];
+        var deficitH = dc.getTextDimensions(deficitText, deficitFont)[1];
+        var metaH = dc.getTextDimensions(timeText, metaFont)[1];
+        var rateH = showRateRow ? dc.getTextDimensions(rateText, rateFont)[1] : 0;
+
+        var totalHeight = statusH + primaryH + deficitH + metaH + (gap * 3);
+        if (showRateRow && rateH >= RATE_ROW_MIN_HEIGHT_PX) {
+            totalHeight += gap + rateH;
+        } else {
+            showRateRow = false;
+            rateH = 0;
+        }
+
+        var y = contentTop + ((contentH - totalHeight) / 2);
+        if (y < contentTop) {
+            y = contentTop;
+        }
+
+        dc.setColor(statusColor, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(cx, y, statusFont, statusText, Graphics.TEXT_JUSTIFY_CENTER);
+        y += statusH + gap;
+
+        dc.setColor(textColor, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(cx, y, primaryFont, numStr, Graphics.TEXT_JUSTIFY_CENTER);
+        y += primaryH + gap;
+
+        dc.setColor(deficitColor, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(cx, y, deficitFont, deficitText, Graphics.TEXT_JUSTIFY_CENTER);
+        y += deficitH + gap;
+
         dc.setColor(dimColor, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, y, Graphics.FONT_TINY, timeText, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx, y, metaFont, timeText, Graphics.TEXT_JUSTIFY_CENTER);
 
-        drawDeficitGauge(dc, w, h, deficitG10, _model.getDoseG10(), dimColor, touchEnabled);
+        if (showRateRow) {
+            y += metaH + gap;
+            dc.drawText(cx, y, rateFont, rateText, Graphics.TEXT_JUSTIFY_CENTER);
+        }
+
+        drawOuterRing(dc, w, h, dimColor, touchEnabled);
     }
 
-//! Draw responsive edge gauges on both sides: green when on/ahead, red proportional to deficit.
-private function drawDeficitGauge(dc as Dc, w as Number, h as Number, 
-                                  deficitG10 as Number, doseG10 as Number, 
-                                  dimColor as Number, touchEnabled as Boolean) as Void {
-    if (w < 150 || h < 110) { return; }
-    
-    var gaugeW = (w * GAUGE_WIDTH_RATIO).toNumber();
-    if (gaugeW < GAUGE_MIN_W_PX) { gaugeW = GAUGE_MIN_W_PX; }
-    else if (gaugeW > GAUGE_MAX_W_PX) { gaugeW = GAUGE_MAX_W_PX; }
+    private function drawOuterRing(dc as Dc, w as Number, h as Number,
+                                   dimColor as Number, touchEnabled as Boolean) as Void {
+        var diameter = (w < h) ? w : h;
+        if (diameter < 96) {
+            return;
+        }
 
-    var top = getSafeTopInset(h);
-    var bottomInset = getSafeBottomInset(w, h, touchEnabled);
-    var gaugeH = h - top - bottomInset;
-    if (gaugeH < GAUGE_MIN_H_PX) { return; }
+        var stroke = getRingStrokeWidth(diameter);
+        var padding = getRingPadding(diameter);
+        var radius = (diameter / 2) - padding - (stroke / 2);
+        if (radius <= 0) {
+            return;
+        }
 
-    var xRight = w - gaugeW;
-    var y = top;
+        var cx = w / 2;
+        var cy = h / 2;
+        var tone = _model.getRingTone();
+        var ringColor = getRingColor(tone);
 
-    // Calculate fill ratio
-    var ratio = 0.0f;
-    if (doseG10 > 0) {
-        ratio = deficitG10.toFloat() / doseG10.toFloat();
-        if (ratio < 0.0f) { ratio = 0.0f; }
-        if (ratio > 1.0f) { ratio = 1.0f; }
+        dc.setPenWidth(stroke);
+        dc.setColor(dimColor, Graphics.COLOR_TRANSPARENT);
+        dc.drawCircle(cx, cy, radius);
+
+        dc.setColor(ringColor, Graphics.COLOR_TRANSPARENT);
+        dc.drawCircle(cx, cy, radius);
     }
-
-    var redH = (gaugeH.toFloat() * ratio).toNumber();
-    var greenH = gaugeH - redH;
-
-    // Draw background track
-    dc.setColor(dimColor, Graphics.COLOR_TRANSPARENT);
-    dc.fillRectangle(0, y, gaugeW, gaugeH);
-    dc.fillRectangle(xRight, y, gaugeW, gaugeH);
-
-    // Draw green portion (on target)
-    if (greenH > 0) {
-        dc.setColor(COLOR_GOOD, Graphics.COLOR_TRANSPARENT);
-        dc.fillRectangle(0, y, gaugeW, greenH);
-        dc.fillRectangle(xRight, y, gaugeW, greenH);
-    }
-
-    // Draw deficit portion
-    if (redH > 0) {
-        var alertColor = (deficitG10 >= GAUGE_ALERT_G10) ? Graphics.COLOR_RED : Graphics.COLOR_ORANGE;
-        dc.setColor(alertColor, Graphics.COLOR_TRANSPARENT);
-        dc.fillRectangle(0, y + greenH, gaugeW, redH);
-        dc.fillRectangle(xRight, y + greenH, gaugeW, redH);
-    }
-}
 
     private function getSafeTopInset(h as Number) as Number {
         return SAFE_TOP_PX;
@@ -416,7 +475,7 @@ private function drawDeficitGauge(dc as Dc, w as Number, h as Number,
     }
 
     private function getRowGap(h as Number) as Number {
-        return ROW_GAP_PX;
+        return getScaledValue(h, CONTENT_GAP_RATIO, ROW_GAP_PX, 12);
     }
 
     //! Select best fitting font for a target row height.
@@ -451,6 +510,79 @@ private function drawDeficitGauge(dc as Dc, w as Number, h as Number,
         return bestFont;
     }
 
+    private function getBestFontForBox(dc as Dc, text as String,
+                                       maxWidth as Number, maxHeight as Number,
+                                       allowNumber as Boolean) {
+        var widthLimit = maxWidth;
+        if (widthLimit < 1) {
+            widthLimit = 1;
+        }
+        var heightLimit = maxHeight;
+        if (heightLimit < 1) {
+            heightLimit = 1;
+        }
+
+        var bestFont = Graphics.FONT_XTINY;
+        var bestHeight = 0;
+
+        var dims = dc.getTextDimensions(text, Graphics.FONT_XTINY);
+        if (dims[0] <= widthLimit && dims[1] <= heightLimit) {
+            bestFont = Graphics.FONT_XTINY;
+            bestHeight = dims[1];
+        }
+
+        dims = dc.getTextDimensions(text, Graphics.FONT_TINY);
+        if (dims[0] <= widthLimit && dims[1] <= heightLimit && dims[1] >= bestHeight) {
+            bestFont = Graphics.FONT_TINY;
+            bestHeight = dims[1];
+        }
+
+        dims = dc.getTextDimensions(text, Graphics.FONT_MEDIUM);
+        if (dims[0] <= widthLimit && dims[1] <= heightLimit && dims[1] >= bestHeight) {
+            bestFont = Graphics.FONT_MEDIUM;
+            bestHeight = dims[1];
+        }
+
+        if (allowNumber) {
+            dims = dc.getTextDimensions(text, Graphics.FONT_NUMBER_MILD);
+            if (dims[0] <= widthLimit && dims[1] <= heightLimit && dims[1] >= bestHeight) {
+                bestFont = Graphics.FONT_NUMBER_MILD;
+            }
+        }
+
+        return bestFont;
+    }
+
+    private function getScaledValue(total as Number, ratio as Float,
+                                    minValue as Number, maxValue as Number) as Number {
+        var scaled = (total.toFloat() * ratio).toNumber();
+        if (scaled < minValue) {
+            return minValue;
+        }
+        if (scaled > maxValue) {
+            return maxValue;
+        }
+        return scaled;
+    }
+
+    private function getRingStrokeWidth(size as Number) as Number {
+        return getScaledValue(size, RING_STROKE_RATIO, RING_STROKE_MIN_PX, RING_STROKE_MAX_PX);
+    }
+
+    private function getRingPadding(size as Number) as Number {
+        return getScaledValue(size, 0.02f, RING_PADDING_MIN_PX, RING_PADDING_MAX_PX);
+    }
+
+    private function getRingColor(tone as Number) as Number {
+        if (tone >= 2) {
+            return COLOR_ALERT;
+        }
+        if (tone == 1) {
+            return COLOR_WARNING;
+        }
+        return COLOR_GOOD;
+    }
+
     private function getUnitGap(w as Number) as Number {
         return UNIT_GAP_PX;
     }
@@ -467,6 +599,33 @@ private function drawDeficitGauge(dc as Dc, w as Number, h as Number,
                                              textWidth as Number, textHeight as Number) as Number {
         if (w != h) { return 0; }
         return SAFE_BOTTOM_PX;
+    }
+
+    private function getContentSideInset(w as Number) as Number {
+        var inset = getScaledValue(w, CONTENT_SIDE_RATIO, CONTENT_MIN_SIDE_PX, 44);
+        var ringInset = getRingStrokeWidth(w) + getRingPadding(w) + getRoundEdgePadding(w);
+        if (ringInset > inset) {
+            inset = ringInset;
+        }
+        return inset;
+    }
+
+    private function getContentTopInset(h as Number) as Number {
+        var inset = getScaledValue(h, CONTENT_VERTICAL_RATIO, CONTENT_MIN_TOP_PX, 36);
+        var safeTop = getSafeTopInset(h);
+        if (safeTop > inset) {
+            inset = safeTop;
+        }
+        return inset;
+    }
+
+    private function getContentBottomInset(w as Number, h as Number, touchEnabled as Boolean) as Number {
+        var inset = getScaledValue(h, CONTENT_VERTICAL_RATIO, CONTENT_MIN_BOTTOM_PX, 40);
+        var safeBottom = getSafeBottomInset(w, h, touchEnabled);
+        if (safeBottom > inset) {
+            inset = safeBottom;
+        }
+        return inset;
     }
 
     private function getRequiredMainHeight(statusH as Number, numberH as Number,

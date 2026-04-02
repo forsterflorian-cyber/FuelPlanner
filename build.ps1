@@ -14,7 +14,11 @@
 param(
     [string]$SdkPath = "$env:APPDATA\Garmin\ConnectIQ\Sdks",
     [string]$KeyPath = "$env:USERPROFILE\developer_key",
-    [string]$JavaPath = ""
+    [string]$JavaPath = "",
+    [string]$OutputDir = ".",
+    [string]$Device = "fr955",
+    [switch]$Test,
+    [switch]$Clean
 )
 
 function Get-JavaMajorVersion([string]$versionLine) {
@@ -84,15 +88,47 @@ Write-Host "Using Java: $javaExe" -ForegroundColor Cyan
 Write-Host "Java Version: $javaVersionLine" -ForegroundColor Cyan
 
 # --- Ensure output dir exists ---
-New-Item -ItemType Directory -Force -Path bin | Out-Null
+New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
+$outputRoot = (Resolve-Path $OutputDir).Path
+
+$standardPackagePath = Join-Path $outputRoot "FuelPlanner-DataField.iq"
+$fenix6PackagePath = Join-Path $outputRoot "FuelPlanner-DataField-Fenix6.iq"
+$testBuildPath = Join-Path $outputRoot ("FuelPlannerTests-" + $Device + ".prg")
 
 $javaArgs = @("-Xms1g", "-Dfile.encoding=UTF-8", "-Dapple.awt.UIElement=true", "-jar", $monkeybrains)
+
+if ($Clean) {
+    Remove-Item -LiteralPath $standardPackagePath -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $fenix6PackagePath -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $testBuildPath -Force -ErrorAction SilentlyContinue
+    Write-Host "Cleaned generated build artifacts from $outputRoot" -ForegroundColor Green
+    exit 0
+}
+
+if ($Test) {
+    Write-Host "`nBuilding Test Bundle for $Device..." -ForegroundColor Yellow
+    $testArgs = $javaArgs + @(
+        "-f", "monkey.tests.jungle",
+        "-o", $testBuildPath,
+        "-d", $Device,
+        "-t",
+        "-y", $KeyPath,
+        "-w"
+    )
+    & $javaExe @testArgs
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Test build FAILED (exit $LASTEXITCODE)"
+        exit $LASTEXITCODE
+    }
+    Write-Host "Test bundle built: $testBuildPath" -ForegroundColor Green
+    exit 0
+}
 
 # --- Build Data Field ---
 Write-Host "`nBuilding Data Field..." -ForegroundColor Yellow
 $dfArgs = $javaArgs + @(
     "-f", "monkey.jungle",
-    "-o", "bin\FuelPlanner-DataField.iq",
+    "-o", $standardPackagePath,
     "-e",                          # export mode = .iq file for store
     "-y", $KeyPath,
     "-w"                           # warnings
@@ -102,13 +138,13 @@ if ($LASTEXITCODE -ne 0) {
     Write-Error "Data Field build FAILED (exit $LASTEXITCODE)"
     exit $LASTEXITCODE
 }
-Write-Host "Data Field built: bin\FuelPlanner-DataField.iq" -ForegroundColor Green
+Write-Host "Data Field built: $standardPackagePath" -ForegroundColor Green
 
 # --- Build Fenix 6 Data Field (memory-constrained) ---
 Write-Host "`nBuilding Fenix 6 Data Field (memory-constrained)..." -ForegroundColor Yellow
 $dfFenix6Args = $javaArgs + @(
     "-f", "fenix6.jungle",
-    "-o", "bin\FuelPlanner-DataField-Fenix6.iq",
+    "-o", $fenix6PackagePath,
     "-e",                          # export mode = .iq file for store
     "-y", $KeyPath,
     "-w"                           # warnings
@@ -118,8 +154,8 @@ if ($LASTEXITCODE -ne 0) {
     Write-Error "Fenix 6 Data Field build FAILED (exit $LASTEXITCODE)"
     exit $LASTEXITCODE
 }
-Write-Host "Fenix 6 Data Field built: bin\FuelPlanner-DataField-Fenix6.iq" -ForegroundColor Green
+Write-Host "Fenix 6 Data Field built: $fenix6PackagePath" -ForegroundColor Green
 
 Write-Host "`nDone! Upload these files to the Connect IQ Store:" -ForegroundColor Cyan
-Write-Host "  bin\FuelPlanner-DataField.iq (standard)"
-Write-Host "  bin\FuelPlanner-DataField-Fenix6.iq (Fenix 6 memory-optimized)"
+Write-Host "  $standardPackagePath (standard: all non-Fenix 6 targets)"
+Write-Host "  $fenix6PackagePath (Fenix 6 family memory-optimized)"

@@ -34,6 +34,9 @@ class FuelModel {
     public const MODE_AUTO         = 0;  // deficit-based with fixed g/h target
     public const MODE_FIXED        = 1;  // fixed interval from last intake
     public const MODE_CALORIE_AUTO = 2;  // target derived from watch calorie data
+    public const RING_TONE_GREEN   = 0;
+    public const RING_TONE_YELLOW  = 1;
+    public const RING_TONE_RED     = 2;
 
     // Explicit session states
     public const STATE_IDLE = 0;
@@ -49,6 +52,7 @@ class FuelModel {
     private var _sessionRecoverable   as Boolean = false;
     private var _startTimestamp       as Number  = 0;
     private var _sessionState as Number = STATE_IDLE;
+    private var _sessionFinishHandled as Boolean = false;
     // Internally tracked in tenths of grams (g10)
     private var _consumedTotalG       as Number  = 0;
     private var _lastIntakeTimestamp  as Number  = 0;
@@ -94,6 +98,8 @@ class FuelModel {
     private var _calorieAutoSuspendedUntilSec as Number = 0; // Recovery: Wann erneut auf Calorie Auto prüfen
     private const CALORIE_FALLBACK_TICKS = 300; // 5 Minuten bei 1Hz
     private const CALORIE_SUSPEND_DURATION_SEC = 600; // 10 Minuten Sperre vor Recovery-Versuch
+    private const RING_WARNING_MIN_SEC = 180;
+    private const RING_WARNING_MAX_SEC = 600;
 
     // For pause detection
     private var _lastTimerTime      as Number = 0;
@@ -160,7 +166,10 @@ class FuelModel {
     //! Called when settings change externally (e.g., Garmin Connect phone app).
     //! Refreshes configuration immediately without resetting session state.
     function onSettingsChanged() as Void {
+        _isTouch = detectTouchScreen();
         loadSettings();
+        _calorieDataMissingTicks = 0;
+        _calorieAutoSuspendedUntilSec = 0;
         if (_sessionActive) {
             recalculateFromCurrentState();
             _forceNextFitFieldUpdate = true;
@@ -321,8 +330,15 @@ class FuelModel {
     }
 
     private function setSessionState(state as Number) as Void {
+        if (state != STATE_FINISHED) {
+            _sessionFinishHandled = false;
+        }
         _sessionState = state;
-        _sessionActive = (state != STATE_IDLE);
+        _sessionActive = (
+            state == STATE_PRIMING ||
+            state == STATE_ACTIVE ||
+            state == STATE_PAUSED
+        );
         _isPaused = (state == STATE_PAUSED);
     }
 
@@ -336,7 +352,9 @@ class FuelModel {
         }
 
         if (timerStateStoppedOrOff) {
-            setSessionState(STATE_FINISHED);
+            if (_sessionState != STATE_FINISHED) {
+                setSessionState(STATE_FINISHED);
+            }
             return;
         }
 
@@ -359,6 +377,7 @@ class FuelModel {
     function clearSessionState() as Void {
         setSessionState(STATE_IDLE);
         _sessionRecoverable = false;
+        _sessionFinishHandled = false;
         _startTimestamp = 0;
         _consumedTotalG = 0;
         _lastIntakeTimestamp = 0;
@@ -374,7 +393,26 @@ class FuelModel {
         resetDisplayValues();
     }
 
-private function markSessionFinished() as Void {
+    (:full)
+    private function markSessionFinished() as Void {
+        if (_sessionState == STATE_IDLE) {
+            return;
+        }
+
+        writeFitSessionSummary(_fitFieldTargetSummary, _fitFieldActualSummary);
+        _sessionRecoverable = false;
+        _pauseStartTimerS = null;
+        _pauseStartClockTs = null;
+        _lastReminderTimestamp = 0;
+        _isReminderDue = false;
+        _autoIntakeLocked = false;
+        _autoIntakeEventPending = false;
+        _storage.clearSession();
+        _sessionFinishHandled = true;
+    }
+
+    (:lite)
+    private function markSessionFinished() as Void {
         if (_sessionState == STATE_IDLE) {
             return;
         }
@@ -387,6 +425,7 @@ private function markSessionFinished() as Void {
         _autoIntakeLocked = false;
         _autoIntakeEventPending = false;
         _storage.clearSession();
+        _sessionFinishHandled = true;
     }
     //! Main compute function — call every tick (1 Hz)
     function compute(info) as Void {
@@ -476,7 +515,9 @@ private function markSessionFinished() as Void {
         }
 
         if (_sessionState == STATE_FINISHED) {
-            markSessionFinished();
+            if (!_sessionFinishHandled) {
+                markSessionFinished();
+            }
             _nextDueInSec = 0;
             updateFitFields();
             return;
@@ -858,6 +899,15 @@ private function markSessionFinished() as Void {
                 }
             }
         } catch (e) {}
+
+        try {
+            if (info has :elapsedTime) {
+                var elapsedTime = getNonNegativeNumberOrNull(info.elapsedTime);
+                if (elapsedTime != null) {
+                    return elapsedTime;
+                }
+            }
+        } catch (e) {}
         return null;
     }
 
@@ -897,6 +947,13 @@ private function markSessionFinished() as Void {
 
     (:lite)
     private function isTimerStatePaused(info) as Boolean {
+        try {
+            if (info has :timerState &&
+                Activity has :TIMER_STATE_PAUSED &&
+                info.timerState == Activity.TIMER_STATE_PAUSED) {
+                return true;
+            }
+        } catch (e) {}
         return false;
     }
 
@@ -907,7 +964,7 @@ private function markSessionFinished() as Void {
 
     (:lite)
     private function isTimerStateStoppedOrOff(info) as Boolean {
-        return false;
+        return FuelPlannerUtils.isTimerStateStoppedOrOff(info);
     }
 
     (:full)
@@ -945,11 +1002,39 @@ private function markSessionFinished() as Void {
     (:lite)
     private function getEffectiveTimerSec(rawTimerSec as Number,
                                           timerStatePaused as Boolean) as Number {
-        return rawTimerSec;
+        if (timerStatePaused) {
+            if (_pauseStartTimerS == null) {
+                _pauseStartTimerS = rawTimerSec;
+            }
+
+            var pauseStartForFreeze = (_pauseStartTimerS != null) ? _pauseStartTimerS : rawTimerSec;
+            var frozenSec = pauseStartForFreeze - _pausedTimerOffsetS;
+            if (frozenSec < 0) {
+                frozenSec = 0;
+            }
+            return frozenSec;
+        }
+
+        if (_pauseStartTimerS != null) {
+            var pauseStartForDelta = (_pauseStartTimerS != null) ? _pauseStartTimerS : rawTimerSec;
+            var pausedDuration = rawTimerSec - pauseStartForDelta;
+            if (pausedDuration > 0) {
+                _pausedTimerOffsetS += pausedDuration;
+            }
+            _pauseStartTimerS = null;
+        }
+
+        var effectiveSec = rawTimerSec - _pausedTimerOffsetS;
+        if (effectiveSec < 0) {
+            effectiveSec = 0;
+        }
+        return effectiveSec;
     }
 
     (:full)
     private function updateCalorieData(info) as Void {
+        var hasCalorieDataThisTick = false;
+
         try {
             if (info has :calories) {
                 var calories = getNonNegativeNumberOrNull(info.calories);
@@ -961,6 +1046,7 @@ private function markSessionFinished() as Void {
                         _latestCaloriesKcal = calories;
                     }
                     _caloriesAvailable = true;
+                    hasCalorieDataThisTick = true;
                 }
             }
         } catch (e) {}
@@ -979,7 +1065,7 @@ private function markSessionFinished() as Void {
 
         // Calorie Auto Fallback mit Recovery: Wechsel auf MODE_AUTO wenn Kalorien-Daten fehlen
         if (_reminderMode == MODE_CALORIE_AUTO) {
-            if (_caloriesAvailable) {
+            if (hasCalorieDataThisTick) {
                 _calorieDataMissingTicks = 0;
                 // Sperre abgelaufen? Dann aufheben
                 if (_calorieAutoSuspendedUntilSec > 0 &&
@@ -999,7 +1085,7 @@ private function markSessionFinished() as Void {
 
         // Recovery: Prüfe ob Kalorien wieder verfügbar sind und Sperre abgelaufen
         if (_calorieAutoSuspendedUntilSec > 0 &&
-            _caloriesAvailable &&
+            hasCalorieDataThisTick &&
             _elapsedActiveSec >= _calorieAutoSuspendedUntilSec) {
             _reminderMode = MODE_CALORIE_AUTO;
             _calorieAutoSuspendedUntilSec = 0;
@@ -1011,6 +1097,8 @@ private function markSessionFinished() as Void {
 
     (:lite)
     private function updateCalorieData(info) as Void {
+        var hasCalorieDataThisTick = false;
+
         try {
             if (info has :calories) {
                 var calories = getNonNegativeNumberOrNull(info.calories);
@@ -1022,9 +1110,48 @@ private function markSessionFinished() as Void {
                         _latestCaloriesKcal = calories;
                     }
                     _caloriesAvailable = true;
+                    hasCalorieDataThisTick = true;
                 }
             }
         } catch (e) {}
+
+        try {
+            if (info has :energyExpenditure) {
+                var energyRate = toFloatOrNull(info.energyExpenditure);
+                if (energyRate != null && energyRate > 0.0f) {
+                    if (energyRate > FuelModelConsts.MAX_ENERGY_RATE_KCAL_MIN) {
+                        energyRate = FuelModelConsts.MAX_ENERGY_RATE_KCAL_MIN;
+                    }
+                    _latestEnergyExpKcalMin = energyRate;
+                }
+            }
+        } catch (e) {}
+
+        if (_reminderMode == MODE_CALORIE_AUTO) {
+            if (hasCalorieDataThisTick) {
+                _calorieDataMissingTicks = 0;
+                if (_calorieAutoSuspendedUntilSec > 0 &&
+                    _elapsedActiveSec >= _calorieAutoSuspendedUntilSec) {
+                    _calorieAutoSuspendedUntilSec = 0;
+                }
+            } else {
+                _calorieDataMissingTicks += 1;
+                if (_calorieDataMissingTicks >= CALORIE_FALLBACK_TICKS) {
+                    _reminderMode = MODE_AUTO;
+                    _calorieDataMissingTicks = 0;
+                    _calorieAutoSuspendedUntilSec = _elapsedActiveSec + CALORIE_SUSPEND_DURATION_SEC;
+                }
+            }
+        }
+
+        if (_calorieAutoSuspendedUntilSec > 0 &&
+            hasCalorieDataThisTick &&
+            _elapsedActiveSec >= _calorieAutoSuspendedUntilSec) {
+            _reminderMode = MODE_CALORIE_AUTO;
+            _calorieAutoSuspendedUntilSec = 0;
+            calculateNextDue();
+            checkReminderDue();
+        }
     }
 
     (:lite)
@@ -1136,9 +1263,49 @@ private function markSessionFinished() as Void {
 
     (:lite)
     private function detectPause(timerTime as Number, timerStatePaused as Boolean) as Boolean {
+        var wasPaused = (_sessionState == STATE_PAUSED);
+        var pauseDetected = false;
+
         if (timerStatePaused) {
+            pauseDetected = true;
+            _timerStallCount = 0;
+            _lastTimerTime = timerTime;
+        } else if (wasPaused && _pauseStartClockTs != null && _lastTimerTime == 0) {
+            pauseDetected = true;
+            _timerStallCount = 1;
+            _lastTimerTime = timerTime;
+        } else if (wasPaused && _pauseStartClockTs != null && timerTime == _lastTimerTime) {
+            pauseDetected = true;
+            _timerStallCount = 1;
+            _lastTimerTime = timerTime;
+        } else if (_lastTimerTime > 0) {
+            if (timerTime == _lastTimerTime) {
+                _timerStallCount += 1;
+                if (_timerStallCount >= 2) {
+                    pauseDetected = true;
+                }
+            } else {
+                _timerStallCount = 0;
+                pauseDetected = false;
+            }
+            _lastTimerTime = timerTime;
+        } else {
+            pauseDetected = false;
+            _lastTimerTime = timerTime;
+        }
+
+        if (pauseDetected) {
+            if (!wasPaused) {
+                _pauseStartClockTs = getCurrentTimestamp();
+            }
             return true;
         }
+
+        if (wasPaused && _pauseStartClockTs != null) {
+            shiftReminderReferenceTimestamps(getCurrentTimestamp() - _pauseStartClockTs);
+        }
+        _pauseStartClockTs = null;
+
         return false;
     }
 
@@ -1268,8 +1435,26 @@ private function markSessionFinished() as Void {
 
     (:lite)
     private function calculateTargetAndDeficit() as Void {
-        _targetTotalG = _consumedTotalG;
-        _deficitG = 0;
+        _targetTotalG = clampNonNegativeTotalG10(FuelModel.calculateTargetTotalG10(
+            _elapsedActiveSec,
+            _carbsTargetGph,
+            _reminderMode,
+            _latestCaloriesKcal,
+            _carbFractionPct,
+            _caloriesAvailable,
+            _storage.MIN_CARBS_TARGET_GPH
+        ));
+
+        _deficitG = clampTotalG10(FuelModel.calculateDeficit(
+            _elapsedActiveSec,
+            _consumedTotalG,
+            _carbsTargetGph,
+            _reminderMode,
+            _latestCaloriesKcal,
+            _carbFractionPct,
+            _caloriesAvailable,
+            _storage.MIN_CARBS_TARGET_GPH
+        ));
     }
 
     //! Recompute target/deficit/reminder timing from current state and settings.
@@ -1416,7 +1601,17 @@ private function markSessionFinished() as Void {
             _nextDueInSec = 0;
         } else {
             var deficitNeededG10 = safeDoseG10 - _deficitG;
-            _nextDueInSec = clampNextDueSec(((deficitNeededG10 * 3600) + safeCarbsRateGph10 - 1) / safeCarbsRateGph10);
+
+            if (_reminderMode == MODE_CALORIE_AUTO && _latestEnergyExpKcalMin > 0.0f) {
+                var rateNumerator = _latestEnergyExpKcalMin * _carbFractionPct.toFloat();
+                if (rateNumerator > 0.0f) {
+                    _nextDueInSec = clampNextDueSec(((deficitNeededG10.toFloat() * 2400.0f) / rateNumerator).toNumber());
+                } else {
+                    _nextDueInSec = FuelModelConsts.MAX_NEXT_DUE_SEC;
+                }
+            } else {
+                _nextDueInSec = clampNextDueSec(((deficitNeededG10 * 3600) + safeCarbsRateGph10 - 1) / safeCarbsRateGph10);
+            }
         }
     }
 
@@ -1435,9 +1630,104 @@ private function markSessionFinished() as Void {
         );
     }
 
+    private function getSafeStartDelaySec() as Number {
+        var safeStartDelayMin = (_startDelayMin >= 0)
+            ? _startDelayMin
+            : _storage.MIN_START_DELAY_MIN;
+        return safeStartDelayMin * 60;
+    }
+
+    private function getSafeDoseG10() as Number {
+        if (_doseG > 0) {
+            return _doseG * 10;
+        }
+        return _storage.MIN_DOSE_G * 10;
+    }
+
+    private function getPlannedIntakeCycleSec() as Number {
+        if (_reminderMode == MODE_FIXED) {
+            var safeIntervalMin = (_fixedIntervalMin > 0)
+                ? _fixedIntervalMin
+                : _storage.MIN_FIXED_INTERVAL_MIN;
+            return clampNextDueSec(safeIntervalMin * 60);
+        }
+
+        var safeDoseG10 = getSafeDoseG10();
+        if (_reminderMode == MODE_CALORIE_AUTO && _latestEnergyExpKcalMin > 0.0f) {
+            var rateNumerator = _latestEnergyExpKcalMin * _carbFractionPct.toFloat();
+            if (rateNumerator > 0.0f) {
+                return clampNextDueSec(((safeDoseG10.toFloat() * 2400.0f) / rateNumerator).toNumber());
+            }
+        }
+
+        var safeCarbsRateGph10 = (_carbsTargetGph > 0)
+            ? _carbsTargetGph * 10
+            : _storage.MIN_CARBS_TARGET_GPH * 10;
+        if (safeCarbsRateGph10 <= 0) {
+            return 0;
+        }
+        return clampNextDueSec(((safeDoseG10 * 3600) + safeCarbsRateGph10 - 1) / safeCarbsRateGph10);
+    }
+
+    private function getRingWarningLeadSec(cycleSec as Number) as Number {
+        if (cycleSec <= 0) {
+            return 0;
+        }
+
+        var warningLeadSec = cycleSec / 4;
+        if (warningLeadSec < RING_WARNING_MIN_SEC) {
+            warningLeadSec = RING_WARNING_MIN_SEC;
+        }
+        if (warningLeadSec > RING_WARNING_MAX_SEC) {
+            warningLeadSec = RING_WARNING_MAX_SEC;
+        }
+        if (warningLeadSec >= cycleSec) {
+            warningLeadSec = cycleSec / 2;
+            if (warningLeadSec < 1) {
+                warningLeadSec = 1;
+            }
+        }
+        return warningLeadSec;
+    }
+
+    function getRingAlertTone() as Number {
+        if (!_sessionActive && _sessionState != STATE_FINISHED) {
+            return RING_TONE_GREEN;
+        }
+        if (_isPaused) {
+            return RING_TONE_GREEN;
+        }
+        if (_consumedTotalG <= 0 && _elapsedActiveSec < getSafeStartDelaySec()) {
+            return RING_TONE_GREEN;
+        }
+        if (_isReminderDue || _nextDueInSec <= 0) {
+            return RING_TONE_RED;
+        }
+
+        if (_reminderMode != MODE_FIXED && _deficitG >= getSafeDoseG10()) {
+            return RING_TONE_RED;
+        }
+
+        var warningLeadSec = getRingWarningLeadSec(getPlannedIntakeCycleSec());
+        if (warningLeadSec > 0 && _nextDueInSec <= warningLeadSec) {
+            return RING_TONE_YELLOW;
+        }
+
+        return RING_TONE_GREEN;
+    }
+
     (:lite)
     private function checkReminderDue() as Void {
-        _isReminderDue = (_nextDueInSec <= 0 && !_isPaused && _consumedTotalG > 0 && _elapsedActiveSec >= _startDelayMin * 60);
+        _isReminderDue = ReminderManager.shouldVibrate(
+            _nextDueInSec,
+            _isPaused,
+            _consumedTotalG,
+            _elapsedActiveSec,
+            _startDelayMin,
+            _lastReminderTimestamp,
+            _maxSnoozeMin,
+            getCurrentTimestamp()
+        );
     }
 
     (:full)
@@ -1643,6 +1933,7 @@ private function markSessionFinished() as Void {
     function getTargetTotalG10()    as Number  { return _targetTotalG; }
     function getDeficitG10()        as Number  { return _deficitG; }
     function getNextDueInSec()      as Number  { return _nextDueInSec; }
+    function getRingTone()          as Number  { return getRingAlertTone(); }
     function getDisplayNextDueInSec() as Number {
         if (_isReminderDue) {
             return 0;
@@ -1676,12 +1967,12 @@ private function markSessionFinished() as Void {
 
     (:lite)
     function getIntakeCount() as Number {
-        return 0;
+        return _intakeCount;
     }
 
     (:full)
     function getRecoveryDeficit() as Number? {
-        if (!_sessionActive || _elapsedActiveSec <= 0) {
+        if ((_sessionState != STATE_FINISHED && !_sessionActive) || _elapsedActiveSec <= 0) {
             return null;
         }
 
@@ -1694,7 +1985,15 @@ private function markSessionFinished() as Void {
 
     (:lite)
     function getRecoveryDeficit() as Number? {
-        return null;
+        if ((_sessionState != STATE_FINISHED && !_sessionActive) || _elapsedActiveSec <= 0) {
+            return null;
+        }
+
+        var recoveryDeficitG10 = _targetTotalG - _consumedTotalG;
+        if (recoveryDeficitG10 <= 0) {
+            return null;
+        }
+        return (recoveryDeficitG10 + 5) / 10;
     }
 
 }

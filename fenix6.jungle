@@ -1,7 +1,7 @@
 # Fenix 6 memory-constrained build configuration
 # Uses lite view to fit within memory limits
 
-project.manifest = manifest.xml
+project.manifest = manifest-fenix6.xml
 project.optimization = 3z
 
 base.sourcePath = source

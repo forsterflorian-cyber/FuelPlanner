@@ -106,6 +106,7 @@ class MockSensorHistory {
 
 class MockStorageBackend extends StorageBackend {
     private var _values as Dictionary = {};
+    private var _deleteCount as Number = 0;
 
     function initialize() {
         StorageBackend.initialize();
@@ -120,9 +121,14 @@ class MockStorageBackend extends StorageBackend {
     }
 
     function deleteValue(key as String) as Void {
+        _deleteCount += 1;
         try {
             _values.remove(key);
         } catch (e) {}
+    }
+
+    function getDeleteCount() as Number {
+        return _deleteCount;
     }
 }
 
@@ -160,7 +166,7 @@ function buildFuelStatusLine(label as String, model as FuelModel) as String {
         " nextDueSec=" + model.getNextDueInSec().format("%d") +
         " displayNextDueSec=" + model.getDisplayNextDueInSec().format("%d") +
         " reminderDue=" + boolToAscii(model.isReminderDue()) +
-        " gaugeTone=" + FuelPlannerUtils.getGaugeAlertTone(model.getDeficitG10(), model.getDoseG10())
+        " ringTone=" + model.getRingTone().format("%d")
     );
 }
 
