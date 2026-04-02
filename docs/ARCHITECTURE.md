@@ -197,9 +197,8 @@ nextDueSec = ceil((doseG10 - deficitG10) * 3600 / carbsRateGph10)
 
 ### 5. FieldView (UI Display)
 
-**Files**:
-- `source/FuelPlannerFieldView.mc` (full version)
-- `source/FuelPlannerFieldViewInstinct3.mc` (lite version)
+**File**:
+- `source/FuelPlannerFieldView.mc`
 
 **Display Layout**:
 ```
@@ -288,31 +287,19 @@ States:
 6. Activity ends
    └─► FuelModel.compute(info)
        └─► FuelModel.markSessionFinished()
-           └─► StorageManager.clearSession()
+           ├─► StorageManager.clearActiveSession()
+           └─► StorageManager.setRecovery... snapshot values
 ```
 
 ## Compile-Time Optimization
 
-The project uses Connect IQ's compile-time attributes to generate optimized binaries:
+The project uses Connect IQ compile-time attributes for test-only and feature-gated code:
 
 ```monkeyc
-(:full)    // Full-featured version (touch devices)
-(:lite)    // Simplified version (button-only devices)
+(:full)    // Standard shipped product path
 (:test)    // Test-only code
 (:testsupport) // Test helpers
 ```
-
-**Binary Differences**:
-
-| Feature | :full | :lite |
-|---------|-------|-------|
-| Touch input | ✅ | ❌ |
-| FIT fields | ✅ | ❌ |
-| Settings menu | ✅ | ❌ |
-| Gauge colors | Multi-color | Monochrome |
-| Auto-flow | Touch-aware | Always active |
-| Confirmation vibe | ✅ | ❌ |
-| Snooze vibe | ✅ | ❌ |
 
 ## Memory Management
 

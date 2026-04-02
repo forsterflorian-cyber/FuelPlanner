@@ -52,6 +52,10 @@ class StorageManager {
     private const KEY_PAUSED_TIMER_OFFSET_S = "pause_off_s";
     private const KEY_PAUSE_START_TIMER_S = "pause_start_s";
     private const KEY_PAUSE_START_CLOCK_TS = "pause_clock_s";
+    private const KEY_RECOVERY_TARGET_G10 = "snap_tgt10";
+    private const KEY_RECOVERY_CONSUMED_G10 = "snap_con10";
+    private const KEY_RECOVERY_ELAPSED_SEC = "snap_elapsed";
+    private const KEY_RECOVERY_INTAKE_COUNT = "snap_count";
 
     // Legacy keys kept only so reset paths can clean up older installs.
     private const LEGACY_KEY_INTAKE_LOG = "int_log";
@@ -574,9 +578,88 @@ class StorageManager {
         }
     }
 
+    function getRecoveryTargetG10() as Number {
+        var value = _storageBackend.getValue(KEY_RECOVERY_TARGET_G10);
+        if (value instanceof Number) {
+            return nonNegative(value);
+        }
+        return 0;
+    }
+
+    function setRecoveryTargetG10(value as Number) as Void {
+        try {
+            _storageBackend.setValue(KEY_RECOVERY_TARGET_G10, nonNegative(value));
+        } catch (e) {
+            _writeFailureCount += 1;
+            _lastWriteFailureKey = KEY_RECOVERY_TARGET_G10;
+        }
+    }
+
+    function getRecoveryConsumedG10() as Number {
+        var value = _storageBackend.getValue(KEY_RECOVERY_CONSUMED_G10);
+        if (value instanceof Number) {
+            return nonNegative(value);
+        }
+        return 0;
+    }
+
+    function setRecoveryConsumedG10(value as Number) as Void {
+        try {
+            _storageBackend.setValue(KEY_RECOVERY_CONSUMED_G10, nonNegative(value));
+        } catch (e) {
+            _writeFailureCount += 1;
+            _lastWriteFailureKey = KEY_RECOVERY_CONSUMED_G10;
+        }
+    }
+
+    function getRecoveryElapsedSec() as Number {
+        var value = _storageBackend.getValue(KEY_RECOVERY_ELAPSED_SEC);
+        if (value instanceof Number) {
+            return nonNegative(value);
+        }
+        return 0;
+    }
+
+    function setRecoveryElapsedSec(value as Number) as Void {
+        try {
+            _storageBackend.setValue(KEY_RECOVERY_ELAPSED_SEC, nonNegative(value));
+        } catch (e) {
+            _writeFailureCount += 1;
+            _lastWriteFailureKey = KEY_RECOVERY_ELAPSED_SEC;
+        }
+    }
+
+    function getRecoveryIntakeCount() as Number {
+        var value = _storageBackend.getValue(KEY_RECOVERY_INTAKE_COUNT);
+        if (value instanceof Number) {
+            return nonNegative(value);
+        }
+        return 0;
+    }
+
+    function setRecoveryIntakeCount(value as Number) as Void {
+        try {
+            _storageBackend.setValue(KEY_RECOVERY_INTAKE_COUNT, nonNegative(value));
+        } catch (e) {
+            _writeFailureCount += 1;
+            _lastWriteFailureKey = KEY_RECOVERY_INTAKE_COUNT;
+        }
+    }
+
+    function hasRecoverySnapshot() as Boolean {
+        return getRecoveryElapsedSec() > 0;
+    }
+
+    function clearRecoverySnapshot() as Void {
+        deleteStorageValue(KEY_RECOVERY_TARGET_G10);
+        deleteStorageValue(KEY_RECOVERY_CONSUMED_G10);
+        deleteStorageValue(KEY_RECOVERY_ELAPSED_SEC);
+        deleteStorageValue(KEY_RECOVERY_INTAKE_COUNT);
+    }
+
     // ========== Session Management ==========
 
-    function clearSession() as Void {
+    function clearActiveSession() as Void {
         deleteStorageValue(KEY_SESSION_ID);
         deleteStorageValue(KEY_START_TIMESTAMP);
         deleteStorageValue(KEY_START_TS_CONFIRMED);
@@ -593,6 +676,11 @@ class StorageManager {
         deleteStorageValue(KEY_PAUSE_START_CLOCK_TS);
         deleteStorageValue(LEGACY_KEY_INTAKE_LOG);
         deleteStorageValue(LEGACY_KEY_LAST_LAP_SNAPSHOT);
+    }
+
+    function clearSession() as Void {
+        clearActiveSession();
+        clearRecoverySnapshot();
     }
 
     function hasActiveSession() as Boolean {

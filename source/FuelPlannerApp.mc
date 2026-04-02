@@ -51,13 +51,6 @@ class FuelPlannerApp extends Application.AppBase {
         }
     }
 
-    (:lite)
-    public function onStop(state as Dictionary?) as Void {
-        if (_model != null) {
-            (_model as FuelModel).saveSession();
-        }
-    }
-
     public function onSettingsChanged() as Void {
         if (_storage == null) {
             _storage = new StorageManager(null, null);
@@ -91,21 +84,6 @@ class FuelPlannerApp extends Application.AppBase {
         model.setFitFields(_fieldDeficit, _fieldConsumed, _fieldTargetSummary, _fieldActualSummary);
         var inputDelegate = new FuelPlannerFieldDelegate(model, reminder, view);
         return [view, inputDelegate];
-    }
-
-    (:lite)
-    public function getInitialView() as [Views] or [Views, InputDelegates] {
-        if (_model == null || _storage == null || _reminder == null) {
-            _storage = new StorageManager(null, null);
-            var storage = _storage as StorageManager;
-            _model = new FuelModel(storage, null);
-            _reminder = new ReminderManager();
-        }
-
-        var model = _model as FuelModel;
-        var reminder = _reminder as ReminderManager;
-        var view = new FuelPlannerFieldView(model, reminder);
-        return [view];
     }
 
     (:full)
@@ -207,11 +185,6 @@ class FuelPlannerApp extends Application.AppBase {
         var menu = new FuelPlannerMenu(storage, _model);
         var inputDelegate = new FuelPlannerMenuDelegate(storage, menu, _model);
         return [menu, inputDelegate];
-    }
-
-    (:lite)
-    public function getSettingsView() as [Views] or [Views, InputDelegates] or Null {
-        return null;
     }
 
 }

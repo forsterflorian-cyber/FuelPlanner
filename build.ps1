@@ -15,7 +15,7 @@ param(
     [string]$SdkPath = "$env:APPDATA\Garmin\ConnectIQ\Sdks",
     [string]$KeyPath = "$env:USERPROFILE\developer_key",
     [string]$JavaPath = "",
-    [string]$OutputDir = ".",
+    [string]$OutputDir = "artifacts",
     [string]$Device = "fr955",
     [switch]$Test,
     [switch]$Clean
@@ -92,15 +92,19 @@ New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 $outputRoot = (Resolve-Path $OutputDir).Path
 
 $standardPackagePath = Join-Path $outputRoot "FuelPlanner-DataField.iq"
-$fenix6PackagePath = Join-Path $outputRoot "FuelPlanner-DataField-Fenix6.iq"
 $testBuildPath = Join-Path $outputRoot ("FuelPlannerTests-" + $Device + ".prg")
+$testBuildDebugPath = $testBuildPath + ".debug.xml"
+$testSettingsPath = Join-Path $outputRoot ("FuelPlannerTests-" + $Device + "-settings.json")
+$testFitContribPath = Join-Path $outputRoot ("FuelPlannerTests-" + $Device + "-fit_contributions.json")
 
 $javaArgs = @("-Xms1g", "-Dfile.encoding=UTF-8", "-Dapple.awt.UIElement=true", "-jar", $monkeybrains)
 
 if ($Clean) {
     Remove-Item -LiteralPath $standardPackagePath -Force -ErrorAction SilentlyContinue
-    Remove-Item -LiteralPath $fenix6PackagePath -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $testBuildPath -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $testBuildDebugPath -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $testSettingsPath -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $testFitContribPath -Force -ErrorAction SilentlyContinue
     Write-Host "Cleaned generated build artifacts from $outputRoot" -ForegroundColor Green
     exit 0
 }
@@ -140,22 +144,5 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "Data Field built: $standardPackagePath" -ForegroundColor Green
 
-# --- Build Fenix 6 Data Field (memory-constrained) ---
-Write-Host "`nBuilding Fenix 6 Data Field (memory-constrained)..." -ForegroundColor Yellow
-$dfFenix6Args = $javaArgs + @(
-    "-f", "fenix6.jungle",
-    "-o", $fenix6PackagePath,
-    "-e",                          # export mode = .iq file for store
-    "-y", $KeyPath,
-    "-w"                           # warnings
-)
-& $javaExe @dfFenix6Args
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "Fenix 6 Data Field build FAILED (exit $LASTEXITCODE)"
-    exit $LASTEXITCODE
-}
-Write-Host "Fenix 6 Data Field built: $fenix6PackagePath" -ForegroundColor Green
-
 Write-Host "`nDone! Upload these files to the Connect IQ Store:" -ForegroundColor Cyan
-Write-Host "  $standardPackagePath (standard: all non-Fenix 6 targets)"
-Write-Host "  $fenix6PackagePath (Fenix 6 family memory-optimized)"
+Write-Host "  $standardPackagePath"

@@ -1,8 +1,14 @@
 # Garmin Connect IQ build output
+artifacts/
 bin/
 external-mir/
 internal-mir/
 gen/
+*.iq
+*.prg
+*.prg.debug.xml
+*-settings.json
+*-fit_contributions.json
 # Screenshots / temp files
 *.png
 *.jpg

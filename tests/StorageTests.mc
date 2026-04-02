@@ -156,11 +156,13 @@ class StorageTests {
         model.saveSession();
 
         logger.debug("finishedSessionStorageActive=" + boolToAscii(storage.hasActiveSession()));
+        logger.debug("finishedSnapshotAvailable=" + boolToAscii(storage.hasRecoverySnapshot()));
         logger.debug("finishedSessionState=" + ((storage.getSessionState() != null) ? (storage.getSessionState() as Number).format("%d") : "null"));
         logger.debug("finishedSessionConsumedG10=" + model.getConsumedTotalG10().format("%d"));
 
-        Test.assertMessage(storage.hasActiveSession(), "A stopped session must remain recoverable in storage.");
-        Test.assertEqual(4, storage.getSessionState());
+        Test.assertMessage(!storage.hasActiveSession(), "A stopped session should no longer remain as an active session in storage.");
+        Test.assertMessage(storage.hasRecoverySnapshot(), "A stopped session must persist a frozen recovery snapshot.");
+        Test.assertMessage(storage.getSessionState() == null, "Stopped sessions should not persist a finished active-session state.");
         Test.assertEqual(250, model.getConsumedTotalG10());
 
         var restoredStorage = buildStorage(props, storageBackend);
@@ -168,6 +170,7 @@ class StorageTests {
         restoredModel.loadSession();
 
         Test.assertMessage(!restoredModel.isSessionActive(), "Stopped sessions must reload as stopped, not as live sessions.");
+        Test.assertMessage(restoredModel.isStoppedSession(), "Stopped sessions should restore from the frozen snapshot.");
         Test.assertEqual(250, restoredModel.getConsumedTotalG10());
         Test.assertEqual(1, restoredModel.getIntakeCount());
         Test.assertEqual(1200, restoredModel.getElapsedActiveSec());
@@ -200,30 +203,30 @@ class StorageTests {
 
         var deletesAfterFirstStop = storageBackend.getDeleteCount();
         var recoveryAfterFirstStop = model.getRecoveryDeficit();
-        var sessionStateAfterFirstStop = storage.getSessionState();
+        var snapshotAvailableAfterFirstStop = storage.hasRecoverySnapshot();
 
         model.compute(info);
 
         var deletesAfterSecondStop = storageBackend.getDeleteCount();
         var recoveryAfterSecondStop = model.getRecoveryDeficit();
-        var sessionStateAfterSecondStop = storage.getSessionState();
+        var snapshotAvailableAfterSecondStop = storage.hasRecoverySnapshot();
 
         logger.debug("deletesBeforeFinish=" + deletesBeforeFinish.format("%d"));
         logger.debug("deletesAfterFirstStop=" + deletesAfterFirstStop.format("%d"));
         logger.debug("deletesAfterSecondStop=" + deletesAfterSecondStop.format("%d"));
-        logger.debug("sessionStateAfterFirstStop=" + ((sessionStateAfterFirstStop != null) ? (sessionStateAfterFirstStop as Number).format("%d") : "null"));
-        logger.debug("sessionStateAfterSecondStop=" + ((sessionStateAfterSecondStop != null) ? (sessionStateAfterSecondStop as Number).format("%d") : "null"));
+        logger.debug("snapshotAvailableAfterFirstStop=" + boolToAscii(snapshotAvailableAfterFirstStop));
+        logger.debug("snapshotAvailableAfterSecondStop=" + boolToAscii(snapshotAvailableAfterSecondStop));
         logger.debug("recoveryAfterFirstStop=" + ((recoveryAfterFirstStop != null) ? recoveryAfterFirstStop.format("%d") : "null"));
         logger.debug("recoveryAfterSecondStop=" + ((recoveryAfterSecondStop != null) ? recoveryAfterSecondStop.format("%d") : "null"));
 
-        Test.assertMessage(storage.hasActiveSession(), "Stopped sessions must remain recoverable.");
-        Test.assertEqual(4, sessionStateAfterFirstStop);
-        Test.assertMessage(deletesAfterFirstStop == deletesBeforeFinish, "Stopping must not clear the recoverable session from storage.");
+        Test.assertMessage(!storage.hasActiveSession(), "Stopping should clear the active session payload once the recovery snapshot is frozen.");
+        Test.assertMessage(snapshotAvailableAfterFirstStop, "Stopping should persist a frozen recovery snapshot.");
+        Test.assertMessage(deletesAfterFirstStop > deletesBeforeFinish, "Stopping should clear the active session payload exactly once.");
         Test.assertMessage(
             deletesAfterSecondStop == deletesAfterFirstStop,
             "Repeated stopped ticks must not rerun destructive session cleanup."
         );
-        Test.assertEqual(sessionStateAfterFirstStop, sessionStateAfterSecondStop);
+        Test.assertEqual(snapshotAvailableAfterFirstStop, snapshotAvailableAfterSecondStop);
         Test.assertMessage(recoveryAfterFirstStop != null, "Finished sessions should keep the recovery summary available.");
         Test.assertEqual(recoveryAfterFirstStop, recoveryAfterSecondStop);
         return true;
