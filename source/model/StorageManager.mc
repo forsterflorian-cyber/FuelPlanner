@@ -43,6 +43,7 @@ class StorageManager {
     private const KEY_START_TS_CONFIRMED = "start_ts_ok";
     private const KEY_CONSUMED_TOTAL = "consumed";
     private const KEY_CONSUMED_TOTAL_G10 = "consum10";
+    private const KEY_SESSION_STATE = "sess_state";
     private const KEY_LAST_INTAKE_TS = "last_int";
     private const KEY_LAST_REMINDER_TS = "last_rem";
     private const KEY_INTAKE_COUNT = "int_cnt";
@@ -394,6 +395,27 @@ class StorageManager {
         }
     }
 
+    function getSessionState() as Number? {
+        var value = _storageBackend.getValue(KEY_SESSION_STATE);
+        if (value instanceof Number) {
+            return nonNegative(value);
+        }
+        return null;
+    }
+
+    function setSessionState(value as Number?) as Void {
+        if (value == null || value < 0) {
+            deleteStorageValue(KEY_SESSION_STATE);
+            return;
+        }
+        try {
+            _storageBackend.setValue(KEY_SESSION_STATE, nonNegative(value));
+        } catch (e) {
+            _writeFailureCount += 1;
+            _lastWriteFailureKey = KEY_SESSION_STATE;
+        }
+    }
+
     function getLastIntakeTimestamp() as Number? {
         var value = _storageBackend.getValue(KEY_LAST_INTAKE_TS);
         if (value instanceof Number && value > 0) {
@@ -560,6 +582,7 @@ class StorageManager {
         deleteStorageValue(KEY_START_TS_CONFIRMED);
         deleteStorageValue(KEY_CONSUMED_TOTAL);
         deleteStorageValue(KEY_CONSUMED_TOTAL_G10);
+        deleteStorageValue(KEY_SESSION_STATE);
         deleteStorageValue(KEY_LAST_INTAKE_TS);
         deleteStorageValue(KEY_LAST_REMINDER_TS);
         deleteStorageValue(KEY_INTAKE_COUNT);

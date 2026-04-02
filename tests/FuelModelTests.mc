@@ -190,25 +190,32 @@ class FuelModelTests {
     }
 
     (:test)
-    static function ringToneHonorsStartDelayAndApproachWindow(logger as Test.Logger) as Boolean {
+    static function ringToneUsesVisibleDeficitBeforeStartDelay(logger as Test.Logger) as Boolean {
         var clock = new MockClock(1000);
         var props = new MockPropertiesBackend();
-        props.setValue("carbsTargetGph", 60);
+        props.setValue("reminderMode", 2);
         props.setValue("doseG", 25);
+        props.setValue("carbFractionPct", 60);
         props.setValue("startDelayMin", 15);
 
         var model = buildModel(clock, props);
         var info = new MockActivityInfo(1000);
 
         info.setTimerSeconds(600);
+        info.setCalories(60);
+        info.setEnergyExpenditure(12.0f);
         model.compute(info);
         Test.assertEqual(0, model.getRingTone());
 
-        info.setTimerSeconds(1200);
+        info.setTimerSeconds(720);
+        info.setCalories(153);
+        info.setEnergyExpenditure(12.75f);
         model.compute(info);
         Test.assertEqual(1, model.getRingTone());
 
-        info.setTimerSeconds(1500);
+        info.setTimerSeconds(840);
+        info.setCalories(187);
+        info.setEnergyExpenditure(13.35f);
         model.compute(info);
         Test.assertEqual(2, model.getRingTone());
 

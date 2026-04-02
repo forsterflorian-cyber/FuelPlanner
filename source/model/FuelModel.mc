@@ -249,15 +249,25 @@ class FuelModel {
                 _intakeCount = 1;
             }
             _sessionRecoverable = true;
+            _sessionFinishHandled = false;
 
-            if (_isPaused) {
-                setSessionState(STATE_PAUSED);
-            } else if (!_isStartTimestampConfirmed) {
-                setSessionState(STATE_PRIMING);
-            } else {
-                setSessionState(STATE_ACTIVE);
+            var persistedSessionState = _storage.getSessionState();
+            if (persistedSessionState == null ||
+                persistedSessionState < STATE_IDLE ||
+                persistedSessionState > STATE_FINISHED) {
+                if (_isPaused) {
+                    persistedSessionState = STATE_PAUSED;
+                } else if (!_isStartTimestampConfirmed) {
+                    persistedSessionState = STATE_PRIMING;
+                } else {
+                    persistedSessionState = STATE_ACTIVE;
+                }
             }
 
+            setSessionState(persistedSessionState);
+            if (_sessionState == STATE_FINISHED) {
+                _sessionFinishHandled = true;
+            }
             recalculateFromCurrentState();
         }
     }
@@ -268,7 +278,7 @@ class FuelModel {
             return;
         }
 
-        if (!_sessionRecoverable || _sessionState == STATE_FINISHED) {
+        if (!_sessionRecoverable) {
             _storage.clearSession();
             return;
         }
@@ -277,6 +287,7 @@ class FuelModel {
         _storage.setSessionId(_sessionId);
         _storage.setStartTimestamp(_startTimestamp);
         _storage.setConsumedTotalG10(_consumedTotalG);
+        _storage.setSessionState(_sessionState);
         _storage.setLastIntakeTimestamp(_lastIntakeTimestamp);
         _storage.setLastReminderTimestamp(_lastReminderTimestamp);
         _storage.setIntakeCount(_intakeCount);
@@ -402,15 +413,15 @@ class FuelModel {
         }
 
         writeFitSessionSummary(_fitFieldTargetSummary, _fitFieldActualSummary);
-        _sessionRecoverable = false;
+        _sessionRecoverable = true;
         _pauseStartTimerS = null;
         _pauseStartClockTs = null;
         _lastReminderTimestamp = 0;
         _isReminderDue = false;
         _autoIntakeLocked = false;
         _autoIntakeEventPending = false;
-        _storage.clearSession();
         _sessionFinishHandled = true;
+        saveSession();
     }
 
     (:lite)
@@ -419,15 +430,15 @@ class FuelModel {
             return;
         }
 
-        _sessionRecoverable = false;
+        _sessionRecoverable = true;
         _pauseStartTimerS = null;
         _pauseStartClockTs = null;
         _lastReminderTimestamp = 0;
         _isReminderDue = false;
         _autoIntakeLocked = false;
         _autoIntakeEventPending = false;
-        _storage.clearSession();
         _sessionFinishHandled = true;
+        saveSession();
     }
     //! Main compute function — call every tick (1 Hz)
     function compute(info) as Void {
@@ -479,12 +490,20 @@ class FuelModel {
                     _isStartTimestampConfirmed = true;
                     saveSession();
                 }
+            } else if (_sessionState == STATE_FINISHED) {
+                if (_startTimestamp != activityStartTs && timerSec > 0) {
+                    startNewSession(activityStartTs);
+                }
             } else if (timerSec > 0) {
                 startNewSession(activityStartTs);
             }
         } else {
             if (_sessionActive && isLikelyTimerReset(timerSec)) {
                 startNewSession(null);
+            } else if (_sessionState == STATE_FINISHED) {
+                if (isLikelyTimerReset(timerSec)) {
+                    startNewSession(null);
+                }
             } else if (!_sessionActive && timerSec > 0) {
                 _timerBacktrackCount = 0;
                 startNewSession(null);
@@ -1706,20 +1725,20 @@ class FuelModel {
         if (_isPaused) {
             return RING_TONE_GREEN;
         }
-        if (_consumedTotalG <= 0 && _elapsedActiveSec < getSafeStartDelaySec()) {
-            return RING_TONE_GREEN;
+
+        var safeDoseG10 = getSafeDoseG10();
+        var roundedDeficitG10 = getRoundedPositiveDeficitG10();
+        if (_reminderMode != MODE_FIXED) {
+            if (roundedDeficitG10 >= safeDoseG10) {
+                return RING_TONE_RED;
+            }
         }
+
         if (_isReminderDue || _nextDueInSec <= 0) {
             return RING_TONE_RED;
         }
 
         if (_reminderMode != MODE_FIXED) {
-            var safeDoseG10 = getSafeDoseG10();
-            var roundedDeficitG10 = getRoundedPositiveDeficitG10();
-            if (roundedDeficitG10 >= safeDoseG10) {
-                return RING_TONE_RED;
-            }
-
             var warningDeficitG10 = ((safeDoseG10 * 7) + 9) / 10;
             if (roundedDeficitG10 >= warningDeficitG10) {
                 return RING_TONE_YELLOW;

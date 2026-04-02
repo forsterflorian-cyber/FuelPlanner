@@ -134,7 +134,7 @@ class StorageTests {
     }
 
     (:test)
-    static function finishedSessionDoesNotRestoreAfterReload(logger as Test.Logger) as Boolean {
+    static function stoppedSessionRestoresAfterReload(logger as Test.Logger) as Boolean {
         var storageBackend = new MockStorageBackend();
         var props = new MockPropertiesBackend();
         props.setValue("carbsTargetGph", 60);
@@ -156,16 +156,21 @@ class StorageTests {
         model.saveSession();
 
         logger.debug("finishedSessionStorageActive=" + boolToAscii(storage.hasActiveSession()));
+        logger.debug("finishedSessionState=" + ((storage.getSessionState() != null) ? (storage.getSessionState() as Number).format("%d") : "null"));
         logger.debug("finishedSessionConsumedG10=" + model.getConsumedTotalG10().format("%d"));
 
-        Test.assertMessage(!storage.hasActiveSession(), "A finished session must be removed from recoverable storage.");
+        Test.assertMessage(storage.hasActiveSession(), "A stopped session must remain recoverable in storage.");
+        Test.assertEqual(4, storage.getSessionState());
         Test.assertEqual(250, model.getConsumedTotalG10());
 
         var restoredStorage = buildStorage(props, storageBackend);
         var restoredModel = buildModel(restoredStorage, new MockClock(5200));
         restoredModel.loadSession();
 
-        Test.assertMessage(!restoredModel.isSessionActive(), "Finished sessions must not reload as live recoverable sessions.");
+        Test.assertMessage(!restoredModel.isSessionActive(), "Stopped sessions must reload as stopped, not as live sessions.");
+        Test.assertEqual(250, restoredModel.getConsumedTotalG10());
+        Test.assertEqual(1, restoredModel.getIntakeCount());
+        Test.assertEqual(1200, restoredModel.getElapsedActiveSec());
         return true;
     }
 
@@ -195,23 +200,30 @@ class StorageTests {
 
         var deletesAfterFirstStop = storageBackend.getDeleteCount();
         var recoveryAfterFirstStop = model.getRecoveryDeficit();
+        var sessionStateAfterFirstStop = storage.getSessionState();
 
         model.compute(info);
 
         var deletesAfterSecondStop = storageBackend.getDeleteCount();
         var recoveryAfterSecondStop = model.getRecoveryDeficit();
+        var sessionStateAfterSecondStop = storage.getSessionState();
 
         logger.debug("deletesBeforeFinish=" + deletesBeforeFinish.format("%d"));
         logger.debug("deletesAfterFirstStop=" + deletesAfterFirstStop.format("%d"));
         logger.debug("deletesAfterSecondStop=" + deletesAfterSecondStop.format("%d"));
+        logger.debug("sessionStateAfterFirstStop=" + ((sessionStateAfterFirstStop != null) ? (sessionStateAfterFirstStop as Number).format("%d") : "null"));
+        logger.debug("sessionStateAfterSecondStop=" + ((sessionStateAfterSecondStop != null) ? (sessionStateAfterSecondStop as Number).format("%d") : "null"));
         logger.debug("recoveryAfterFirstStop=" + ((recoveryAfterFirstStop != null) ? recoveryAfterFirstStop.format("%d") : "null"));
         logger.debug("recoveryAfterSecondStop=" + ((recoveryAfterSecondStop != null) ? recoveryAfterSecondStop.format("%d") : "null"));
 
-        Test.assertMessage(deletesAfterFirstStop > deletesBeforeFinish, "Finishing should clear the recoverable session once.");
+        Test.assertMessage(storage.hasActiveSession(), "Stopped sessions must remain recoverable.");
+        Test.assertEqual(4, sessionStateAfterFirstStop);
+        Test.assertMessage(deletesAfterFirstStop == deletesBeforeFinish, "Stopping must not clear the recoverable session from storage.");
         Test.assertMessage(
             deletesAfterSecondStop == deletesAfterFirstStop,
-            "Repeated stopped ticks must not rerun terminal session cleanup."
+            "Repeated stopped ticks must not rerun destructive session cleanup."
         );
+        Test.assertEqual(sessionStateAfterFirstStop, sessionStateAfterSecondStop);
         Test.assertMessage(recoveryAfterFirstStop != null, "Finished sessions should keep the recovery summary available.");
         Test.assertEqual(recoveryAfterFirstStop, recoveryAfterSecondStop);
         return true;

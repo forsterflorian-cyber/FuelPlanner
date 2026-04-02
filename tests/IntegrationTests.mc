@@ -77,7 +77,8 @@ class IntegrationTests {
         model.compute(info);
 
         Test.assertMessage(!model.isSessionActive(), "Session should be finished");
-        Test.assertMessage(!storage.hasActiveSession(), "Storage should be cleared");
+        Test.assertMessage(storage.hasActiveSession(), "Stopped sessions should stay recoverable in storage");
+        Test.assertEqual(4, storage.getSessionState());
 
         return true;
     }
