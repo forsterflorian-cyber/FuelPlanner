@@ -4,11 +4,11 @@
 
     <!-- Settings Labels (Garmin Connect settings page) -->
     <string id="SettingCarbsTarget">KH-Ziel (g/h)</string>
-    <string id="SettingDoseSize">Portionsgroesse (g)</string>
+    <string id="SettingDoseSize">Portionsgröße (g)</string>
     <string id="SettingReminderMode">Erinnerungsmodus</string>
     <string id="SettingFixedInterval">Festes Intervall (min)</string>
-    <string id="SettingStartDelay">Startverzoegerung (min)</string>
-    <string id="SettingSnoozeTime">Schlummer-Zeit (min)</string>
+    <string id="SettingStartDelay">Startverzögerung (min)</string>
+    <string id="SettingSnoozeTime">Schlummerzeit (min)</string>
     <string id="SettingFullScreenAlerts">Native Vollbild-Alarme</string>
     <string id="SettingCarbFraction">KH % der kcal</string>
     <string id="SettingSportPreset">Sport-Vorlage</string>
@@ -28,38 +28,38 @@
 
     <!-- Field View: status row -->
     <string id="LabelPaused">PAUSIERT</string>
-    <string id="LabelFuelNow">JETZT ESSEN</string>
+    <string id="LabelFuelNow">JETZT TANKEN!</string>
     <string id="LabelTapPrefix">TIPPEN +</string>
     <string id="LabelHoldPrefix">DOWN +</string>
-    <string id="LabelLapUndoHint">LAP halten Undo</string>
-    <string id="LabelLapUndoShort">LAP undo</string>
-    <string id="LabelNext">Naechste</string>
+    <string id="LabelLapUndoHint">LAP halten = Undo</string>
+    <string id="LabelLapUndoShort">LAP Undo</string>
+    <string id="LabelNext">Nächste</string>
     <string id="LabelAutoFlowStatus">AUTO-FLOW</string>
 
     <!-- Field View: deficit row -->
-    <string id="LabelBehind">Hinter</string>
+    <string id="LabelBehind">Rückstand</string>
     <string id="LabelAhead">Voraus</string>
-    <string id="LabelOnTarget">Im Ziel</string>
+    <string id="LabelOnTarget">Im Plan</string>
 
     <!-- Field View: rate label row -->
     <string id="LabelRateTargetPrefix">Plan</string>
     <string id="LabelRateAutoCarbsSuffix">% KH</string>
     <string id="LabelRateAutoNoData">Auto (keine kcal-Daten)</string>
-    <string id="LabelEnableTouchForManual">Bitte Touchscreen aktivieren</string>
+    <string id="LabelEnableTouchForManual">Touch aktivieren für Eingabe</string>
     <string id="LabelAutoFlowActive">AUTO-FLOW aktiv</string>
     <string id="LabelRecovery">Erholung</string>
-    <string id="LabelRecoveryAction">KH auffuellen</string>
-    <string id="LabelFuelingOk">Versorgung ok</string>
+    <string id="LabelRecoveryAction">KH auffüllen</string>
+    <string id="LabelFuelingOk">Versorgung OK</string>
     <string id="LabelEnabled">Aktiv</string>
     <string id="LabelDisabled">Aus</string>
 
     <!-- Field View: idle screen -->
-    <string id="LabelWaiting">Aktivitaet starten</string>
+    <string id="LabelWaiting">Aktivität starten</string>
 
     <string id="LabelMenuTitle">Einstellungen</string>
-    <string id="LabelClearSession">Sitzung loeschen</string>
-    <string id="LabelClearSessionSub">Tracking zuruecksetzen</string>
-    <string id="LabelConfirmClear">Sitzung loeschen?</string>
+    <string id="LabelClearSession">Sitzung löschen</string>
+    <string id="LabelClearSessionSub">Tracking zurücksetzen</string>
+    <string id="LabelConfirmClear">Sitzung löschen?</string>
     <string id="LabelPresets">Vorlagen</string>
 
     <!-- Units -->
@@ -73,6 +73,6 @@
     <string id="FitConsumedChartTitle">Gesamtaufnahme</string>
     <string id="FitConsumedDataLabel">Gesamtaufnahme</string>
     <string id="FitTargetCarbsSummaryLabel">Geplante KH</string>
-    <string id="FitActualIntakeSummaryLabel">Gebuchte KH</string>
-    <string id="FitActualIntakeEstimateSummaryLabel">Aufnahme (Schaetzung)</string>
+    <string id="FitActualIntakeSummaryLabel">Erfasste KH</string>
+    <string id="FitActualIntakeEstimateSummaryLabel">Aufnahme (Schätzung)</string>
 </strings>

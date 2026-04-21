@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<settings>
+    <setting propertyKey="@Properties.carbsTargetGph" title="@Strings.SettingCarbsTarget">
+        <settingConfig type="numeric" min="20" max="120" />
+    </setting>
+
+    <setting propertyKey="@Properties.doseG" title="@Strings.SettingDoseSize">
+        <settingConfig type="numeric" min="5" max="100" />
+    </setting>
+
+    <setting propertyKey="@Properties.reminderMode" title="@Strings.SettingReminderMode">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.ModeAuto</listEntry>
+            <listEntry value="1">@Strings.ModeFixed</listEntry>
+            <listEntry value="2">@Strings.ModeCalorieAuto</listEntry>
+        </settingConfig>
+    </setting>
+
+    <setting propertyKey="@Properties.fixedIntervalMin" title="@Strings.SettingFixedInterval">
+        <settingConfig type="numeric" min="5" max="60" />
+    </setting>
+
+    <setting propertyKey="@Properties.startDelayMin" title="@Strings.SettingStartDelay">
+        <settingConfig type="numeric" min="0" max="60" />
+    </setting>
+
+    <setting propertyKey="@Properties.maxSnoozeMin" title="@Strings.SettingSnoozeTime">
+        <settingConfig type="numeric" min="1" max="15" />
+    </setting>
+
+    <setting propertyKey="@Properties.dataFieldAlertEnabled" title="@Strings.SettingFullScreenAlerts">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.LabelDisabled</listEntry>
+            <listEntry value="1">@Strings.LabelEnabled</listEntry>
+        </settingConfig>
+    </setting>
+
+    <setting propertyKey="@Properties.carbFractionPct" title="@Strings.SettingCarbFraction">
+        <settingConfig type="numeric" min="40" max="80" />
+    </setting>
+</settings>
