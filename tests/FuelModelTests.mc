@@ -237,15 +237,17 @@ class FuelModelTests {
         model.compute(info);
         model.recordIntake(25);
 
-        clock.advance(1);
+        clock.setNow(2840);
         info.setTimerSeconds(900);
         model.compute(info);
         Test.assertEqual(0, model.getRingTone());
 
+        clock.setNow(2960);
         info.setTimerSeconds(960);
         model.compute(info);
         Test.assertEqual(1, model.getRingTone());
 
+        clock.setNow(3260);
         info.setTimerSeconds(1260);
         model.compute(info);
         Test.assertEqual(2, model.getRingTone());

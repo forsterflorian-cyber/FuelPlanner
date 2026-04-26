@@ -73,6 +73,6 @@
     <string id="FitConsumedChartTitle">Gesamtaufnahme</string>
     <string id="FitConsumedDataLabel">Gesamtaufnahme</string>
     <string id="FitTargetCarbsSummaryLabel">Geplante KH</string>
-    <string id="FitActualIntakeSummaryLabel">Erfasste KH</string>
-    <string id="FitActualIntakeEstimateSummaryLabel">Aufnahme (Schätzung)</string>
+    <string id="FitActualIntakeSummaryLabel">Aufnahme / Schätzung</string>
+    <string id="FitActualIntakeEstimateSummaryLabel">Aufnahme / Schätzung</string>
 </strings>

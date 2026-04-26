@@ -11,8 +11,9 @@ It tracks intake against a target, shows the current deficit, and reminds the at
 - Reminder modes: `Auto`, `Fixed`, `Calorie Auto`
 - Pause-aware session handling
 - Frozen post-activity recovery snapshot after stop/restart
-- Touch and button support on the remaining supported devices
-- FIT summary fields for later review
+- Touch logging and undo on touch-capable devices
+- Automatic estimate flow on non-touch devices
+- FIT record and session fields written to the FIT file for compatible analysis tools
 
 ## Reminder Modes
 
@@ -33,8 +34,9 @@ FuelPlanner currently ships as a single package for these devices:
 
 1. Add FuelPlanner as a Connect IQ data field to a supported activity.
 2. Start an activity such as Run, Bike, or Hike.
-3. Use the center touch zone or button flow to log intake.
-4. Use the top zone or menu action to snooze reminders when needed.
+3. On touch-capable devices, tap the center zone to log intake and the bottom zone to undo the last intake.
+4. On non-touch devices, FuelPlanner applies the configured dose automatically when a reminder becomes due.
+5. Use the top zone or menu action to snooze reminders when needed.
 
 ## Settings
 
@@ -46,6 +48,10 @@ FuelPlanner currently ships as a single package for these devices:
 - `Start Delay`: delay before reminders begin
 - `Snooze Time`: reminder snooze duration
 - `Native Full-Screen Alerts`: available only on devices that support Garmin `DataFieldAlert`
+
+## FIT Data
+
+FuelPlanner writes live record fields and final session fields to the FIT file. Garmin Connect may show the live record fields as charts, but Connect does not consistently surface custom session fields in the activity summary on all devices/accounts. The session fields are still written to the FIT file and can be read by compatible FIT tools.
 
 ## Build
 

@@ -495,7 +495,9 @@ class FuelModel {
         }
 
         calculateTargetAndDeficit();
-        writeFitSessionSummary(_fitFieldTargetSummary, _fitFieldActualSummary);
+        _forceNextFitFieldUpdate = true;
+        updateFitFields();
+        flushFitSessionSummary();
         storeRecoverySnapshot(_targetTotalG, _consumedTotalG, _elapsedActiveSec, _intakeCount);
         _storage.clearActiveSession();
         setSessionState(STATE_IDLE);
@@ -563,14 +565,16 @@ class FuelModel {
         }
 
         var activityStartTs = getActivityStartTimestamp(info);
-        handleActivityStartDetection(activityStartTs, timerSec);
+        var timerStateStoppedOrOff = isTimerStateStoppedOrOff(info);
+        handleActivityStartDetection(activityStartTs, timerSec, timerStateStoppedOrOff);
         handleTimerState(info, timerTime, timerSec);
         handleSessionStates(info);
     }
 
     //! Detect new activity or timer reset
     private function handleActivityStartDetection(activityStartTs as Number?,
-                                                  timerSec as Number) as Void {
+                                                  timerSec as Number,
+                                                  timerStateStoppedOrOff as Boolean) as Void {
         if (activityStartTs != null) {
             _timerBacktrackCount = 0;
             if (_sessionActive) {
@@ -589,7 +593,9 @@ class FuelModel {
                     saveSession();
                 }
             } else if (isStoppedSession()) {
-                if (_startTimestamp != activityStartTs && timerSec > 0) {
+                if (!timerStateStoppedOrOff &&
+                    _startTimestamp != activityStartTs &&
+                    timerSec > 0) {
                     startNewSession(activityStartTs);
                 }
             } else if (timerSec > 0) {
@@ -599,7 +605,9 @@ class FuelModel {
             if (_sessionActive && isLikelyTimerReset(timerSec)) {
                 startNewSession(null);
             } else if (isStoppedSession()) {
-                if (timerSec > 0 && isLikelyTimerReset(timerSec)) {
+                if (!timerStateStoppedOrOff &&
+                    timerSec > 0 &&
+                    isLikelyTimerReset(timerSec)) {
                     startNewSession(null);
                 }
             } else if (!_sessionActive && timerSec > 0) {
@@ -951,7 +959,9 @@ class FuelModel {
 
     (:full)
     function flushFitSessionSummary() as Void {
-        if (!_sessionActive) {
+        // Session FIT fields are summary values. Write them whenever fields exist,
+        // including the final stop/recovery phase where _sessionActive is already false.
+        if (_fitFieldTargetSummary == null && _fitFieldActualSummary == null) {
             return;
         }
         writeFitSessionSummary(_fitFieldTargetSummary, _fitFieldActualSummary);

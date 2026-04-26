@@ -73,6 +73,6 @@
     <string id="FitConsumedChartTitle">Total Intake</string>
     <string id="FitConsumedDataLabel">Total Intake</string>
     <string id="FitTargetCarbsSummaryLabel">Planned Carbs</string>
-    <string id="FitActualIntakeSummaryLabel">Logged Intake</string>
-    <string id="FitActualIntakeEstimateSummaryLabel">Intake (Estimate)</string>
+    <string id="FitActualIntakeSummaryLabel">Intake / Estimate</string>
+    <string id="FitActualIntakeEstimateSummaryLabel">Intake / Estimate</string>
 </strings>

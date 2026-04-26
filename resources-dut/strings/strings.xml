@@ -73,6 +73,6 @@
     <string id="FitConsumedChartTitle">Totale inname</string>
     <string id="FitConsumedDataLabel">Totale inname</string>
     <string id="FitTargetCarbsSummaryLabel">Geplande KH</string>
-    <string id="FitActualIntakeSummaryLabel">Gelogde inname</string>
-    <string id="FitActualIntakeEstimateSummaryLabel">Inname (schatting)</string>
+    <string id="FitActualIntakeSummaryLabel">Inname / schatting</string>
+    <string id="FitActualIntakeEstimateSummaryLabel">Inname / schatting</string>
 </strings>

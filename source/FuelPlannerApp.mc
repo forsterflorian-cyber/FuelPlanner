@@ -1,7 +1,6 @@
 import Toybox.Application;
 import Toybox.FitContributor;
 import Toybox.Lang;
-import Toybox.System;
 import Toybox.WatchUi;
 
 class FuelPlannerApp extends Application.AppBase {
@@ -91,7 +90,7 @@ class FuelPlannerApp extends Application.AppBase {
         if (_fieldDeficit == null) {
             try {
                 _fieldDeficit = view.createField(
-                    loadString(Rez.Strings.FitDeficitDataLabel, "Current Deficit"),
+                    FuelPlannerUtils.loadString(Rez.Strings.FitDeficitDataLabel, "Current Deficit"),
                     FIT_FIELD_ID_DEFICIT,
                     FitContributor.DATA_TYPE_FLOAT,
                     { :mesgType => FitContributor.MESG_TYPE_RECORD, :units => FIT_UNIT_GRAMS }
@@ -104,7 +103,7 @@ class FuelPlannerApp extends Application.AppBase {
         if (_fieldConsumed == null) {
             try {
                 _fieldConsumed = view.createField(
-                    loadString(Rez.Strings.FitConsumedDataLabel, "Total Intake"),
+                    FuelPlannerUtils.loadString(Rez.Strings.FitConsumedDataLabel, "Total Intake"),
                     FIT_FIELD_ID_CONSUMED,
                     FitContributor.DATA_TYPE_FLOAT,
                     { :mesgType => FitContributor.MESG_TYPE_RECORD, :units => FIT_UNIT_GRAMS }
@@ -117,7 +116,7 @@ class FuelPlannerApp extends Application.AppBase {
         if (_fieldTargetSummary == null) {
             try {
                 _fieldTargetSummary = view.createField(
-                    loadString(Rez.Strings.FitTargetCarbsSummaryLabel, "Target Carbs"),
+                    FuelPlannerUtils.loadString(Rez.Strings.FitTargetCarbsSummaryLabel, "Target Carbs"),
                     FIT_FIELD_ID_TARGET_SUMMARY,
                     FitContributor.DATA_TYPE_FLOAT,
                     { :mesgType => FitContributor.MESG_TYPE_SESSION, :units => FIT_UNIT_GRAMS }
@@ -143,37 +142,10 @@ class FuelPlannerApp extends Application.AppBase {
 
     (:full)
     private function getActualIntakeSummaryLabel() as String {
-        if (!isTouchScreenEnabled()) {
-            return loadString(Rez.Strings.FitActualIntakeEstimateSummaryLabel, "Intake (Estimate)");
-        }
-        return loadString(Rez.Strings.FitActualIntakeSummaryLabel, "Actual Intake");
-    }
-
-    (:full)
-    private function isTouchScreenEnabled() as Boolean {
-        try {
-            var settings = System.getDeviceSettings();
-            if (settings != null &&
-                settings has :isTouchScreen &&
-                settings.isTouchScreen instanceof Boolean) {
-                return settings.isTouchScreen;
-            }
-        } catch (e) {}
-        return false;
-    }
-
-    (:full)
-    private function loadString(resourceId as Lang.ResourceId?, fallback as String) as String {
-        if (resourceId == null) {
-            return fallback;
-        }
-        try {
-            var value = WatchUi.loadResource(resourceId);
-            if (value instanceof String) {
-                return value as String;
-            }
-        } catch (e) {}
-        return fallback;
+        // The same FIT field is used for manual touch logging and the non-touch auto-flow.
+        // Keep the label neutral because Connect IQ resource labels are static, while the
+        // runtime value can be either a confirmed intake or an estimated/planned intake.
+        return FuelPlannerUtils.loadString(Rez.Strings.FitActualIntakeSummaryLabel, "Intake / Estimate");
     }
 
     (:full)

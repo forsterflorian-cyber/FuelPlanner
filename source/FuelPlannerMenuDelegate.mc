@@ -35,35 +35,22 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
         loadStrings();
     }
 
-    private function loadString(resourceId as Lang.ResourceId?, fallback as String) as String {
-        if (resourceId == null) {
-            return fallback;
-        }
-        try {
-            var value = WatchUi.loadResource(resourceId);
-            if (value instanceof String) {
-                return value as String;
-            }
-        } catch (e) {}
-        return fallback;
-    }
-
     private function loadStrings() as Void {
-        _strModeAuto = loadString(Rez.Strings.ModeAuto, "Auto");
-        _strModeFixed = loadString(Rez.Strings.ModeFixed, "Fixed");
-        _strModeCalorieAuto = loadString(Rez.Strings.ModeCalorieAuto, "Auto (Calories)");
-        _strSettingCarbsTarget = loadString(Rez.Strings.SettingCarbsTarget, "Carbs target");
-        _strSettingDoseSize = loadString(Rez.Strings.SettingDoseSize, "Dose size");
-        _strSettingCarbFraction = loadString(Rez.Strings.SettingCarbFraction, "Carb fraction");
-        _strSettingFixedInterval = loadString(Rez.Strings.SettingFixedInterval, "Fixed interval");
-        _strSettingStartDelay = loadString(Rez.Strings.SettingStartDelay, "Start delay");
-        _strSettingSnoozeTime = loadString(Rez.Strings.SettingSnoozeTime, "Snooze time");
-        _strLabelConfirmClear = loadString(Rez.Strings.LabelConfirmClear, "Clear session?");
-        _strEnabled = loadString(Rez.Strings.LabelEnabled, "Enabled");
-        _strDisabled = loadString(Rez.Strings.LabelDisabled, "Disabled");
-        _strUnitGramsPerHour = loadString(Rez.Strings.UnitGramsPerHour, "g/h");
-        _strUnitGrams = loadString(Rez.Strings.UnitGrams, "g");
-        _strUnitMinutes = loadString(Rez.Strings.UnitMinutes, "min");
+        _strModeAuto = FuelPlannerUtils.loadString(Rez.Strings.ModeAuto, "Auto");
+        _strModeFixed = FuelPlannerUtils.loadString(Rez.Strings.ModeFixed, "Fixed");
+        _strModeCalorieAuto = FuelPlannerUtils.loadString(Rez.Strings.ModeCalorieAuto, "Auto (Calories)");
+        _strSettingCarbsTarget = FuelPlannerUtils.loadString(Rez.Strings.SettingCarbsTarget, "Carbs target");
+        _strSettingDoseSize = FuelPlannerUtils.loadString(Rez.Strings.SettingDoseSize, "Dose size");
+        _strSettingCarbFraction = FuelPlannerUtils.loadString(Rez.Strings.SettingCarbFraction, "Carb fraction");
+        _strSettingFixedInterval = FuelPlannerUtils.loadString(Rez.Strings.SettingFixedInterval, "Fixed interval");
+        _strSettingStartDelay = FuelPlannerUtils.loadString(Rez.Strings.SettingStartDelay, "Start delay");
+        _strSettingSnoozeTime = FuelPlannerUtils.loadString(Rez.Strings.SettingSnoozeTime, "Snooze time");
+        _strLabelConfirmClear = FuelPlannerUtils.loadString(Rez.Strings.LabelConfirmClear, "Clear session?");
+        _strEnabled = FuelPlannerUtils.loadString(Rez.Strings.LabelEnabled, "Enabled");
+        _strDisabled = FuelPlannerUtils.loadString(Rez.Strings.LabelDisabled, "Disabled");
+        _strUnitGramsPerHour = FuelPlannerUtils.loadString(Rez.Strings.UnitGramsPerHour, "g/h");
+        _strUnitGrams = FuelPlannerUtils.loadString(Rez.Strings.UnitGrams, "g");
+        _strUnitMinutes = FuelPlannerUtils.loadString(Rez.Strings.UnitMinutes, "min");
         _suffixGph = " " + _strUnitGramsPerHour;
         _suffixGrams = " " + _strUnitGrams;
         _suffixMinutes = " " + _strUnitMinutes;

@@ -77,8 +77,9 @@ class IntegrationTests {
         model.compute(info);
 
         Test.assertMessage(!model.isSessionActive(), "Session should be finished");
-        Test.assertMessage(storage.hasActiveSession(), "Stopped sessions should stay recoverable in storage");
-        Test.assertEqual(4, storage.getSessionState());
+        Test.assertMessage(!storage.hasActiveSession(), "Stopped sessions should clear the active session payload.");
+        Test.assertMessage(storage.hasRecoverySnapshot(), "Stopped sessions should persist a recovery snapshot.");
+        Test.assertMessage(model.isStoppedSession(), "Stopped sessions should remain visible through the recovery layout.");
 
         return true;
     }
@@ -111,6 +112,7 @@ class IntegrationTests {
         }
 
         var deficitBeforePause = model.getDeficitG10();
+        var elapsedBeforePause = model.getElapsedActiveSec();
         logger.debug("deficitBeforePauseG10=" + deficitBeforePause.format("%d"));
 
         // Pause
@@ -136,7 +138,7 @@ class IntegrationTests {
         model.compute(info);
 
         Test.assertMessage(!model.isPaused(), "Should not be paused after resume");
-        Test.assertMessage(model.getElapsedActiveSec() == 300, "Elapsed should still be 300 after resume");
+        Test.assertEqual(elapsedBeforePause, model.getElapsedActiveSec());
 
         // Stop
         info.timerState = Activity.TIMER_STATE_STOPPED;
@@ -208,30 +210,21 @@ class IntegrationTests {
         info.advanceTimerSeconds(1);
         model.compute(info);
 
-        // Progress until reminder is due (deficit >= 25g = 250 g10)
-        // At 60 g/h, need 25 minutes to reach 25g deficit
+        // On non-touch devices, auto-flow books the intake during the due compute tick.
+        // At 60 g/h, 25 minutes reaches the 25g dose threshold.
         for (var i = 0; i < 1500; i += 1) {
             clock.advance(1);
             info.advanceTimerSeconds(1);
             model.compute(info);
 
-            if (model.isReminderDue()) {
-                logger.debug("Reminder due at tick " + i.format("%d"));
+            if (model.getIntakeCount() > 0) {
+                logger.debug("Auto intake at tick " + i.format("%d"));
                 break;
             }
         }
 
-        Test.assertMessage(model.isReminderDue(), "Reminder should be due after 25 minutes");
-
-        // Simulate auto-intake
-        // Note: Auto-intake happens in compute(), so we need to tick again
-        clock.advance(1);
-        info.advanceTimerSeconds(1);
-        model.compute(info);
-
-        // After auto-intake, reminder should be cleared
-        Test.assertMessage(!model.isReminderDue(), "Reminder should be cleared after auto-intake");
         Test.assertMessage(model.getIntakeCount() > 0, "Should have recorded at least one intake");
+        Test.assertMessage(!model.isReminderDue(), "Reminder should be cleared after auto-intake");
 
         return true;
     }
@@ -324,7 +317,6 @@ class IntegrationTests {
             model1.compute(info);
         }
 
-        model1.recordIntake(25);
         info.timerState = Activity.TIMER_STATE_STOPPED;
         model1.compute(info);
         model1.saveSession();
@@ -500,37 +492,32 @@ class IntegrationTests {
         info.advanceTimerSeconds(1);
         model.compute(info);
 
-        // First reminder should be after startDelay + interval = 0 + 20 = 20 minutes
-        // Progress 20 minutes
+        // Non-touch fixed mode books the planned intake when the interval becomes due.
         for (var i = 0; i < 1200; i += 1) {
             clock.advance(1);
             info.advanceTimerSeconds(1);
             model.compute(info);
         }
 
-        Test.assertMessage(model.isReminderDue(), "First reminder should be due after 20 minutes");
+        Test.assertMessage(model.getIntakeCount() > 0, "First fixed-interval due tick should auto-book intake.");
+        Test.assertMessage(!model.isReminderDue(), "Auto-flow should clear the due reminder.");
 
-        // Simulate intake
-        model.recordIntake(25);
-
-        // Next reminder should be 20 minutes after last intake
-        // Progress 19 minutes
+        var intakeCountAfterFirstInterval = model.getIntakeCount();
         for (var i = 0; i < 1140; i += 1) {
             clock.advance(1);
             info.advanceTimerSeconds(1);
             model.compute(info);
         }
 
-        Test.assertMessage(!model.isReminderDue(), "Should not be due yet (19 minutes after last intake)");
+        Test.assertEqual(intakeCountAfterFirstInterval, model.getIntakeCount());
 
-        // Progress 1 more minute
         for (var i = 0; i < 60; i += 1) {
             clock.advance(1);
             info.advanceTimerSeconds(1);
             model.compute(info);
         }
 
-        Test.assertMessage(model.isReminderDue(), "Should be due after 20 minutes from last intake");
+        Test.assertMessage(model.getIntakeCount() > intakeCountAfterFirstInterval, "Second fixed interval should auto-book another intake.");
 
         return true;
     }

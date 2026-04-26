@@ -18,11 +18,6 @@ class FuelPlannerReminderAlert extends WatchUi.DataFieldAlert {
     function onUpdate(dc as Dc) as Void {
         var w = dc.getWidth();
         var h = dc.getHeight();
-        var contentW = w - 24;
-        if (contentW < 40) {
-            contentW = 40;
-        }
-
         dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_RED);
         dc.clear();
         dc.fillRectangle(0, 0, w, h);

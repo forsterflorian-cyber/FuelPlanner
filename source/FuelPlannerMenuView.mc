@@ -119,46 +119,33 @@ class FuelPlannerMenu extends WatchUi.Menu2 {
         }
     }
 
-    private function loadString(resourceId as Lang.ResourceId?, fallback as String) as String {
-        if (resourceId == null) {
-            return fallback;
-        }
-        try {
-            var value = WatchUi.loadResource(resourceId);
-            if (value instanceof String) {
-                return value as String;
-            }
-        } catch (e) {}
-        return fallback;
-    }
-
     private function loadStrings() as Void {
-        _strLabelMenuTitle = loadString(Rez.Strings.LabelMenuTitle, "FuelPlanner");
-        _strSettingCarbsTarget = loadString(Rez.Strings.SettingCarbsTarget, "Carbs target");
-        _strSettingDoseSize = loadString(Rez.Strings.SettingDoseSize, "Dose size");
-        _strSettingReminderMode = loadString(Rez.Strings.SettingReminderMode, "Reminder mode");
-        _strSettingCarbFraction = loadString(Rez.Strings.SettingCarbFraction, "Carb fraction");
-        _strSettingFixedInterval = loadString(Rez.Strings.SettingFixedInterval, "Fixed interval");
-        _strSettingStartDelay = loadString(Rez.Strings.SettingStartDelay, "Start delay");
-        _strSettingSnoozeTime = loadString(Rez.Strings.SettingSnoozeTime, "Snooze time");
-        _strSettingFullScreenAlerts = loadString(Rez.Strings.SettingFullScreenAlerts, "Full-screen alerts");
-        _strLabelPresets = loadString(Rez.Strings.LabelPresets, "Presets");
-        _strPresetRun = loadString(Rez.Strings.PresetRun, "Run");
-        _strPresetRunSub = loadString(Rez.Strings.PresetRunSub, "60 g/h, 25 g");
-        _strPresetBike = loadString(Rez.Strings.PresetBike, "Bike");
-        _strPresetBikeSub = loadString(Rez.Strings.PresetBikeSub, "90 g/h, 30 g");
-        _strPresetHike = loadString(Rez.Strings.PresetHike, "Hike");
-        _strPresetHikeSub = loadString(Rez.Strings.PresetHikeSub, "40 g/h, 20 g");
-        _strLabelClearSession = loadString(Rez.Strings.LabelClearSession, "Clear session");
-        _strLabelClearSessionSub = loadString(Rez.Strings.LabelClearSessionSub, "Delete current data");
-        _strModeAuto = loadString(Rez.Strings.ModeAuto, "Auto");
-        _strModeFixed = loadString(Rez.Strings.ModeFixed, "Fixed");
-        _strModeCalorieAuto = loadString(Rez.Strings.ModeCalorieAuto, "Auto (Calories)");
-        _strEnabled = loadString(Rez.Strings.LabelEnabled, "Enabled");
-        _strDisabled = loadString(Rez.Strings.LabelDisabled, "Disabled");
-        _strUnitGramsPerHour = loadString(Rez.Strings.UnitGramsPerHour, "g/h");
-        _strUnitGrams = loadString(Rez.Strings.UnitGrams, "g");
-        _strUnitMinutes = loadString(Rez.Strings.UnitMinutes, "min");
+        _strLabelMenuTitle = FuelPlannerUtils.loadString(Rez.Strings.LabelMenuTitle, "FuelPlanner");
+        _strSettingCarbsTarget = FuelPlannerUtils.loadString(Rez.Strings.SettingCarbsTarget, "Carbs target");
+        _strSettingDoseSize = FuelPlannerUtils.loadString(Rez.Strings.SettingDoseSize, "Dose size");
+        _strSettingReminderMode = FuelPlannerUtils.loadString(Rez.Strings.SettingReminderMode, "Reminder mode");
+        _strSettingCarbFraction = FuelPlannerUtils.loadString(Rez.Strings.SettingCarbFraction, "Carb fraction");
+        _strSettingFixedInterval = FuelPlannerUtils.loadString(Rez.Strings.SettingFixedInterval, "Fixed interval");
+        _strSettingStartDelay = FuelPlannerUtils.loadString(Rez.Strings.SettingStartDelay, "Start delay");
+        _strSettingSnoozeTime = FuelPlannerUtils.loadString(Rez.Strings.SettingSnoozeTime, "Snooze time");
+        _strSettingFullScreenAlerts = FuelPlannerUtils.loadString(Rez.Strings.SettingFullScreenAlerts, "Full-screen alerts");
+        _strLabelPresets = FuelPlannerUtils.loadString(Rez.Strings.LabelPresets, "Presets");
+        _strPresetRun = FuelPlannerUtils.loadString(Rez.Strings.PresetRun, "Run");
+        _strPresetRunSub = FuelPlannerUtils.loadString(Rez.Strings.PresetRunSub, "60 g/h, 25 g");
+        _strPresetBike = FuelPlannerUtils.loadString(Rez.Strings.PresetBike, "Bike");
+        _strPresetBikeSub = FuelPlannerUtils.loadString(Rez.Strings.PresetBikeSub, "90 g/h, 30 g");
+        _strPresetHike = FuelPlannerUtils.loadString(Rez.Strings.PresetHike, "Hike");
+        _strPresetHikeSub = FuelPlannerUtils.loadString(Rez.Strings.PresetHikeSub, "40 g/h, 20 g");
+        _strLabelClearSession = FuelPlannerUtils.loadString(Rez.Strings.LabelClearSession, "Clear session");
+        _strLabelClearSessionSub = FuelPlannerUtils.loadString(Rez.Strings.LabelClearSessionSub, "Delete current data");
+        _strModeAuto = FuelPlannerUtils.loadString(Rez.Strings.ModeAuto, "Auto");
+        _strModeFixed = FuelPlannerUtils.loadString(Rez.Strings.ModeFixed, "Fixed");
+        _strModeCalorieAuto = FuelPlannerUtils.loadString(Rez.Strings.ModeCalorieAuto, "Auto (Calories)");
+        _strEnabled = FuelPlannerUtils.loadString(Rez.Strings.LabelEnabled, "Enabled");
+        _strDisabled = FuelPlannerUtils.loadString(Rez.Strings.LabelDisabled, "Disabled");
+        _strUnitGramsPerHour = FuelPlannerUtils.loadString(Rez.Strings.UnitGramsPerHour, "g/h");
+        _strUnitGrams = FuelPlannerUtils.loadString(Rez.Strings.UnitGrams, "g");
+        _strUnitMinutes = FuelPlannerUtils.loadString(Rez.Strings.UnitMinutes, "min");
     }
 
     private function modeLabel(mode as Number, intervalMin as Number) as String {

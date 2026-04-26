@@ -1,4 +1,3 @@
-import Toybox.Application;
 import Toybox.Application.Storage;
 import Toybox.Application.Properties;
 import Toybox.Lang;
