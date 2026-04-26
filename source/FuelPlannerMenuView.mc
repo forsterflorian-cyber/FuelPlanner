@@ -2,7 +2,6 @@ import Toybox.Lang;
 import Toybox.WatchUi;
 
 //! Main settings menu
-(:full)
 class FuelPlannerMenu extends WatchUi.Menu2 {
 
     // Direct item references so delegates can update sub-labels without findItemById
@@ -162,7 +161,6 @@ class FuelPlannerMenu extends WatchUi.Menu2 {
 }
 
 //! Number picker for settings
-(:full)
 class NumberPickerView extends WatchUi.Menu2 {
 
     function initialize(title as String, current as Number, min as Number,

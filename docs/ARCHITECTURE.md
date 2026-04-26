@@ -203,24 +203,22 @@ nextDueSec = ceil((doseG10 - deficitG10) * 3600 / carbsRateGph10)
 **Display Layout**:
 ```
 ┌─────────────────────────────────────────────┐
-│  [Gauge]                          [Gauge]   │
+│         Outer reminder ring                 │
 │                                             │
 │           Next 2:30                         │
 │                                             │
 │          150/300 g                          │
 │                                             │
-│        Plan 60 g/h                          │
-│                                             │
 │         Behind 25 g                         │
 │                                             │
 │        1h23m | 6x                           │
 │                                             │
-│           Tap 25 g                          │
+│        Plan 60 g/h                          │
 └─────────────────────────────────────────────┘
 
 States:
 - No session: "FuelPlanner" + "Waiting for activity..."
-- Active: Status + consumed/target + rate label + deficit + meta
+- Active: Status + consumed/target + deficit + meta + optional rate label
 - Paused: "PAUSED" (yellow)
 - Reminder due: "FUEL NOW" (blinking red)
 - Recovery: "Fueling OK" (green) or "Recovery +XXg" (orange)
@@ -242,9 +240,11 @@ States:
 │                                             │
 │                                             │
 ├─────────────────────────────────────────────┤
-│          (bottom 20% - no action)           │
+│          Undo Zone (bottom 20%)             │
 └─────────────────────────────────────────────┘
 ```
+
+The top zone snoozes only while a reminder is due. The bottom zone performs an undo only when the model exposes an undoable intake; otherwise edge taps are ignored.
 
 ## Data Flow
 
@@ -296,7 +296,7 @@ States:
 The project uses Connect IQ compile-time attributes for test-only and feature-gated code:
 
 ```monkeyc
-(:full)    // Standard shipped product path
+standard shipped product path
 (:test)    // Test-only code
 (:testsupport) // Test helpers
 ```
@@ -308,7 +308,7 @@ Connect IQ devices have limited heap (typically 32-128 KB). FuelPlaner minimizes
 1. **Module-level constants**: Stored in bytecode, not heap
 2. **Lazy initialization**: Vibe profiles created on first use
 3. **Integer arithmetic**: g10 (tenths of grams) avoids Float where possible
-4. **No string concatenation in hot paths**: Pre-computed strings
+4. **Bounded hot-path string work**: Shared string loading and short formatted labels
 5. **Minimal object allocation**: Reuse existing objects
 
 **Memory Budget** (estimated):
@@ -400,7 +400,7 @@ Examples:
    FieldView
    ├── StatusComponent
    ├── NumberComponent
-   ├── GaugeComponent
+   ├── RingComponent
    └── MetaComponent
    ```
 

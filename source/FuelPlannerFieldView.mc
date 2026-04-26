@@ -5,7 +5,6 @@ import Toybox.System;
 import Toybox.Lang;
 import FuelPlannerLog;
 //! Data Field View for FuelPlanner - responsive, top-to-bottom layout
-(:full)
 class FuelPlannerFieldView extends WatchUi.DataField {
 
     private var _model as FuelModel;
@@ -31,12 +30,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private const RING_STROKE_MAX_PX = 18;
     private const RING_PADDING_MIN_PX = 4;
     private const RING_PADDING_MAX_PX = 12;
-
-    // Blink state for "FUEL NOW" indicator
-    private var _blinkState    as Boolean = false;
-    private var _lastBlinkTime as Number  = 0;
-    private const BLINK_INTERVAL = 500;
-
+    private const ROUND_EDGE_PADDING_PX = 8;
 
     // Last known field size (for tap zone mapping in multi-field layouts)
     private var _lastFieldWidth as Number = 0;
@@ -120,11 +114,6 @@ class FuelPlannerFieldView extends WatchUi.DataField {
                 _model.recordReminderTriggered();
                 presentReminderNotification();
             }
-        }       
-        var now = System.getTimer();
-        if (now - _lastBlinkTime >= BLINK_INTERVAL) {
-            _blinkState    = !_blinkState;
-            _lastBlinkTime = now;
         }
     }
 
@@ -203,7 +192,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         if (info == null) {
             return false;
         }
-        return isTimerStateStoppedOrOff(info);
+        return FuelPlannerUtils.isTimerStateStoppedOrOff(info);
     }
 
 
@@ -363,7 +352,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             sideInset = (w - contentW) / 2;
         }
         var contentTop = getContentTopInset(h);
-        var contentBottom = h - getContentBottomInset(w, h, touchEnabled);
+        var contentBottom = h - getContentBottomInset(h);
         var contentH = contentBottom - contentTop;
         if (contentH < 40) {
             contentH = h;
@@ -411,8 +400,8 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         var rateText = buildRateLabel();
         var showRateRow = contentH >= 150;
 
-        // Keep the typography inside a centered inner column so we can later
-        // swap the side bars for a perimeter ring without moving the text again.
+        // Keep the typography inside a centered inner column so the perimeter
+        // ring remains readable without crowding the text.
         var statusFont = getBestFontForBox(dc, statusText, contentW, getScaledValue(contentH, STATUS_ROW_RATIO, 14, 32), false);
         var primaryFont = getBestFontForBox(dc, numStr, contentW, getScaledValue(contentH, PRIMARY_ROW_RATIO, 24, 60), true);
         var deficitFont = getBestFontForBox(dc, deficitText, contentW, getScaledValue(contentH, DEFICIT_ROW_RATIO, 14, 28), false);
@@ -458,11 +447,11 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             dc.drawText(cx, y, rateFont, rateText, Graphics.TEXT_JUSTIFY_CENTER);
         }
 
-        drawOuterRing(dc, w, h, dimColor, touchEnabled);
+        drawOuterRing(dc, w, h, dimColor);
     }
 
     private function drawOuterRing(dc as Dc, w as Number, h as Number,
-                                   dimColor as Number, touchEnabled as Boolean) as Void {
+                                   dimColor as Number) as Void {
         var diameter = (w < h) ? w : h;
         if (diameter < 96) {
             return;
@@ -486,14 +475,6 @@ class FuelPlannerFieldView extends WatchUi.DataField {
 
         dc.setColor(ringColor, Graphics.COLOR_TRANSPARENT);
         dc.drawCircle(cx, cy, radius);
-    }
-
-    private function getSafeTopInset(h as Number) as Number {
-        return SAFE_TOP_PX;
-    }
-
-    private function getSafeBottomInset(w as Number, h as Number, touchEnabled as Boolean) as Number {
-        return SAFE_BOTTOM_PX;
     }
 
     private function getRowGap(h as Number) as Number {
@@ -573,13 +554,9 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         return COLOR_GOOD;
     }
 
-    private function getRoundEdgePadding(w as Number) as Number {
-        return 8;
-    }
-
     private function getContentSideInset(w as Number) as Number {
         var inset = getScaledValue(w, CONTENT_SIDE_RATIO, CONTENT_MIN_SIDE_PX, 44);
-        var ringInset = getRingStrokeWidth(w) + getRingPadding(w) + getRoundEdgePadding(w);
+        var ringInset = getRingStrokeWidth(w) + getRingPadding(w) + ROUND_EDGE_PADDING_PX;
         if (ringInset > inset) {
             inset = ringInset;
         }
@@ -588,18 +565,16 @@ class FuelPlannerFieldView extends WatchUi.DataField {
 
     private function getContentTopInset(h as Number) as Number {
         var inset = getScaledValue(h, CONTENT_VERTICAL_RATIO, CONTENT_MIN_TOP_PX, 36);
-        var safeTop = getSafeTopInset(h);
-        if (safeTop > inset) {
-            inset = safeTop;
+        if (SAFE_TOP_PX > inset) {
+            inset = SAFE_TOP_PX;
         }
         return inset;
     }
 
-    private function getContentBottomInset(w as Number, h as Number, touchEnabled as Boolean) as Number {
+    private function getContentBottomInset(h as Number) as Number {
         var inset = getScaledValue(h, CONTENT_VERTICAL_RATIO, CONTENT_MIN_BOTTOM_PX, 40);
-        var safeBottom = getSafeBottomInset(w, h, touchEnabled);
-        if (safeBottom > inset) {
-            inset = safeBottom;
+        if (SAFE_BOTTOM_PX > inset) {
+            inset = SAFE_BOTTOM_PX;
         }
         return inset;
     }
@@ -639,10 +614,6 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             return deficitText;
         }
         return buildRateLabel();
-    }
-
-    private function isTimerStateStoppedOrOff(info as Activity.Info) as Boolean {
-        return FuelPlannerUtils.isTimerStateStoppedOrOff(info);
     }
 
     //! Format seconds as m:ss or Xh:mm

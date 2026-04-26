@@ -8,24 +8,15 @@ class FuelPlannerApp extends Application.AppBase {
     private var _model as FuelModel? = null;
     private var _storage as StorageManager? = null;
     private var _reminder as ReminderManager? = null;
-    (:full)
     private var _fieldDeficit as FitContributor.Field? = null;
-    (:full)
     private var _fieldConsumed as FitContributor.Field? = null;
-    (:full)
     private var _fieldTargetSummary as FitContributor.Field? = null;
-    (:full)
     private var _fieldActualSummary as FitContributor.Field? = null;
 
-    (:full)
     private const FIT_FIELD_ID_DEFICIT = 0;
-    (:full)
     private const FIT_FIELD_ID_CONSUMED = 1;
-    (:full)
     private const FIT_FIELD_ID_TARGET_SUMMARY = 2;
-    (:full)
     private const FIT_FIELD_ID_ACTUAL_SUMMARY = 3;
-    (:full)
     private const FIT_UNIT_GRAMS = "g";
 
     public function initialize() {
@@ -41,7 +32,6 @@ class FuelPlannerApp extends Application.AppBase {
         model.loadSession();
     }
 
-    (:full)
     public function onStop(state as Dictionary?) as Void {
         if (_model != null) {
             var model = _model as FuelModel;
@@ -67,7 +57,6 @@ class FuelPlannerApp extends Application.AppBase {
         WatchUi.requestUpdate();
     }
 
-    (:full)
     public function getInitialView() as [Views] or [Views, InputDelegates] {
         if (_model == null || _storage == null || _reminder == null) {
             _storage = new StorageManager(null, null);
@@ -85,7 +74,6 @@ class FuelPlannerApp extends Application.AppBase {
         return [view, inputDelegate];
     }
 
-    (:full)
     private function ensureFitFields(view as FuelPlannerFieldView) as Void {
         if (_fieldDeficit == null) {
             try {
@@ -140,7 +128,6 @@ class FuelPlannerApp extends Application.AppBase {
         }
     }
 
-    (:full)
     private function getActualIntakeSummaryLabel() as String {
         // The same FIT field is used for manual touch logging and the non-touch auto-flow.
         // Keep the label neutral because Connect IQ resource labels are static, while the
@@ -148,7 +135,6 @@ class FuelPlannerApp extends Application.AppBase {
         return FuelPlannerUtils.loadString(Rez.Strings.FitActualIntakeSummaryLabel, "Intake / Estimate");
     }
 
-    (:full)
     public function getSettingsView() as [Views] or [Views, InputDelegates] or Null {
         if (_storage == null) {
             _storage = new StorageManager(null, null);

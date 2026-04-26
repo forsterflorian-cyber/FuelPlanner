@@ -256,7 +256,6 @@ class MemoryTests {
         info.setTimerSeconds(900);
 
         invokeViewCompute(view, info);
-        System.println("render_cleanup_note drawFuelInfo_missing=true cleanup_target=frame_snapshots");
 
         var baselineStats = sampleSettledMemory("render_baseline", 6);
         var peak = updatePeak(

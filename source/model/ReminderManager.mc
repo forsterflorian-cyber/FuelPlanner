@@ -17,11 +17,8 @@ class ReminderManager {
     private var _minVibInterval as Number = 2000; // Minimum 2 seconds between vibes
     private var _intakeReminderPattern as Array<Attention.VibeProfile>? = null;
     private var _autoIntakePattern as Array<Attention.VibeProfile>? = null;
-    (:full)
     private var _confirmationPattern as Array<Attention.VibeProfile>? = null;
-    (:full)
     private var _snoozePattern as Array<Attention.VibeProfile>? = null;
-    (:full)
     private var _undoPattern as Array<Attention.VibeProfile>? = null;
     
     //! Constructor
@@ -53,7 +50,6 @@ class ReminderManager {
         return _autoIntakePattern as Array<Attention.VibeProfile>;
     }
 
-    (:full)
     private function getConfirmationPattern() as Array<Attention.VibeProfile> {
         if (_confirmationPattern == null) {
             _confirmationPattern = [
@@ -65,7 +61,6 @@ class ReminderManager {
         return _confirmationPattern as Array<Attention.VibeProfile>;
     }
 
-    (:full)
     private function getSnoozePattern() as Array<Attention.VibeProfile> {
         if (_snoozePattern == null) {
             _snoozePattern = [
@@ -75,7 +70,6 @@ class ReminderManager {
         return _snoozePattern as Array<Attention.VibeProfile>;
     }
 
-    (:full)
     private function getUndoPattern() as Array<Attention.VibeProfile> {
         if (_undoPattern == null) {
             // Triple pulse: deutlich anders als Confirmation (double pulse)
@@ -182,7 +176,6 @@ class ReminderManager {
     }
     
     //! Trigger confirmation vibration (after intake recorded)
-    (:full)
     function triggerConfirmation() as Boolean {
         if (!_hasVibration) {
             return false;
@@ -210,7 +203,6 @@ class ReminderManager {
     }
 
     //! Trigger snooze confirmation
-    (:full)
     function triggerSnooze() as Boolean {
         if (!_hasVibration) {
             return false;
@@ -220,7 +212,6 @@ class ReminderManager {
     }
 
     //! Trigger undo confirmation (triple pulse - distinct from intake confirmation)
-    (:full)
     function triggerUndo() as Boolean {
         if (!_hasVibration) {
             return false;

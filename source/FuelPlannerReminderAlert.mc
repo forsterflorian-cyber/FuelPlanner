@@ -2,7 +2,6 @@ import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.WatchUi;
 
-(:full)
 class FuelPlannerReminderAlert extends WatchUi.DataFieldAlert {
     private var _titleText as String;
     private var _doseText as String;

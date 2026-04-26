@@ -11,7 +11,6 @@
     <string id="SettingSnoozeTime">Sluimertijd (min)</string>
     <string id="SettingFullScreenAlerts">Native schermvullende meldingen</string>
     <string id="SettingCarbFraction">KH-% van kcal</string>
-    <string id="SettingSportPreset">Sportpreset</string>
 
     <!-- Reminder Modes -->
     <string id="ModeAuto">Auto (tekort)</string>
@@ -29,10 +28,6 @@
     <!-- Field View: status row -->
     <string id="LabelPaused">GEPAUZEERD</string>
     <string id="LabelFuelNow">NU INNEMEN</string>
-    <string id="LabelTapPrefix">TIK +</string>
-    <string id="LabelHoldPrefix">DOWN +</string>
-    <string id="LabelLapUndoHint">LAP ingedrukt = undo</string>
-    <string id="LabelLapUndoShort">LAP undo</string>
     <string id="LabelNext">Volgende</string>
     <string id="LabelAutoFlowStatus">AUTO-FLOW</string>
 
@@ -45,8 +40,6 @@
     <string id="LabelRateTargetPrefix">Plan</string>
     <string id="LabelRateAutoCarbsSuffix">% KH</string>
     <string id="LabelRateAutoNoData">Auto (geen cal-data)</string>
-    <string id="LabelEnableTouchForManual">Schakel touch in voor inname</string>
-    <string id="LabelAutoFlowActive">AUTO-FLOW actief</string>
     <string id="LabelRecovery">Herstel</string>
     <string id="LabelRecoveryAction">Aanvullen</string>
     <string id="LabelFuelingOk">Voeding OK</string>
@@ -74,5 +67,4 @@
     <string id="FitConsumedDataLabel">Totale inname</string>
     <string id="FitTargetCarbsSummaryLabel">Geplande KH</string>
     <string id="FitActualIntakeSummaryLabel">Inname / schatting</string>
-    <string id="FitActualIntakeEstimateSummaryLabel">Inname / schatting</string>
 </strings>

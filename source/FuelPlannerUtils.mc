@@ -3,7 +3,7 @@ import Toybox.Lang;
 import Toybox.WatchUi;
 
 //! Gemeinsame Utility-Funktionen für FuelPlaner
-//! Vermeidet Code-Duplikation zwischen FuelModel, FieldView und FieldViewInstinct3
+//! Vermeidet Code-Duplikation zwischen Model-, View- und Menu-Code
 module FuelPlannerUtils {
 
     //! Prüft ob der Timer gestoppt oder ausgeschaltet ist
@@ -26,8 +26,8 @@ module FuelPlannerUtils {
         return false;
     }
 
-    //! Zentrale Resource-String-Laden-Funktion
-    //! Eliminiert Code-Duplikation in 5 Dateien
+    //! Zentrale Resource-String-Ladefunktion
+    //! Haelt Fallback-Handling an einer Stelle
     function loadString(resourceId as Lang.ResourceId?, fallback as String) as String {
         if (resourceId == null) {
             return fallback;

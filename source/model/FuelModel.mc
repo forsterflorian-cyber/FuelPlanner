@@ -116,11 +116,8 @@ class FuelModel {
     private var _timerBacktrackCount as Number = 0;
 
     // For undo functionality
-    (:full)
     private var _undoAvailable      as Boolean = false;
-    (:full)
     private var _undoGramsG10       as Number = 0;
-    (:full)
     private var _undoTimestamp      as Number = 0;
 
     //! Constructor
@@ -184,7 +181,6 @@ class FuelModel {
         }
     }
 
-    (:full)
     function setFitFields(fieldDeficit as FitContributor.Field?,
                           fieldConsumed as FitContributor.Field?,
                           fieldTargetSummary as FitContributor.Field?,
@@ -488,7 +484,6 @@ class FuelModel {
         resetDisplayValues();
     }
 
-    (:full)
     private function markSessionFinished() as Void {
         if (_sessionState == STATE_IDLE) {
             return;
@@ -516,30 +511,6 @@ class FuelModel {
         loadRecoverySnapshot();
     }
 
-    (:lite)
-    private function markSessionFinished() as Void {
-        if (_sessionState == STATE_IDLE) {
-            return;
-        }
-
-        calculateTargetAndDeficit();
-        storeRecoverySnapshot(_targetTotalG, _consumedTotalG, _elapsedActiveSec, _intakeCount);
-        _storage.clearActiveSession();
-        setSessionState(STATE_IDLE);
-        _sessionRecoverable = false;
-        _pauseStartTimerS = null;
-        _pauseStartClockTs = null;
-        _lastReminderTimestamp = 0;
-        _isReminderDue = false;
-        _autoIntakeLocked = false;
-        _autoIntakeEventPending = false;
-        _startTimestamp = 0;
-        _lastIntakeTimestamp = 0;
-        _sessionId = 0;
-        _isStartTimestampConfirmed = false;
-        _sessionFinishHandled = true;
-        loadRecoverySnapshot();
-    }
     //! Main compute function — call every tick (1 Hz)
     function compute(info) as Void {
         if (info == null) {
@@ -676,12 +647,7 @@ class FuelModel {
         updateFitFields();
     }
 
-    (:lite)
-    private function detectTouchScreen() as Boolean {
-        return false;
-    }
 
-    (:full)
     private function detectTouchScreen() as Boolean {
         try {
             var settings = System.getDeviceSettings();
@@ -696,19 +662,13 @@ class FuelModel {
         return false;
     }
 
-    (:full)
     private function clampSetting(value as Number, min as Number, max as Number) as Number {
         if (value < min) { return min; }
         if (value > max) { return max; }
         return value;
     }
 
-    (:lite)
-    private function clampSetting(value as Number, min as Number, max as Number) as Number {
-        return value;
-    }
 
-    (:full)
     private function clampElapsedActiveSec(value as Number) as Number {
         if (value < 0) {
             return 0;
@@ -719,12 +679,7 @@ class FuelModel {
         return value;
     }
 
-    (:lite)
-    private function clampElapsedActiveSec(value as Number) as Number {
-        return value;
-    }
 
-    (:full)
     private function clampTotalG10(value as Number) as Number {
         if (value > FuelModelConsts.MAX_TOTAL_G10) {
             return FuelModelConsts.MAX_TOTAL_G10;
@@ -735,12 +690,7 @@ class FuelModel {
         return value;
     }
 
-    (:lite)
-    private function clampTotalG10(value as Number) as Number {
-        return value;
-    }
 
-    (:full)
     private function clampNonNegativeTotalG10(value as Number) as Number {
         if (value < 0) {
             return 0;
@@ -751,12 +701,7 @@ class FuelModel {
         return value;
     }
 
-    (:lite)
-    private function clampNonNegativeTotalG10(value as Number) as Number {
-        return value;
-    }
 
-    (:full)
     private function clampNextDueSec(value as Number) as Number {
         if (value < 0) {
             return 0;
@@ -767,12 +712,7 @@ class FuelModel {
         return value;
     }
 
-    (:lite)
-    private function clampNextDueSec(value as Number) as Number {
-        return value;
-    }
 
-    (:full)
     private function shiftReminderReferenceTimestamps(pausedDurationSec as Number) as Void {
         if (pausedDurationSec <= 0) {
             return;
@@ -786,11 +726,7 @@ class FuelModel {
         }
     }
 
-    (:lite)
-    private function shiftReminderReferenceTimestamps(pausedDurationSec as Number) as Void {
-    }
 
-    (:full)
     private function getSnoozeRemainingSec(nowTimestamp as Number) as Number {
         if (_lastReminderTimestamp <= 0) {
             return 0;
@@ -804,12 +740,7 @@ class FuelModel {
         return clampNextDueSec(snoozeSec - elapsedSinceReminder);
     }
 
-    (:lite)
-    private function getSnoozeRemainingSec(nowTimestamp as Number) as Number {
-        return 0;
-    }
 
-    (:full)
     private function isLikelyTimerReset(rawTimerSec as Number) as Boolean {
         if (_elapsedActiveSec <= 0) {
             _timerBacktrackCount = 0;
@@ -838,25 +769,7 @@ class FuelModel {
         return true;
     }
 
-    (:lite)
-    private function isLikelyTimerReset(rawTimerSec as Number) as Boolean {
-        if (_elapsedActiveSec <= 0) {
-            return false;
-        }
 
-        if (rawTimerSec > 5) {
-            return false;
-        }
-
-        var delta = _elapsedActiveSec - rawTimerSec;
-        if (delta < FuelModelConsts.TIMER_BACKTRACK_RESET_DELTA_SEC) {
-            return false;
-        }
-
-        return true;
-    }
-
-    (:full)
     private function applyAutoIntakeIfDue() as Void {
         if (_isTouch) {
             _autoIntakeLocked = false;
@@ -890,35 +803,7 @@ class FuelModel {
         checkReminderDue();
     }
 
-    (:lite)
-    private function applyAutoIntakeIfDue() as Void {
-        if (!_isReminderDue) {
-            _autoIntakeLocked = false;
-            _autoIntakeEventPending = false;
-            return;
-        }
 
-        if (_autoIntakeLocked) {
-            return;
-        }
-
-        var intakeCountBefore = _intakeCount;
-        _autoIntakeLocked = true;
-        recordDefaultIntake();
-        if (_intakeCount <= intakeCountBefore) {
-            // Intake was not booked (e.g. unexpected validation/storage issue) -> allow retry.
-            _autoIntakeLocked = false;
-            _autoIntakeEventPending = false;
-            return;
-        }
-        _autoIntakeEventPending = true;
-        recordReminderTriggered();
-        _deficitG = _targetTotalG - _consumedTotalG;
-        calculateNextDue();
-        checkReminderDue();
-    }
-
-    (:full)
     private function updateFitFields() as Void {
         if (!isSessionActive()) {
             _forceNextFitFieldUpdate = true;
@@ -952,12 +837,7 @@ class FuelModel {
         writeFitSessionSummary(_fitFieldTargetSummary, _fitFieldActualSummary);
     }
 
-    (:lite)
-    private function updateFitFields() as Void {
-        _forceNextFitFieldUpdate = true;
-    }
 
-    (:full)
     function flushFitSessionSummary() as Void {
         // Session FIT fields are summary values. Write them whenever fields exist,
         // including the final stop/recovery phase where _sessionActive is already false.
@@ -967,11 +847,7 @@ class FuelModel {
         writeFitSessionSummary(_fitFieldTargetSummary, _fitFieldActualSummary);
     }
 
-    (:lite)
-    function flushFitSessionSummary() as Void {
-    }
 
-    (:full)
     private function writeFitSessionSummary(fieldTargetSummary as FitContributor.Field?,
                                             fieldActualSummary as FitContributor.Field?) as Void {
         try {
@@ -991,7 +867,6 @@ class FuelModel {
         }
     }
 
-    (:full)
     private function getTimerTime(info) as Number? {
         try {
             if (info has :timerTime) {
@@ -1014,29 +889,7 @@ class FuelModel {
         return null;
     }
 
-    (:lite)
-    private function getTimerTime(info) as Number? {
-        try {
-            if (info has :timerTime) {
-                var timerTime = getNonNegativeNumberOrNull(info.timerTime);
-                if (timerTime != null) {
-                    return timerTime;
-                }
-            }
-        } catch (e) {}
 
-        try {
-            if (info has :elapsedTime) {
-                var elapsedTime = getNonNegativeNumberOrNull(info.elapsedTime);
-                if (elapsedTime != null) {
-                    return elapsedTime;
-                }
-            }
-        } catch (e) {}
-        return null;
-    }
-
-    (:full)
     private function getActivityStartTimestamp(info) as Number? {
         try {
             if (info has :startTime && info.startTime != null) {
@@ -1048,17 +901,7 @@ class FuelModel {
         return null;
     }
 
-    (:lite)
-    private function getActivityStartTimestamp(info) as Number? {
-        try {
-            if (info has :startTime && info.startTime != null) {
-                return info.startTime.value();
-            }
-        } catch (e) {}
-        return null;
-    }
 
-    (:full)
     private function isTimerStatePaused(info) as Boolean {
         try {
             if (info has :timerState &&
@@ -1070,29 +913,12 @@ class FuelModel {
         return false;
     }
 
-    (:lite)
-    private function isTimerStatePaused(info) as Boolean {
-        try {
-            if (info has :timerState &&
-                Activity has :TIMER_STATE_PAUSED &&
-                info.timerState == Activity.TIMER_STATE_PAUSED) {
-                return true;
-            }
-        } catch (e) {}
-        return false;
-    }
 
-    (:full)
     private function isTimerStateStoppedOrOff(info) as Boolean {
         return FuelPlannerUtils.isTimerStateStoppedOrOff(info);
     }
 
-    (:lite)
-    private function isTimerStateStoppedOrOff(info) as Boolean {
-        return FuelPlannerUtils.isTimerStateStoppedOrOff(info);
-    }
 
-    (:full)
     private function getEffectiveTimerSec(rawTimerSec as Number,
                                           timerStatePaused as Boolean) as Number {
         if (timerStatePaused) {
@@ -1124,39 +950,7 @@ class FuelModel {
         return effectiveSec;
     }
 
-    (:lite)
-    private function getEffectiveTimerSec(rawTimerSec as Number,
-                                          timerStatePaused as Boolean) as Number {
-        if (timerStatePaused) {
-            if (_pauseStartTimerS == null) {
-                _pauseStartTimerS = rawTimerSec;
-            }
 
-            var pauseStartForFreeze = (_pauseStartTimerS != null) ? _pauseStartTimerS : rawTimerSec;
-            var frozenSec = pauseStartForFreeze - _pausedTimerOffsetS;
-            if (frozenSec < 0) {
-                frozenSec = 0;
-            }
-            return frozenSec;
-        }
-
-        if (_pauseStartTimerS != null) {
-            var pauseStartForDelta = (_pauseStartTimerS != null) ? _pauseStartTimerS : rawTimerSec;
-            var pausedDuration = rawTimerSec - pauseStartForDelta;
-            if (pausedDuration > 0) {
-                _pausedTimerOffsetS += pausedDuration;
-            }
-            _pauseStartTimerS = null;
-        }
-
-        var effectiveSec = rawTimerSec - _pausedTimerOffsetS;
-        if (effectiveSec < 0) {
-            effectiveSec = 0;
-        }
-        return effectiveSec;
-    }
-
-    (:full)
     private function updateCalorieData(info) as Void {
         var hasCalorieDataThisTick = false;
 
@@ -1220,66 +1014,8 @@ class FuelModel {
         }
     }
 
-    (:lite)
-    private function updateCalorieData(info) as Void {
-        var hasCalorieDataThisTick = false;
 
-        try {
-            if (info has :calories) {
-                var calories = getNonNegativeNumberOrNull(info.calories);
-                if (calories != null) {
-                    if (calories > FuelModelConsts.MAX_CALORIES_KCAL) {
-                        calories = FuelModelConsts.MAX_CALORIES_KCAL;
-                    }
-                    if (!_caloriesAvailable || calories >= _latestCaloriesKcal) {
-                        _latestCaloriesKcal = calories;
-                    }
-                    _caloriesAvailable = true;
-                    hasCalorieDataThisTick = true;
-                }
-            }
-        } catch (e) {}
 
-        try {
-            if (info has :energyExpenditure) {
-                var energyRate = toFloatOrNull(info.energyExpenditure);
-                if (energyRate != null && energyRate > 0.0f) {
-                    if (energyRate > FuelModelConsts.MAX_ENERGY_RATE_KCAL_MIN) {
-                        energyRate = FuelModelConsts.MAX_ENERGY_RATE_KCAL_MIN;
-                    }
-                    _latestEnergyExpKcalMin = energyRate;
-                }
-            }
-        } catch (e) {}
-
-        if (_reminderMode == MODE_CALORIE_AUTO) {
-            if (hasCalorieDataThisTick) {
-                _calorieDataMissingTicks = 0;
-                if (_calorieAutoSuspendedUntilSec > 0 &&
-                    _elapsedActiveSec >= _calorieAutoSuspendedUntilSec) {
-                    _calorieAutoSuspendedUntilSec = 0;
-                }
-            } else {
-                _calorieDataMissingTicks += 1;
-                if (_calorieDataMissingTicks >= CALORIE_FALLBACK_TICKS) {
-                    _reminderMode = MODE_AUTO;
-                    _calorieDataMissingTicks = 0;
-                    _calorieAutoSuspendedUntilSec = _elapsedActiveSec + CALORIE_SUSPEND_DURATION_SEC;
-                }
-            }
-        }
-
-        if (_calorieAutoSuspendedUntilSec > 0 &&
-            hasCalorieDataThisTick &&
-            _elapsedActiveSec >= _calorieAutoSuspendedUntilSec) {
-            _reminderMode = MODE_CALORIE_AUTO;
-            _calorieAutoSuspendedUntilSec = 0;
-            calculateNextDue();
-            checkReminderDue();
-        }
-    }
-
-    (:lite)
     private function toNumberOrNull(value as Lang.Object?) as Number? {
         if (value instanceof Number) {
             return value;
@@ -1287,15 +1023,7 @@ class FuelModel {
         return null;
     }
 
-    (:full)
-    private function toNumberOrNull(value as Lang.Object?) as Number? {
-        if (value instanceof Number) {
-            return value;
-        }
-        return null;
-    }
 
-    (:lite)
     private function getNonNegativeNumberOrNull(value as Lang.Object?) as Number? {
         var numberValue = toNumberOrNull(value);
         if (numberValue != null && numberValue >= 0) {
@@ -1304,27 +1032,7 @@ class FuelModel {
         return null;
     }
 
-    (:full)
-    private function getNonNegativeNumberOrNull(value as Lang.Object?) as Number? {
-        var numberValue = toNumberOrNull(value);
-        if (numberValue != null && numberValue >= 0) {
-            return numberValue;
-        }
-        return null;
-    }
 
-    (:lite)
-    private function toFloatOrNull(value as Lang.Object?) as Float? {
-        if (value instanceof Float) {
-            return value;
-        }
-        if (value instanceof Number) {
-            return value.toFloat();
-        }
-        return null;
-    }
-
-    (:full)
     private function toFloatOrNull(value as Lang.Object?) as Float? {
         if (value instanceof Float) {
             return value;
@@ -1336,7 +1044,6 @@ class FuelModel {
     }
 
     //! Detect pause from explicit timer state (preferred) or timer stall fallback.
-    (:full)
     private function detectPause(timerTime as Number, timerStatePaused as Boolean) as Boolean {
         var wasPaused = (_sessionState == STATE_PAUSED);
         var pauseDetected = false;
@@ -1386,53 +1093,6 @@ class FuelModel {
         return false;
     }
 
-    (:lite)
-    private function detectPause(timerTime as Number, timerStatePaused as Boolean) as Boolean {
-        var wasPaused = (_sessionState == STATE_PAUSED);
-        var pauseDetected = false;
-
-        if (timerStatePaused) {
-            pauseDetected = true;
-            _timerStallCount = 0;
-            _lastTimerTime = timerTime;
-        } else if (wasPaused && _pauseStartClockTs != null && _lastTimerTime == 0) {
-            pauseDetected = true;
-            _timerStallCount = 1;
-            _lastTimerTime = timerTime;
-        } else if (wasPaused && _pauseStartClockTs != null && timerTime == _lastTimerTime) {
-            pauseDetected = true;
-            _timerStallCount = 1;
-            _lastTimerTime = timerTime;
-        } else if (_lastTimerTime > 0) {
-            if (timerTime == _lastTimerTime) {
-                _timerStallCount += 1;
-                if (_timerStallCount >= 2) {
-                    pauseDetected = true;
-                }
-            } else {
-                _timerStallCount = 0;
-                pauseDetected = false;
-            }
-            _lastTimerTime = timerTime;
-        } else {
-            pauseDetected = false;
-            _lastTimerTime = timerTime;
-        }
-
-        if (pauseDetected) {
-            if (!wasPaused) {
-                _pauseStartClockTs = getCurrentTimestamp();
-            }
-            return true;
-        }
-
-        if (wasPaused && _pauseStartClockTs != null) {
-            shiftReminderReferenceTimestamps(getCurrentTimestamp() - _pauseStartClockTs);
-        }
-        _pauseStartClockTs = null;
-
-        return false;
-    }
 
     private function resetDisplayValues() as Void {
         _elapsedActiveSec   = 0;
@@ -1534,7 +1194,6 @@ class FuelModel {
         return deficitG10;
     }
 
-    (:full)
     private function calculateTargetAndDeficit() as Void {
         _targetTotalG = clampNonNegativeTotalG10(FuelModel.calculateTargetTotalG10(
             _elapsedActiveSec,
@@ -1558,32 +1217,8 @@ class FuelModel {
         ));
     }
 
-    (:lite)
-    private function calculateTargetAndDeficit() as Void {
-        _targetTotalG = clampNonNegativeTotalG10(FuelModel.calculateTargetTotalG10(
-            _elapsedActiveSec,
-            _carbsTargetGph,
-            _reminderMode,
-            _latestCaloriesKcal,
-            _carbFractionPct,
-            _caloriesAvailable,
-            _storage.MIN_CARBS_TARGET_GPH
-        ));
-
-        _deficitG = clampTotalG10(FuelModel.calculateDeficit(
-            _elapsedActiveSec,
-            _consumedTotalG,
-            _carbsTargetGph,
-            _reminderMode,
-            _latestCaloriesKcal,
-            _carbFractionPct,
-            _caloriesAvailable,
-            _storage.MIN_CARBS_TARGET_GPH
-        ));
-    }
 
     //! Recompute target/deficit/reminder timing from current state and settings.
-    (:full)
     private function recalculateFromCurrentState() as Void {
         if (_sessionState == STATE_IDLE) {
             resetDisplayValues();
@@ -1603,32 +1238,12 @@ class FuelModel {
         checkReminderDue();
     }
 
-    (:lite)
-    private function recalculateFromCurrentState() as Void {
-        if (_sessionState == STATE_IDLE) {
-            resetDisplayValues();
-            return;
-        }
-
-        calculateTargetAndDeficit();
-
-        if (_sessionState == STATE_PRIMING ||
-            _sessionState == STATE_PAUSED) {
-            _nextDueInSec = 0;
-            _isReminderDue = false;
-            return;
-        }
-
-        calculateNextDue();
-        checkReminderDue();
-    }
     (:testsupport)
     function setTouchForTest(isTouch as Boolean) as Void {
         _isTouch = isTouch;
     }
 
     //! Calculate time until next intake is due
-    (:full)
     private function calculateNextDue() as Void {
         var safeStartDelayMin = (_startDelayMin >= 0)
             ? _startDelayMin
@@ -1684,62 +1299,8 @@ class FuelModel {
         }
     }
 
-    (:lite)
-    private function calculateNextDue() as Void {
-        var safeStartDelayMin = (_startDelayMin >= 0)
-            ? _startDelayMin
-            : _storage.MIN_START_DELAY_MIN;
-        var safeDoseG10 = (_doseG > 0)
-            ? _doseG * 10
-            : _storage.MIN_DOSE_G * 10;
-        var safeCarbsRateGph10 = (_carbsTargetGph > 0)
-            ? _carbsTargetGph * 10
-            : _storage.MIN_CARBS_TARGET_GPH * 10;
-
-        var startDelaySec = safeStartDelayMin * 60;
-
-        if (_consumedTotalG == 0 && _elapsedActiveSec < startDelaySec) {
-            _nextDueInSec = startDelaySec - _elapsedActiveSec;
-            return;
-        }
-
-        if (_reminderMode == MODE_FIXED) {
-            // Fixed interval from last intake; first reminder after delay + one full interval
-            var safeIntervalMin = (_fixedIntervalMin > 0)
-                ? _fixedIntervalMin
-                : _storage.MIN_FIXED_INTERVAL_MIN;
-            var intervalSec = safeIntervalMin * 60;
-            if (_consumedTotalG == 0) {
-                _nextDueInSec = clampNextDueSec((startDelaySec + intervalSec) - _elapsedActiveSec);
-            } else {
-                var now = getCurrentTimestamp();
-                var safeLastIntakeTimestamp = (_lastIntakeTimestamp > 0) ? _lastIntakeTimestamp : now;
-                _nextDueInSec = clampNextDueSec(intervalSec - (now - safeLastIntakeTimestamp));
-            }
-            return;
-        }
-
-        // MODE_AUTO and MODE_CALORIE_AUTO: deficit-based (all g10)
-        if (_deficitG >= safeDoseG10) {
-            _nextDueInSec = 0;
-        } else {
-            var deficitNeededG10 = safeDoseG10 - _deficitG;
-
-            if (_reminderMode == MODE_CALORIE_AUTO && _latestEnergyExpKcalMin > 0.0f) {
-                var rateNumerator = _latestEnergyExpKcalMin * _carbFractionPct.toFloat();
-                if (rateNumerator > 0.0f) {
-                    _nextDueInSec = clampNextDueSec(((deficitNeededG10.toFloat() * 2400.0f) / rateNumerator).toNumber());
-                } else {
-                    _nextDueInSec = FuelModelConsts.MAX_NEXT_DUE_SEC;
-                }
-            } else {
-                _nextDueInSec = clampNextDueSec(((deficitNeededG10 * 3600) + safeCarbsRateGph10 - 1) / safeCarbsRateGph10);
-            }
-        }
-    }
 
     //! Check if reminder should fire
-    (:full)
     private function checkReminderDue() as Void {
         _isReminderDue = ReminderManager.shouldVibrate(
             _nextDueInSec,
@@ -1751,13 +1312,6 @@ class FuelModel {
             _maxSnoozeMin,
             getCurrentTimestamp()
         );
-    }
-
-    private function getSafeStartDelaySec() as Number {
-        var safeStartDelayMin = (_startDelayMin >= 0)
-            ? _startDelayMin
-            : _storage.MIN_START_DELAY_MIN;
-        return safeStartDelayMin * 60;
     }
 
     private function getSafeDoseG10() as Number {
@@ -1855,21 +1409,7 @@ class FuelModel {
         return RING_TONE_GREEN;
     }
 
-    (:lite)
-    private function checkReminderDue() as Void {
-        _isReminderDue = ReminderManager.shouldVibrate(
-            _nextDueInSec,
-            _isPaused,
-            _consumedTotalG,
-            _elapsedActiveSec,
-            _startDelayMin,
-            _lastReminderTimestamp,
-            _maxSnoozeMin,
-            getCurrentTimestamp()
-        );
-    }
 
-    (:full)
     function recordReminderTriggered() as Void {
         _lastReminderTimestamp = getCurrentTimestamp();
         _isReminderDue = false;
@@ -1877,14 +1417,7 @@ class FuelModel {
         saveSession();
     }
 
-    (:lite)
-    function recordReminderTriggered() as Void {
-        _lastReminderTimestamp = getCurrentTimestamp();
-        _isReminderDue = false;
-        saveSession();
-    }
 
-    (:full)
     function snoozeReminder() as Void {
         if (!_sessionActive) {
             return;
@@ -1895,17 +1428,7 @@ class FuelModel {
         saveSession();
     }
 
-    (:lite)
-    function snoozeReminder() as Void {
-        if (!_sessionActive) {
-            return;
-        }
-        _lastReminderTimestamp = getCurrentTimestamp();
-        _isReminderDue = false;
-        saveSession();
-    }
 
-    (:full)
     function recordIntake(grams as Number) as Void {
         if (!_sessionActive) { return; }
         if (grams <= 0) { return; }
@@ -1935,31 +1458,7 @@ class FuelModel {
         saveSession();
     }
 
-    (:lite)
-    function recordIntake(grams as Number) as Void {
-        if (!_sessionActive) { return; }
-        if (grams <= 0) { return; }
-        var safeGrams = grams;
-        if (safeGrams > FuelModelConsts.MAX_MANUAL_INTAKE_G) {
-            safeGrams = FuelModelConsts.MAX_MANUAL_INTAKE_G;
-        }
 
-        var gramsG10 = gramsToG10(safeGrams);
-        if (gramsG10 <= 0) { return; }
-        var now              = getCurrentTimestamp();
-        _consumedTotalG      = clampNonNegativeTotalG10(_consumedTotalG + gramsG10);
-        _lastIntakeTimestamp = now;
-        _lastReminderTimestamp = 0;
-        _isReminderDue       = false;
-        _autoIntakeLocked    = false;
-        _autoIntakeEventPending = false;
-        _intakeCount        += 1;
-        
-        recalculateFromCurrentState();
-        saveSession();
-    }
-
-    (:full)
     function undoLastIntake() as Boolean {
         if (!_sessionActive || !_undoAvailable) {
             return false;
@@ -1985,12 +1484,7 @@ class FuelModel {
         return true;
     }
 
-    (:lite)
-    function undoLastIntake() as Boolean {
-        return false;
-    }
 
-    (:full)
     function isUndoAvailable() as Boolean {
         if (!_sessionActive || !_undoAvailable) {
             return false;
@@ -1999,12 +1493,7 @@ class FuelModel {
         return (now - _undoTimestamp) <= 10;
     }
 
-    (:lite)
-    function isUndoAvailable() as Boolean {
-        return false;
-    }
 
-    (:full)
     function getUndoRemainingSec() as Number {
         if (!_sessionActive || !_undoAvailable) {
             return 0;
@@ -2017,26 +1506,16 @@ class FuelModel {
         return remaining;
     }
 
-    (:lite)
-    function getUndoRemainingSec() as Number {
-        return 0;
-    }
 
-    (:full)
     function recordDefaultIntake() as Void {
         recordIntake(_doseG);
     }
 
-    (:lite)
-    function recordDefaultIntake() as Void {
-        recordIntake(_doseG);
-    }
 
     private function getCurrentTimestamp() as Number {
         return _clock.now();
     }
 
-    (:full)
     function onTimerLap() as Void {
         if (!_sessionActive) {
             return;
@@ -2045,14 +1524,6 @@ class FuelModel {
         saveSession();
     }
 
-    (:lite)
-    function onTimerLap() as Void {
-        if (!_sessionActive) {
-            return;
-        }
-
-        saveSession();
-    }
 
     // grams is always an integer Number, so * 10 is exact — no Float needed
     private function gramsToG10(grams as Number) as Number {
@@ -2064,10 +1535,7 @@ class FuelModel {
     function isSessionActive()      as Boolean { return _sessionActive; }
     function isPaused()             as Boolean { return _isPaused; }
     function getElapsedActiveSec()  as Number  { return _elapsedActiveSec; }
-    (:full)
     function getElapsedActiveHours()as Float   { return _elapsedActiveSec.toFloat() / 3600.0f; }
-    (:lite)
-    function getElapsedActiveHours()as Float   { return 0.0f; }
     function getConsumedTotalG10()  as Number  { return _consumedTotalG; }
     function getTargetTotalG10()    as Number  { return _targetTotalG; }
     function getDeficitG10()        as Number  { return _deficitG; }
@@ -2089,13 +1557,8 @@ class FuelModel {
     function getReminderMode()      as Number  { return _reminderMode; }
     function getFixedIntervalMin()  as Number  { return _fixedIntervalMin; }
     function isStoppedSession()     as Boolean { return _recoverySnapshotAvailable; }
-    (:full)
     function supportsNativeDataFieldAlert() as Boolean {
         return WatchUi.DataField has :showAlert;
-    }
-    (:lite)
-    function supportsNativeDataFieldAlert() as Boolean {
-        return false;
     }
     function isDataFieldAlertEnabled() as Boolean {
         return _dataFieldAlertEnabled && supportsNativeDataFieldAlert();
@@ -2112,17 +1575,11 @@ class FuelModel {
         return true;
     }
 
-    (:full)
     function getIntakeCount() as Number {
         return _intakeCount;
     }
 
-    (:lite)
-    function getIntakeCount() as Number {
-        return _intakeCount;
-    }
 
-    (:full)
     function getRecoveryDeficit() as Number? {
         if (!_recoverySnapshotAvailable || _recoverySnapshotElapsedSec <= 0) {
             return null;
@@ -2135,17 +1592,5 @@ class FuelModel {
         return (recoveryDeficitG10 + 5) / 10;
     }
 
-    (:lite)
-    function getRecoveryDeficit() as Number? {
-        if (!_recoverySnapshotAvailable || _recoverySnapshotElapsedSec <= 0) {
-            return null;
-        }
-
-        var recoveryDeficitG10 = _recoverySnapshotTargetG10 - _recoverySnapshotConsumedG10;
-        if (recoveryDeficitG10 <= 0) {
-            return null;
-        }
-        return (recoveryDeficitG10 + 5) / 10;
-    }
 
 }

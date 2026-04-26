@@ -10,7 +10,6 @@
     <string id="SettingSnoozeTime">Snooze Time (min)</string>
     <string id="SettingFullScreenAlerts">Native Full-Screen Alerts</string>
     <string id="SettingCarbFraction">Carb % of kcal</string>
-    <string id="SettingSportPreset">Sport Preset</string>
 
     <!-- Reminder Modes -->
     <string id="ModeAuto">Auto (deficit)</string>
@@ -28,10 +27,6 @@
     <!-- Field View: status row -->
     <string id="LabelPaused">PAUSED</string>
     <string id="LabelFuelNow">FUEL NOW!</string>
-    <string id="LabelTapPrefix">TAP +</string>
-    <string id="LabelHoldPrefix">DOWN +</string>
-    <string id="LabelLapUndoHint">LAP hold undo</string>
-    <string id="LabelLapUndoShort">LAP undo</string>
     <string id="LabelNext">Next</string>
     <string id="LabelAutoFlowStatus">AUTO-FLOW</string>
 
@@ -44,8 +39,6 @@
     <string id="LabelRateTargetPrefix">Plan</string>
     <string id="LabelRateAutoCarbsSuffix">% carbs</string>
     <string id="LabelRateAutoNoData">Auto (no cal data)</string>
-    <string id="LabelEnableTouchForManual">Enable Touch for Intake</string>
-    <string id="LabelAutoFlowActive">AUTO-FLOW active</string>
     <string id="LabelRecovery">Recovery</string>
     <string id="LabelRecoveryAction">Refuel</string>
     <string id="LabelFuelingOk">Fueling OK</string>
@@ -74,5 +67,4 @@
     <string id="FitConsumedDataLabel">Total Intake</string>
     <string id="FitTargetCarbsSummaryLabel">Planned Carbs</string>
     <string id="FitActualIntakeSummaryLabel">Intake / Estimate</string>
-    <string id="FitActualIntakeEstimateSummaryLabel">Intake / Estimate</string>
 </strings>

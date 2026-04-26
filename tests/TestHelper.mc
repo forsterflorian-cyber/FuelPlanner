@@ -1,4 +1,3 @@
-import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.System;
 using Toybox.Test;
@@ -76,31 +75,6 @@ class MockActivityInfo {
 
     function setEnergyExpenditure(value as Float) as Void {
         energyExpenditure = value;
-    }
-}
-
-class MockSensorHistory {
-    private var _samples as Array<Dictionary> = [] as Array<Dictionary>;
-
-    function initialize() {
-    }
-
-    function addSample(timestamp as Number, value as Number) as Void {
-        _samples.add({
-            "t" => timestamp,
-            "v" => value
-        });
-    }
-
-    function size() as Number {
-        return _samples.size();
-    }
-
-    function latest() as Dictionary? {
-        if (_samples.size() <= 0) {
-            return null;
-        }
-        return _samples[_samples.size() - 1];
     }
 }
 
@@ -228,37 +202,6 @@ function sampleSettledMemory(label as String, samples as Number) as Dictionary {
     }
     System.println(formatMemoryStats(label, best));
     return best;
-}
-
-function createRenderSurface(width as Number, height as Number) as Dictionary? {
-    try {
-        if (Graphics has :createBufferedBitmap) {
-            var bufferRef = Graphics.createBufferedBitmap({
-                :width => width,
-                :height => height
-            });
-            var bufferedBitmap = bufferRef.get() as Graphics.BufferedBitmap;
-            if (bufferedBitmap != null) {
-                return {
-                    "bitmap" => bufferedBitmap,
-                    "dc" => bufferedBitmap.getDc()
-                };
-            }
-        }
-    } catch (e) {}
-
-    try {
-        var fallbackBitmap = new Graphics.BufferedBitmap({
-            :width => width,
-            :height => height
-        });
-        return {
-            "bitmap" => fallbackBitmap,
-            "dc" => fallbackBitmap.getDc()
-        };
-    } catch (e) {}
-
-    return null;
 }
 
 function simulateCrash(storageBackend as MockStorageBackend,
