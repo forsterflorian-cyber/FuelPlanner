@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <strings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
     <string id="AppName">FuelPlanner</string>
 
@@ -48,7 +49,6 @@
     <!-- Field View: idle screen -->
     <string id="LabelWaiting">Start activity to begin</string>
 
-    
     <string id="LabelMenuTitle">Settings</string>
     <string id="LabelClearSession">Clear Session</string>
     <string id="LabelClearSessionSub">Reset tracking data</string>

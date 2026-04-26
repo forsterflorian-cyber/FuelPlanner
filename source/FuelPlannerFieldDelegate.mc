@@ -2,23 +2,23 @@ import Toybox.Lang;
 import Toybox.WatchUi;
 
 class FuelPlannerFieldDelegate extends WatchUi.InputDelegate {
-    
+
     private var _model as FuelModel;
     private var _reminder as ReminderManager;
     private var _view as FuelPlannerFieldView;
-    
+
     function initialize(model as FuelModel, reminder as ReminderManager, view as FuelPlannerFieldView) {
         InputDelegate.initialize();
         _model = model;
         _reminder = reminder;
         _view = view;
     }
-    
+
     function onTap(clickEvent as WatchUi.ClickEvent) as Boolean {
         if (!_model.isSessionActive()) {
             return true;
         }
-        
+
         var coords = clickEvent.getCoordinates();
         if (coords == null || coords.size() < 2) {
             return true;

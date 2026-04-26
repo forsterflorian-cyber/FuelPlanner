@@ -4,4 +4,4 @@ project.optimization = 3z
 base.sourcePath = source
 
 # Single supported package: build the standard code path only.
-base.excludeAnnotations = test;testsupport
+base.excludeAnnotations = test;testsupport;debug

@@ -1,5 +1,6 @@
 import Toybox.Lang;
 import Toybox.WatchUi;
+import FuelReminderModes;
 
 //! Main settings menu
 class FuelPlannerMenu extends WatchUi.Menu2 {
@@ -148,8 +149,8 @@ class FuelPlannerMenu extends WatchUi.Menu2 {
     }
 
     private function modeLabel(mode as Number, intervalMin as Number) as String {
-        if (mode == 0) { return _strModeAuto; }
-        if (mode == 1) {
+        if (mode == FuelReminderModes.AUTO) { return _strModeAuto; }
+        if (mode == FuelReminderModes.FIXED) {
             return _strModeFixed + " " + intervalMin.format("%d") + " " + _strUnitMinutes;
         }
         return _strModeCalorieAuto;

@@ -5,6 +5,7 @@ import Toybox.FitContributor;
 import Toybox.System;
 import Toybox.WatchUi;
 import FuelPlannerLog;
+import FuelReminderModes;
 
 // Module-level constants: stored in bytecode, not per-instance heap
 module FuelModelConsts {
@@ -18,6 +19,7 @@ module FuelModelConsts {
     const MAX_ENERGY_RATE_KCAL_MIN        = 40.0f;
     const MAX_MANUAL_INTAKE_G             = 200;
     const PRIMING_CONFIRM_SEC = 3;
+    const UNDO_WINDOW_SEC = 10;
 }
 
 class FuelClock {
@@ -32,9 +34,9 @@ class FuelClock {
 //! Core calculation model for fuel planning
 class FuelModel {
     // Reminder modes (class-level const — class prototype, not per-instance heap)
-    public const MODE_AUTO         = 0;  // deficit-based with fixed g/h target
-    public const MODE_FIXED        = 1;  // fixed interval from last intake
-    public const MODE_CALORIE_AUTO = 2;  // target derived from watch calorie data
+    public const MODE_AUTO         = FuelReminderModes.AUTO;         // deficit-based with fixed g/h target
+    public const MODE_FIXED        = FuelReminderModes.FIXED;        // fixed interval from last intake
+    public const MODE_CALORIE_AUTO = FuelReminderModes.CALORIE_AUTO; // target derived from watch calorie data
     public const RING_TONE_GREEN   = 0;
     public const RING_TONE_YELLOW  = 1;
     public const RING_TONE_RED     = 2;
@@ -74,7 +76,7 @@ class FuelModel {
     // Cached settings (_carbsTargetGph10 / _doseG10 computed on-the-fly to save heap slots)
     private var _carbsTargetGph    as Number = 60;
     private var _doseG             as Number = 25;
-    private var _reminderMode      as Number = 0;
+    private var _reminderMode      as Number = FuelReminderModes.AUTO;
     private var _fixedIntervalMin  as Number = 20;
     private var _startDelayMin     as Number = 15;
     private var _maxSnoozeMin      as Number = 5;
@@ -359,6 +361,7 @@ class FuelModel {
         _lastReminderTimestamp = 0;
         _autoIntakeLocked = false;
         _autoIntakeEventPending = false;
+        clearUndoState();
         _consumedTotalG = _recoverySnapshotConsumedG10;
         _intakeCount = _recoverySnapshotIntakeCount;
         _elapsedActiveSec = _recoverySnapshotElapsedSec;
@@ -383,6 +386,7 @@ class FuelModel {
         _lastReminderTimestamp = 0;
         _autoIntakeLocked    = false;
         _autoIntakeEventPending = false;
+        clearUndoState();
         _sessionRecoverable = true;
 
         if (activityStartTs != null) {
@@ -503,6 +507,7 @@ class FuelModel {
         _isReminderDue = false;
         _autoIntakeLocked = false;
         _autoIntakeEventPending = false;
+        clearUndoState();
         _startTimestamp = 0;
         _lastIntakeTimestamp = 0;
         _sessionId = 0;
@@ -826,13 +831,17 @@ class FuelModel {
             if (_fitFieldDeficit != null) {
                 _fitFieldDeficit.setData(_deficitG.toFloat() / 10.0f);
             }
-        } catch (e) {}
+        } catch (e) {
+            FuelPlannerLog.logError("FIT", "Failed to write deficit record");
+        }
 
         try {
             if (_fitFieldConsumed != null) {
                 _fitFieldConsumed.setData(_consumedTotalG.toFloat() / 10.0f);
             }
-        } catch (e) {}
+        } catch (e) {
+            FuelPlannerLog.logError("FIT", "Failed to write consumed record");
+        }
 
         writeFitSessionSummary(_fitFieldTargetSummary, _fitFieldActualSummary);
     }
@@ -1111,6 +1120,7 @@ class FuelModel {
         _timerBacktrackCount = 0;
         _lastFitFieldUpdateMs = 0;
         _forceNextFitFieldUpdate = true;
+        clearUndoState();
     }
 
     public static function calculateTargetTotalG10(elapsedActiveSec as Number,
@@ -1127,8 +1137,7 @@ class FuelModel {
             safeElapsedActiveSec = FuelModelConsts.MAX_ELAPSED_ACTIVE_SEC;
         }
 
-        // reminderMode == 2 ist MODE_CALORIE_AUTO (kann in static method nicht als Instanz-Konstante gelesen werden)
-        if (reminderMode == 2 && caloriesAvailable) {
+        if (reminderMode == FuelReminderModes.CALORIE_AUTO && caloriesAvailable) {
             // Target = burned carbs estimate in g10.
             var safeCaloriesKcal = latestCaloriesKcal;
             if (safeCaloriesKcal < 0) {
@@ -1447,12 +1456,12 @@ class FuelModel {
         _autoIntakeLocked    = false;
         _autoIntakeEventPending = false;
         _intakeCount        += 1;
-        
+
         // Store undo state
         _undoAvailable = true;
         _undoGramsG10 = gramsG10;
         _undoTimestamp = now;
-        
+
         recalculateFromCurrentState();
         _forceNextFitFieldUpdate = true;
         saveSession();
@@ -1463,21 +1472,20 @@ class FuelModel {
         if (!_sessionActive || !_undoAvailable) {
             return false;
         }
-        
+
         var now = getCurrentTimestamp();
-        // Allow undo within 10 seconds
-        if (now - _undoTimestamp > 10) {
-            _undoAvailable = false;
+        if (now - _undoTimestamp > FuelModelConsts.UNDO_WINDOW_SEC) {
+            clearUndoState();
             return false;
         }
-        
+
         _consumedTotalG = clampNonNegativeTotalG10(_consumedTotalG - _undoGramsG10);
         _intakeCount -= 1;
         if (_intakeCount < 0) {
             _intakeCount = 0;
         }
-        
-        _undoAvailable = false;
+
+        clearUndoState();
         recalculateFromCurrentState();
         _forceNextFitFieldUpdate = true;
         saveSession();
@@ -1490,20 +1498,31 @@ class FuelModel {
             return false;
         }
         var now = getCurrentTimestamp();
-        return (now - _undoTimestamp) <= 10;
+        if (now - _undoTimestamp > FuelModelConsts.UNDO_WINDOW_SEC) {
+            clearUndoState();
+            return false;
+        }
+        return true;
     }
 
 
     function getUndoRemainingSec() as Number {
-        if (!_sessionActive || !_undoAvailable) {
+        if (!isUndoAvailable()) {
             return 0;
         }
         var now = getCurrentTimestamp();
-        var remaining = 10 - (now - _undoTimestamp);
+        var remaining = FuelModelConsts.UNDO_WINDOW_SEC - (now - _undoTimestamp);
         if (remaining < 0) {
             return 0;
         }
         return remaining;
+    }
+
+
+    private function clearUndoState() as Void {
+        _undoAvailable = false;
+        _undoGramsG10 = 0;
+        _undoTimestamp = 0;
     }
 
 

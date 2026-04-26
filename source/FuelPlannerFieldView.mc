@@ -4,6 +4,7 @@ import Toybox.WatchUi;
 import Toybox.System;
 import Toybox.Lang;
 import FuelPlannerLog;
+import FuelReminderModes;
 //! Data Field View for FuelPlanner - responsive, top-to-bottom layout
 class FuelPlannerFieldView extends WatchUi.DataField {
 
@@ -38,7 +39,6 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private const DEFAULT_SCREEN_HEIGHT = 240;
     private const DEFAULT_SCREEN_WIDTH = 240;
     private const UNIT_G = "g";
-    private const UNIT_GPH = " g/h";
     private const SEP_PIPE = " | ";
     private const RECOVERY_MIN_G = 10;
     private const CONTENT_SIDE_RATIO = 0.10f;
@@ -206,14 +206,14 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             contentW = 40;
             contentInset = (w - contentW) / 2;
         }
-        
+
         // Hintergrund: Aggressives Rot oder Orange
         dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_RED);
         dc.fillRectangle(0, 0, w, h);
-        
+
         // Text-Farbe Weiß für maximalen Kontrast
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        
+
         var strFuelNow = FuelPlannerUtils.loadString(Rez.Strings.LabelFuelNow, "FUEL NOW");
         var doseText = _model.getDoseG().format("%d") + UNIT_G;
         var reasonText = buildReminderReasonText();
@@ -234,7 +234,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         dc.drawText(w / 2, y, titleFont, strFuelNow, Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(w / 2, y + titleH + gap, doseFont, doseText, Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(w / 2, y + titleH + gap + doseH + gap, reasonFont, reasonText, Graphics.TEXT_JUSTIFY_CENTER);
-        
+
         // Optional: Ein weißer Rahmen zur Abgrenzung
         dc.setPenWidth(4);
         dc.drawRectangle(2, 2, w-4, h-4);
@@ -381,16 +381,13 @@ class FuelPlannerFieldView extends WatchUi.DataField {
 
         // Deficit row
         var deficitG10 = _model.getDeficitG10();
-        var deficitText;
+        var deficitText = buildDeficitTextFromG10(deficitG10);
         var deficitColor;
         if (deficitG10 > 5) {
-            deficitText = FuelPlannerUtils.loadString(Rez.Strings.LabelBehind, "Behind") + " " + ((deficitG10 + 5) / 10).format("%d") + UNIT_G;
             deficitColor = COLOR_WARNING;
         } else if (deficitG10 < -5) {
-            deficitText = FuelPlannerUtils.loadString(Rez.Strings.LabelAhead, "Ahead") + " " + (((-deficitG10) + 5) / 10).format("%d") + UNIT_G;
             deficitColor = COLOR_GOOD;
         } else {
-            deficitText = FuelPlannerUtils.loadString(Rez.Strings.LabelOnTarget, "On target");
             deficitColor = COLOR_GOOD;
         }
 
@@ -447,11 +444,10 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             dc.drawText(cx, y, rateFont, rateText, Graphics.TEXT_JUSTIFY_CENTER);
         }
 
-        drawOuterRing(dc, w, h, dimColor);
+        drawOuterRing(dc, w, h);
     }
 
-    private function drawOuterRing(dc as Dc, w as Number, h as Number,
-                                   dimColor as Number) as Void {
+    private function drawOuterRing(dc as Dc, w as Number, h as Number) as Void {
         var diameter = (w < h) ? w : h;
         if (diameter < 96) {
             return;
@@ -470,9 +466,6 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         var ringColor = getRingColor(tone);
 
         dc.setPenWidth(stroke);
-        dc.setColor(dimColor, Graphics.COLOR_TRANSPARENT);
-        dc.drawCircle(cx, cy, radius);
-
         dc.setColor(ringColor, Graphics.COLOR_TRANSPARENT);
         dc.drawCircle(cx, cy, radius);
     }
@@ -588,11 +581,16 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             }
             return FuelPlannerUtils.loadString(Rez.Strings.LabelRateAutoNoData, "Auto (no cal data)");
         }
-        return FuelPlannerUtils.loadString(Rez.Strings.LabelRateTargetPrefix, "Plan") + " " + _model.getCarbsTargetGph().format("%d") + UNIT_GPH;
+        return FuelPlannerUtils.loadString(Rez.Strings.LabelRateTargetPrefix, "Plan") + " " +
+               _model.getCarbsTargetGph().format("%d") + " " +
+               FuelPlannerUtils.loadString(Rez.Strings.UnitGramsPerHour, "g/h");
     }
 
     private function buildDeficitText() as String {
-        var deficitG10 = _model.getDeficitG10();
+        return buildDeficitTextFromG10(_model.getDeficitG10());
+    }
+
+    private function buildDeficitTextFromG10(deficitG10 as Number) as String {
         if (deficitG10 > 5) {
             return FuelPlannerUtils.loadString(Rez.Strings.LabelBehind, "Behind") + " " + ((deficitG10 + 5) / 10).format("%d") + UNIT_G;
         }
@@ -603,15 +601,15 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     }
 
     private function buildReminderReasonText() as String {
-        if (_model.getReminderMode() == 1) {
+        if (_model.getReminderMode() == FuelReminderModes.FIXED) {
             return FuelPlannerUtils.loadString(Rez.Strings.ModeFixed, "Fixed") + " " +
                    _model.getFixedIntervalMin().format("%d") + " " +
                    FuelPlannerUtils.loadString(Rez.Strings.UnitMinutes, "min");
         }
 
-        var deficitText = buildDeficitText();
-        if (deficitText != FuelPlannerUtils.loadString(Rez.Strings.LabelOnTarget, "On target")) {
-            return deficitText;
+        var deficitG10 = _model.getDeficitG10();
+        if (deficitG10 > 5 || deficitG10 < -5) {
+            return buildDeficitTextFromG10(deficitG10);
         }
         return buildRateLabel();
     }

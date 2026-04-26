@@ -6,38 +6,37 @@ import Toybox.Lang;
 //! In Debug-Builds: System.println Ausgabe
 module FuelPlannerLog {
 
-    // Debug-Builds: Logging aktiv
     (:debug)
-    function dError(tag as String, msg as String) as Void {
+    function printLine(level as String, tag as String, msg as String) as Void {
         try {
-            System.println("FP ERR [" + tag + "]: " + msg);
+            System.println("FP " + level + " [" + tag + "]: " + msg);
         } catch (e) {}
     }
 
     (:debug)
-    function dWarn(tag as String, msg as String) as Void {
-        try {
-            System.println("FP WRN [" + tag + "]: " + msg);
-        } catch (e) {}
-    }
-
-    (:debug)
-    function dInfo(tag as String, msg as String) as Void {
-        try {
-            System.println("FP INF [" + tag + "]: " + msg);
-        } catch (e) {}
-    }
-
-    // Production-Builds: No-Op (wird vom Compiler weggelassen)
     function logError(tag as String, msg as String) as Void {
-        // No-op in production - no code generated
+        printLine("ERR", tag, msg);
     }
 
+    (:debug)
     function logWarn(tag as String, msg as String) as Void {
-        // No-op in production - no code generated
+        printLine("WRN", tag, msg);
     }
 
+    (:debug)
     function logInfo(tag as String, msg as String) as Void {
-        // No-op in production - no code generated
+        printLine("INF", tag, msg);
+    }
+
+    (:release)
+    function logError(tag as String, msg as String) as Void {
+    }
+
+    (:release)
+    function logWarn(tag as String, msg as String) as Void {
+    }
+
+    (:release)
+    function logInfo(tag as String, msg as String) as Void {
     }
 }

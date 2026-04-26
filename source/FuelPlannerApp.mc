@@ -2,6 +2,7 @@ import Toybox.Application;
 import Toybox.FitContributor;
 import Toybox.Lang;
 import Toybox.WatchUi;
+import FuelPlannerLog;
 
 class FuelPlannerApp extends Application.AppBase {
 
@@ -84,6 +85,7 @@ class FuelPlannerApp extends Application.AppBase {
                     { :mesgType => FitContributor.MESG_TYPE_RECORD, :units => FIT_UNIT_GRAMS }
                 );
             } catch (e) {
+                FuelPlannerLog.logError("FIT", "Failed to create deficit field");
                 _fieldDeficit = null;
             }
         }
@@ -97,6 +99,7 @@ class FuelPlannerApp extends Application.AppBase {
                     { :mesgType => FitContributor.MESG_TYPE_RECORD, :units => FIT_UNIT_GRAMS }
                 );
             } catch (e) {
+                FuelPlannerLog.logError("FIT", "Failed to create consumed field");
                 _fieldConsumed = null;
             }
         }
@@ -110,6 +113,7 @@ class FuelPlannerApp extends Application.AppBase {
                     { :mesgType => FitContributor.MESG_TYPE_SESSION, :units => FIT_UNIT_GRAMS }
                 );
             } catch (e) {
+                FuelPlannerLog.logError("FIT", "Failed to create target summary field");
                 _fieldTargetSummary = null;
             }
         }
@@ -123,6 +127,7 @@ class FuelPlannerApp extends Application.AppBase {
                     { :mesgType => FitContributor.MESG_TYPE_SESSION, :units => FIT_UNIT_GRAMS }
                 );
             } catch (e) {
+                FuelPlannerLog.logError("FIT", "Failed to create actual summary field");
                 _fieldActualSummary = null;
             }
         }

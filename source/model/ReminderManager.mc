@@ -1,16 +1,17 @@
 import Toybox.Lang;
 import Toybox.Attention;
 import Toybox.System;
+import FuelPlannerLog;
 
 //! Manages vibration reminders with defensive capability checks
 class ReminderManager {
-    
+
     // Vibration patterns
     private const VIBE_SHORT = 100;
     private const VIBE_MEDIUM = 200;
     private const VIBE_LONG = 400;
     private const VIBE_PAUSE = 100;
-    
+
     private var _hasVibration as Boolean = false;
     private var _hasBacklight as Boolean = false;
     private var _lastVibeTime as Number = 0;
@@ -20,7 +21,7 @@ class ReminderManager {
     private var _confirmationPattern as Array<Attention.VibeProfile>? = null;
     private var _snoozePattern as Array<Attention.VibeProfile>? = null;
     private var _undoPattern as Array<Attention.VibeProfile>? = null;
-    
+
     //! Constructor
     function initialize() {
         checkCapabilities();
@@ -84,7 +85,7 @@ class ReminderManager {
         }
         return _undoPattern as Array<Attention.VibeProfile>;
     }
-    
+
     //! Check device capabilities
     private function checkCapabilities() as Void {
         _hasVibration = false;
@@ -101,12 +102,13 @@ class ReminderManager {
                     _hasVibration = true; // Assume available if we cannot query the setting
                 }
             } catch (e) {
+                FuelPlannerLog.logWarn("Reminder", "Failed to read vibration setting");
                 _hasVibration = true;
             }
         } else {
             _hasVibration = false;
         }
-        
+
         // Check for backlight support
         if (Attention has :backlight) {
             _hasBacklight = true;
@@ -147,7 +149,7 @@ class ReminderManager {
 
         return (safeNowTimestamp - lastReminderTimestamp) >= (safeMaxSnoozeMin * 60);
     }
-    
+
     //! Trigger reminder vibration pattern
     function triggerReminder() as Boolean {
         // Rate limiting
@@ -155,32 +157,32 @@ class ReminderManager {
         if (now - _lastVibeTime < _minVibInterval) {
             return false;
         }
-        
+
         var delivered = false;
-        
+
         // Try vibration
         if (_hasVibration) {
             delivered = vibratePattern(getIntakeReminderPattern());
         }
-        
+
         // Also flash backlight if available
         if (_hasBacklight) {
             delivered = flashBacklight() || delivered;
         }
-        
+
         if (delivered) {
             _lastVibeTime = now;
         }
-        
+
         return delivered;
     }
-    
+
     //! Trigger confirmation vibration (after intake recorded)
     function triggerConfirmation() as Boolean {
         if (!_hasVibration) {
             return false;
         }
-        
+
         return vibratePattern(getConfirmationPattern());
     }
 
@@ -207,7 +209,7 @@ class ReminderManager {
         if (!_hasVibration) {
             return false;
         }
-        
+
         return vibratePattern(getSnoozePattern());
     }
 
@@ -216,10 +218,10 @@ class ReminderManager {
         if (!_hasVibration) {
             return false;
         }
-        
+
         return vibratePattern(getUndoPattern());
     }
-    
+
     //! Execute vibration pattern
     private function vibratePattern(pattern as Array<Attention.VibeProfile>) as Boolean {
         try {
@@ -228,12 +230,13 @@ class ReminderManager {
                 return true;
             }
         } catch (e instanceof Lang.Exception) {
-            // Vibration failed, continue silently
+            FuelPlannerLog.logWarn("Reminder", "Vibration failed");
         } catch (e) {
+            FuelPlannerLog.logWarn("Reminder", "Vibration failed");
         }
         return false;
     }
-    
+
     //! Flash backlight
     private function flashBacklight() as Boolean {
         try {
@@ -242,22 +245,23 @@ class ReminderManager {
                 return true;
             }
         } catch (e instanceof Lang.Exception) {
-            // Backlight failed, continue silently
+            FuelPlannerLog.logWarn("Reminder", "Backlight failed");
         } catch (e) {
+            FuelPlannerLog.logWarn("Reminder", "Backlight failed");
         }
         return false;
     }
-    
+
     //! Check if vibration is available
     function hasVibration() as Boolean {
         return _hasVibration;
     }
-    
+
     //! Check if backlight control is available
     function hasBacklight() as Boolean {
         return _hasBacklight;
     }
-    
+
     //! Refresh capability check (call if settings might have changed)
     function refreshCapabilities() as Void {
         checkCapabilities();

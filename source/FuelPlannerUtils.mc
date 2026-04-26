@@ -1,6 +1,7 @@
 import Toybox.Activity;
 import Toybox.Lang;
 import Toybox.WatchUi;
+import FuelPlannerLog;
 
 //! Gemeinsame Utility-Funktionen für FuelPlaner
 //! Vermeidet Code-Duplikation zwischen Model-, View- und Menu-Code
@@ -37,7 +38,9 @@ module FuelPlannerUtils {
             if (value instanceof String) {
                 return value as String;
             }
-        } catch (e) {}
+        } catch (e) {
+            FuelPlannerLog.logWarn("Resources", "Failed to load string resource");
+        }
         return fallback;
     }
 }

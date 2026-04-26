@@ -163,7 +163,7 @@ nextDueSec = ceil((doseG10 - deficitG10) * 3600 / carbsRateGph10)
 │                  Local Device                        │
 │  ┌────────────────────────────────────────────────┐ │
 │  │  Storage (device-specific, not synced)         │ │
-│  │  - sess_id, start_ts, consumed10, last_int     │ │
+│  │  - sess_id, start_ts, consum10, last_int       │ │
 │  │  - is_paused, elapsed_s, pause_off_s           │ │
 │  │  - start_ts_ok, int_cnt, last_rem              │ │
 │  └────────────────────────────────────────────────┘ │

@@ -1,5 +1,7 @@
 import Toybox.Lang;
 import Toybox.WatchUi;
+import FuelPlannerLog;
+import FuelReminderModes;
 
 //! Menu delegate for settings
 class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
@@ -70,8 +72,8 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
 
     //! Returns the localized display label for a reminder mode value
     private function modeLabel(mode as Number, intervalMin as Number) as String {
-        if (mode == 0) { return _strModeAuto; }
-        if (mode == 1) {
+        if (mode == FuelReminderModes.AUTO) { return _strModeAuto; }
+        if (mode == FuelReminderModes.FIXED) {
             return _strModeFixed + " " + intervalMin.format("%d") + _suffixMinutes;
         }
         return _strModeCalorieAuto;
@@ -221,7 +223,7 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
     private function applyPreset(carbsGph as Number, doseG as Number) as Void {
         _storage.setCarbsTargetGph(carbsGph);
         _storage.setDoseG(doseG);
-        _storage.setReminderMode(0);
+        _storage.setReminderMode(FuelReminderModes.AUTO);
         _storage.setStartDelayMin(15);
 
         var safeCarbs = _storage.getCarbsTargetGph();
@@ -288,7 +290,9 @@ class NumberPickerDelegate extends WatchUi.Menu2InputDelegate {
         try {
             _setter.invoke(value);
             didPersist = true;
-        } catch (e) {}
+        } catch (e) {
+            FuelPlannerLog.logError("Settings", "Failed to persist picker value");
+        }
         if (didPersist) {
             _item.setSubLabel(value.format("%d") + _suffix);
             if (_model != null) {
@@ -332,8 +336,8 @@ class FixedIntervalDelegate extends WatchUi.Menu2InputDelegate {
     }
 
     private function modeLabel(mode as Number, intervalMin as Number) as String {
-        if (mode == 0) { return _strModeAuto; }
-        if (mode == 1) {
+        if (mode == FuelReminderModes.AUTO) { return _strModeAuto; }
+        if (mode == FuelReminderModes.FIXED) {
             return _strModeFixed + " " + intervalMin.format("%d") + " " + _strUnitMinutes;
         }
         return _strModeCalorieAuto;

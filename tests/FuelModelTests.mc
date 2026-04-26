@@ -1,6 +1,7 @@
 using Toybox.Test;
 import Toybox.Lang;
 import Toybox.Activity;
+import FuelReminderModes;
 
 class FuelModelTests {
 
@@ -175,7 +176,7 @@ class FuelModelTests {
         info.setTimerSeconds(60);
 
         // Initial: MODE_CALORIE_AUTO
-        Test.assertEqual(2, model.getReminderMode());
+        Test.assertEqual(FuelReminderModes.CALORIE_AUTO, model.getReminderMode());
 
         // Simulate 5 minutes without calorie data (300 ticks)
         for (var i = 0; i < 305; i += 1) {
@@ -185,7 +186,7 @@ class FuelModelTests {
         }
 
         // Should have fallen back to MODE_AUTO
-        Test.assertEqual(0, model.getReminderMode());
+        Test.assertEqual(FuelReminderModes.AUTO, model.getReminderMode());
         return true;
     }
 
@@ -414,6 +415,38 @@ class FuelModelTests {
     }
 
     (:test)
+    static function undoStateClearsWhenNewSessionStarts(logger as Test.Logger) as Boolean {
+        var clock = new MockClock(1000);
+        var props = new MockPropertiesBackend();
+        props.setValue("carbsTargetGph", 60);
+        props.setValue("doseG", 25);
+        props.setValue("startDelayMin", 0);
+
+        var model = buildModel(clock, props);
+        var info = new MockActivityInfo(1000);
+        info.setTimerSeconds(60);
+        model.compute(info);
+
+        model.recordIntake(25);
+        Test.assertMessage(model.isUndoAvailable(), "Undo should be available after the first-session intake.");
+
+        info.timerState = Activity.TIMER_STATE_STOPPED;
+        model.compute(info);
+        Test.assertMessage(model.isStoppedSession(), "Stopped first session should leave a recovery snapshot.");
+
+        clock.setNow(1006);
+        var nextInfo = new MockActivityInfo(1006);
+        nextInfo.setTimerSeconds(1);
+        model.compute(nextInfo);
+
+        Test.assertMessage(model.isSessionActive(), "A new activity should start a fresh session.");
+        Test.assertMessage(!model.isUndoAvailable(), "Undo state must not carry from the previous session.");
+        Test.assertEqual(0, model.getConsumedTotalG10());
+        Test.assertEqual(0, model.getIntakeCount());
+        return true;
+    }
+
+    (:test)
     static function calorieAutoRecovery(logger as Test.Logger) as Boolean {
         var clock = new MockClock(4000);
         var props = new MockPropertiesBackend();
@@ -427,7 +460,7 @@ class FuelModelTests {
         info.setTimerSeconds(60);
 
         // Initial: MODE_CALORIE_AUTO
-        Test.assertEqual(2, model.getReminderMode());
+        Test.assertEqual(FuelReminderModes.CALORIE_AUTO, model.getReminderMode());
 
         // Simulate 5 minutes without calorie data (300 ticks)
         for (var i = 0; i < 305; i += 1) {
@@ -437,7 +470,7 @@ class FuelModelTests {
         }
 
         // Should have fallen back to MODE_AUTO
-        Test.assertEqual(0, model.getReminderMode());
+        Test.assertEqual(FuelReminderModes.AUTO, model.getReminderMode());
 
         // Simulate 10 more minutes (600 seconds) - recovery window opens
         for (var i = 0; i < 600; i += 1) {
@@ -451,7 +484,7 @@ class FuelModelTests {
         model.compute(info);
 
         // Should have recovered to MODE_CALORIE_AUTO
-        Test.assertEqual(2, model.getReminderMode());
+        Test.assertEqual(FuelReminderModes.CALORIE_AUTO, model.getReminderMode());
 
         return true;
     }

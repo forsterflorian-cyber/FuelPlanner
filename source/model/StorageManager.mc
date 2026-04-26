@@ -2,6 +2,7 @@ import Toybox.Application.Storage;
 import Toybox.Application.Properties;
 import Toybox.Lang;
 import FuelPlannerLog;
+import FuelReminderModes;
 
 class StorageBackend {
     function initialize() {
@@ -65,8 +66,8 @@ class StorageManager {
     public const MAX_CARBS_TARGET_GPH       = 120;
     public const MIN_DOSE_G                 = 5;
     public const MAX_DOSE_G                 = 100;
-    public const MIN_REMINDER_MODE          = 0;
-    public const MAX_REMINDER_MODE          = 2;
+    public const MIN_REMINDER_MODE          = FuelReminderModes.AUTO;
+    public const MAX_REMINDER_MODE          = FuelReminderModes.CALORIE_AUTO;
     public const MIN_FIXED_INTERVAL_MIN     = 5;
     public const MAX_FIXED_INTERVAL_MIN     = 60;
     public const MIN_START_DELAY_MIN        = 0;
@@ -80,7 +81,7 @@ class StorageManager {
 
     public const DEFAULT_CARBS_TARGET_GPH   = 60;
     public const DEFAULT_DOSE_G             = 25;
-    public const DEFAULT_REMINDER_MODE      = 0;
+    public const DEFAULT_REMINDER_MODE      = FuelReminderModes.AUTO;
     public const DEFAULT_FIXED_INTERVAL_MIN = 20;
     public const DEFAULT_START_DELAY_MIN    = 15;
     public const DEFAULT_MAX_SNOOZE_MIN     = 5;
@@ -111,6 +112,31 @@ class StorageManager {
         _lastWriteFailureKey = "";
     }
 
+    private function recordWriteFailure(key as String, action as String) as Void {
+        _writeFailureCount += 1;
+        _lastWriteFailureKey = key;
+        FuelPlannerLog.logError("Storage", "Failed to " + action + ": " + key);
+    }
+
+    private function setStorageValue(key as String, value as Lang.Object?) as Boolean {
+        try {
+            _storageBackend.setValue(key, value);
+            return true;
+        } catch (e) {
+            recordWriteFailure(key, "set value");
+        }
+        return false;
+    }
+
+    private function getStorageValue(key as String) as Lang.Object? {
+        try {
+            return _storageBackend.getValue(key);
+        } catch (e) {
+            FuelPlannerLog.logWarn("Storage", "Failed to get value: " + key);
+        }
+        return null;
+    }
+
     private function clamp(value as Number, min as Number, max as Number) as Number {
         if (value < min) { return min; }
         if (value > max) { return max; }
@@ -137,11 +163,17 @@ class StorageManager {
                 var clamped = clamp(value, min, max);
                 var normalized = roundToInt(clamped);
                 if (normalized != value) {
-                    _propertiesBackend.setValue(key, normalized);
+                    try {
+                        _propertiesBackend.setValue(key, normalized);
+                    } catch (writeError) {
+                        recordWriteFailure(key, "normalize property");
+                    }
                 }
                 return normalized;
             }
-        } catch (e) {}
+        } catch (e) {
+            FuelPlannerLog.logWarn("Storage", "Failed to get property: " + key);
+        }
         return defaultValue;
     }
 
@@ -150,9 +182,7 @@ class StorageManager {
         try {
             _propertiesBackend.setValue(key, roundToInt(clamp(value, min, max)));
         } catch (e) {
-            _writeFailureCount += 1;
-            _lastWriteFailureKey = key;
-            FuelPlannerLog.logError("Storage", "Failed to set property: " + key);
+            recordWriteFailure(key, "set property");
         }
     }
 
@@ -160,9 +190,7 @@ class StorageManager {
         try {
             _storageBackend.deleteValue(key);
         } catch (e) {
-            _writeFailureCount += 1;
-            _lastWriteFailureKey = key;
-            FuelPlannerLog.logError("Storage", "Failed to delete value: " + key);
+            recordWriteFailure(key, "delete value");
         }
     }
 
@@ -281,7 +309,7 @@ class StorageManager {
     // ========== Session Data (in Storage) ==========
 
     function getSessionId() as Number? {
-        var value = _storageBackend.getValue(KEY_SESSION_ID);
+        var value = getStorageValue(KEY_SESSION_ID);
         if (value instanceof Number && value > 0) {
             return value;
         }
@@ -290,19 +318,14 @@ class StorageManager {
 
     function setSessionId(value as Number) as Void {
         if (value > 0) {
-            try {
-                _storageBackend.setValue(KEY_SESSION_ID, value);
-            } catch (e) {
-                _writeFailureCount += 1;
-                _lastWriteFailureKey = KEY_SESSION_ID;
-            }
+            setStorageValue(KEY_SESSION_ID, value);
         } else {
             deleteStorageValue(KEY_SESSION_ID);
         }
     }
 
     function getStartTimestamp() as Number? {
-        var value = _storageBackend.getValue(KEY_START_TIMESTAMP);
+        var value = getStorageValue(KEY_START_TIMESTAMP);
         if (value instanceof Number && value > 0) {
             return value;
         }
@@ -311,19 +334,14 @@ class StorageManager {
 
     function setStartTimestamp(value as Number) as Void {
         if (value > 0) {
-            try {
-                _storageBackend.setValue(KEY_START_TIMESTAMP, value);
-            } catch (e) {
-                _writeFailureCount += 1;
-                _lastWriteFailureKey = KEY_START_TIMESTAMP;
-            }
+            setStorageValue(KEY_START_TIMESTAMP, value);
         } else {
             deleteStorageValue(KEY_START_TIMESTAMP);
         }
     }
 
     function getIsStartTimestampConfirmed() as Boolean {
-        var value = _storageBackend.getValue(KEY_START_TS_CONFIRMED);
+        var value = getStorageValue(KEY_START_TS_CONFIRMED);
         if (value instanceof Boolean) {
             return value;
         }
@@ -331,16 +349,11 @@ class StorageManager {
     }
 
     function setIsStartTimestampConfirmed(value as Boolean) as Void {
-        try {
-            _storageBackend.setValue(KEY_START_TS_CONFIRMED, value);
-        } catch (e) {
-            _writeFailureCount += 1;
-            _lastWriteFailureKey = KEY_START_TS_CONFIRMED;
-        }
+        setStorageValue(KEY_START_TS_CONFIRMED, value);
     }
 
     function getConsumedTotal() as Number {
-        var value = _storageBackend.getValue(KEY_CONSUMED_TOTAL);
+        var value = getStorageValue(KEY_CONSUMED_TOTAL);
         if (value instanceof Number) {
             return nonNegative(value);
         }
@@ -348,16 +361,11 @@ class StorageManager {
     }
 
     function setConsumedTotal(value as Number) as Void {
-        try {
-            _storageBackend.setValue(KEY_CONSUMED_TOTAL, nonNegative(value));
-        } catch (e) {
-            _writeFailureCount += 1;
-            _lastWriteFailureKey = KEY_CONSUMED_TOTAL;
-        }
+        setStorageValue(KEY_CONSUMED_TOTAL, nonNegative(value));
     }
 
     function getConsumedTotalG10() as Number {
-        var value = _storageBackend.getValue(KEY_CONSUMED_TOTAL_G10);
+        var value = getStorageValue(KEY_CONSUMED_TOTAL_G10);
         if (value instanceof Number) {
             return nonNegative(value);
         }
@@ -367,39 +375,29 @@ class StorageManager {
 
     function setConsumedTotalG10(value as Number) as Void {
         var clamped = nonNegative(value);
-        // Legacy-Write mit Rounding statt Truncation: (251+5)/10 = 25 statt 251/10 = 25
+        // Legacy-Write mit Rounding statt Truncation: (256+5)/10 = 26 statt 256/10 = 25
         var legacyValue = (clamped + 5) / 10;
-        
+
         // Beide Werte schreiben - bei Fehlschlag Inkonsistenz vermeiden
         var newKeySuccess = false;
         var legacyKeySuccess = false;
-        
-        try {
-            _storageBackend.setValue(KEY_CONSUMED_TOTAL_G10, clamped);
-            newKeySuccess = true;
-        } catch (e) {
-            _writeFailureCount += 1;
-            _lastWriteFailureKey = KEY_CONSUMED_TOTAL_G10;
-        }
-        
-        try {
-            _storageBackend.setValue(KEY_CONSUMED_TOTAL, legacyValue);
-            legacyKeySuccess = true;
-        } catch (e) {
-            _writeFailureCount += 1;
-            _lastWriteFailureKey = KEY_CONSUMED_TOTAL;
-        }
-        
+
+        newKeySuccess = setStorageValue(KEY_CONSUMED_TOTAL_G10, clamped);
+
+        legacyKeySuccess = setStorageValue(KEY_CONSUMED_TOTAL, legacyValue);
+
         // Wenn neuer Key fehlschlägt, Legacy aufräumen um Inkonsistenz zu vermeiden
         if (!newKeySuccess && legacyKeySuccess) {
             try {
                 _storageBackend.deleteValue(KEY_CONSUMED_TOTAL);
-            } catch (e) {}
+            } catch (e) {
+                recordWriteFailure(KEY_CONSUMED_TOTAL, "delete inconsistent legacy value");
+            }
         }
     }
 
     function getSessionState() as Number? {
-        var value = _storageBackend.getValue(KEY_SESSION_STATE);
+        var value = getStorageValue(KEY_SESSION_STATE);
         if (value instanceof Number) {
             return nonNegative(value);
         }
@@ -411,16 +409,11 @@ class StorageManager {
             deleteStorageValue(KEY_SESSION_STATE);
             return;
         }
-        try {
-            _storageBackend.setValue(KEY_SESSION_STATE, nonNegative(value));
-        } catch (e) {
-            _writeFailureCount += 1;
-            _lastWriteFailureKey = KEY_SESSION_STATE;
-        }
+        setStorageValue(KEY_SESSION_STATE, nonNegative(value));
     }
 
     function getLastIntakeTimestamp() as Number? {
-        var value = _storageBackend.getValue(KEY_LAST_INTAKE_TS);
+        var value = getStorageValue(KEY_LAST_INTAKE_TS);
         if (value instanceof Number && value > 0) {
             return value;
         }
@@ -429,19 +422,14 @@ class StorageManager {
 
     function setLastIntakeTimestamp(value as Number) as Void {
         if (value > 0) {
-            try {
-                _storageBackend.setValue(KEY_LAST_INTAKE_TS, value);
-            } catch (e) {
-                _writeFailureCount += 1;
-                _lastWriteFailureKey = KEY_LAST_INTAKE_TS;
-            }
+            setStorageValue(KEY_LAST_INTAKE_TS, value);
         } else {
             deleteStorageValue(KEY_LAST_INTAKE_TS);
         }
     }
 
     function getLastReminderTimestamp() as Number {
-        var value = _storageBackend.getValue(KEY_LAST_REMINDER_TS);
+        var value = getStorageValue(KEY_LAST_REMINDER_TS);
         if (value instanceof Number && value > 0) {
             return value;
         }
@@ -450,19 +438,14 @@ class StorageManager {
 
     function setLastReminderTimestamp(value as Number) as Void {
         if (value > 0) {
-            try {
-                _storageBackend.setValue(KEY_LAST_REMINDER_TS, value);
-            } catch (e) {
-                _writeFailureCount += 1;
-                _lastWriteFailureKey = KEY_LAST_REMINDER_TS;
-            }
+            setStorageValue(KEY_LAST_REMINDER_TS, value);
         } else {
             deleteStorageValue(KEY_LAST_REMINDER_TS);
         }
     }
 
     function getIsPaused() as Boolean {
-        var value = _storageBackend.getValue(KEY_IS_PAUSED);
+        var value = getStorageValue(KEY_IS_PAUSED);
         if (value instanceof Boolean) {
             return value;
         }
@@ -470,16 +453,11 @@ class StorageManager {
     }
 
     function setIsPaused(value as Boolean) as Void {
-        try {
-            _storageBackend.setValue(KEY_IS_PAUSED, value);
-        } catch (e) {
-            _writeFailureCount += 1;
-            _lastWriteFailureKey = KEY_IS_PAUSED;
-        }
+        setStorageValue(KEY_IS_PAUSED, value);
     }
 
     function getElapsedActiveSec() as Number {
-        var value = _storageBackend.getValue(KEY_ELAPSED_SEC);
+        var value = getStorageValue(KEY_ELAPSED_SEC);
         if (value instanceof Number) {
             return nonNegative(value);
         }
@@ -487,16 +465,11 @@ class StorageManager {
     }
 
     function setElapsedActiveSec(value as Number) as Void {
-        try {
-            _storageBackend.setValue(KEY_ELAPSED_SEC, nonNegative(value));
-        } catch (e) {
-            _writeFailureCount += 1;
-            _lastWriteFailureKey = KEY_ELAPSED_SEC;
-        }
+        setStorageValue(KEY_ELAPSED_SEC, nonNegative(value));
     }
 
     function getPausedTimerOffsetSec() as Number {
-        var value = _storageBackend.getValue(KEY_PAUSED_TIMER_OFFSET_S);
+        var value = getStorageValue(KEY_PAUSED_TIMER_OFFSET_S);
         if (value instanceof Number) {
             return nonNegative(value);
         }
@@ -504,16 +477,11 @@ class StorageManager {
     }
 
     function setPausedTimerOffsetSec(value as Number) as Void {
-        try {
-            _storageBackend.setValue(KEY_PAUSED_TIMER_OFFSET_S, nonNegative(value));
-        } catch (e) {
-            _writeFailureCount += 1;
-            _lastWriteFailureKey = KEY_PAUSED_TIMER_OFFSET_S;
-        }
+        setStorageValue(KEY_PAUSED_TIMER_OFFSET_S, nonNegative(value));
     }
 
     function getPauseStartTimerSec() as Number? {
-        var value = _storageBackend.getValue(KEY_PAUSE_START_TIMER_S);
+        var value = getStorageValue(KEY_PAUSE_START_TIMER_S);
         if (value instanceof Number) {
             var sanitized = nonNegative(value);
             if (sanitized > 0) {
@@ -528,16 +496,11 @@ class StorageManager {
             deleteStorageValue(KEY_PAUSE_START_TIMER_S);
             return;
         }
-        try {
-            _storageBackend.setValue(KEY_PAUSE_START_TIMER_S, nonNegative(value));
-        } catch (e) {
-            _writeFailureCount += 1;
-            _lastWriteFailureKey = KEY_PAUSE_START_TIMER_S;
-        }
+        setStorageValue(KEY_PAUSE_START_TIMER_S, nonNegative(value));
     }
 
     function getPauseStartClockSec() as Number? {
-        var value = _storageBackend.getValue(KEY_PAUSE_START_CLOCK_TS);
+        var value = getStorageValue(KEY_PAUSE_START_CLOCK_TS);
         if (value instanceof Number) {
             var sanitized = nonNegative(value);
             if (sanitized > 0) {
@@ -552,16 +515,11 @@ class StorageManager {
             deleteStorageValue(KEY_PAUSE_START_CLOCK_TS);
             return;
         }
-        try {
-            _storageBackend.setValue(KEY_PAUSE_START_CLOCK_TS, nonNegative(value));
-        } catch (e) {
-            _writeFailureCount += 1;
-            _lastWriteFailureKey = KEY_PAUSE_START_CLOCK_TS;
-        }
+        setStorageValue(KEY_PAUSE_START_CLOCK_TS, nonNegative(value));
     }
 
     function getIntakeCount() as Number {
-        var value = _storageBackend.getValue(KEY_INTAKE_COUNT);
+        var value = getStorageValue(KEY_INTAKE_COUNT);
         if (value instanceof Number) {
             return nonNegative(value);
         }
@@ -569,16 +527,11 @@ class StorageManager {
     }
 
     function setIntakeCount(value as Number) as Void {
-        try {
-            _storageBackend.setValue(KEY_INTAKE_COUNT, nonNegative(value));
-        } catch (e) {
-            _writeFailureCount += 1;
-            _lastWriteFailureKey = KEY_INTAKE_COUNT;
-        }
+        setStorageValue(KEY_INTAKE_COUNT, nonNegative(value));
     }
 
     function getRecoveryTargetG10() as Number {
-        var value = _storageBackend.getValue(KEY_RECOVERY_TARGET_G10);
+        var value = getStorageValue(KEY_RECOVERY_TARGET_G10);
         if (value instanceof Number) {
             return nonNegative(value);
         }
@@ -586,16 +539,11 @@ class StorageManager {
     }
 
     function setRecoveryTargetG10(value as Number) as Void {
-        try {
-            _storageBackend.setValue(KEY_RECOVERY_TARGET_G10, nonNegative(value));
-        } catch (e) {
-            _writeFailureCount += 1;
-            _lastWriteFailureKey = KEY_RECOVERY_TARGET_G10;
-        }
+        setStorageValue(KEY_RECOVERY_TARGET_G10, nonNegative(value));
     }
 
     function getRecoveryConsumedG10() as Number {
-        var value = _storageBackend.getValue(KEY_RECOVERY_CONSUMED_G10);
+        var value = getStorageValue(KEY_RECOVERY_CONSUMED_G10);
         if (value instanceof Number) {
             return nonNegative(value);
         }
@@ -603,16 +551,11 @@ class StorageManager {
     }
 
     function setRecoveryConsumedG10(value as Number) as Void {
-        try {
-            _storageBackend.setValue(KEY_RECOVERY_CONSUMED_G10, nonNegative(value));
-        } catch (e) {
-            _writeFailureCount += 1;
-            _lastWriteFailureKey = KEY_RECOVERY_CONSUMED_G10;
-        }
+        setStorageValue(KEY_RECOVERY_CONSUMED_G10, nonNegative(value));
     }
 
     function getRecoveryElapsedSec() as Number {
-        var value = _storageBackend.getValue(KEY_RECOVERY_ELAPSED_SEC);
+        var value = getStorageValue(KEY_RECOVERY_ELAPSED_SEC);
         if (value instanceof Number) {
             return nonNegative(value);
         }
@@ -620,16 +563,11 @@ class StorageManager {
     }
 
     function setRecoveryElapsedSec(value as Number) as Void {
-        try {
-            _storageBackend.setValue(KEY_RECOVERY_ELAPSED_SEC, nonNegative(value));
-        } catch (e) {
-            _writeFailureCount += 1;
-            _lastWriteFailureKey = KEY_RECOVERY_ELAPSED_SEC;
-        }
+        setStorageValue(KEY_RECOVERY_ELAPSED_SEC, nonNegative(value));
     }
 
     function getRecoveryIntakeCount() as Number {
-        var value = _storageBackend.getValue(KEY_RECOVERY_INTAKE_COUNT);
+        var value = getStorageValue(KEY_RECOVERY_INTAKE_COUNT);
         if (value instanceof Number) {
             return nonNegative(value);
         }
@@ -637,12 +575,7 @@ class StorageManager {
     }
 
     function setRecoveryIntakeCount(value as Number) as Void {
-        try {
-            _storageBackend.setValue(KEY_RECOVERY_INTAKE_COUNT, nonNegative(value));
-        } catch (e) {
-            _writeFailureCount += 1;
-            _lastWriteFailureKey = KEY_RECOVERY_INTAKE_COUNT;
-        }
+        setStorageValue(KEY_RECOVERY_INTAKE_COUNT, nonNegative(value));
     }
 
     function hasRecoverySnapshot() as Boolean {

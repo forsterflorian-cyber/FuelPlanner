@@ -1,6 +1,7 @@
 using Toybox.Test;
 import Toybox.Lang;
 import Toybox.Activity;
+import FuelReminderModes;
 
 //! Integration tests for session lifecycle and component interaction
 class IntegrationTests {
@@ -353,7 +354,7 @@ class IntegrationTests {
         model.compute(info);
 
         // Initial: MODE_CALORIE_AUTO
-        Test.assertEqual(2, model.getReminderMode());
+        Test.assertEqual(FuelReminderModes.CALORIE_AUTO, model.getReminderMode());
 
         // Simulate 6 minutes without calorie data (360 ticks)
         // Fallback should happen at tick 300 (5 minutes)
@@ -363,7 +364,7 @@ class IntegrationTests {
             info.advanceTimerSeconds(1);
             model.compute(info);
 
-            if (model.getReminderMode() == 0 && fallbackTick < 0) {
+            if (model.getReminderMode() == FuelReminderModes.AUTO && fallbackTick < 0) {
                 fallbackTick = i;
                 logger.debug("Fallback at tick " + i.format("%d"));
             }
@@ -371,7 +372,7 @@ class IntegrationTests {
 
         Test.assertMessage(fallbackTick >= 0, "Should have fallen back to MODE_AUTO");
         Test.assertMessage(fallbackTick <= 300, "Fallback should happen at or before 300 ticks");
-        Test.assertEqual(0, model.getReminderMode());
+        Test.assertEqual(FuelReminderModes.AUTO, model.getReminderMode());
 
         // Continue with MODE_AUTO
         Test.assertMessage(model.isSessionActive(), "Session should still be active");

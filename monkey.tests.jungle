@@ -2,3 +2,4 @@ project.manifest = manifest.xml
 project.optimization = 0
 
 base.sourcePath = source;tests
+base.excludeAnnotations = release

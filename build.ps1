@@ -34,12 +34,20 @@ function Get-JavaMajorVersion([string]$versionLine) {
 }
 
 # --- Auto-detect newest SDK ---
+if (-not (Test-Path $SdkPath)) {
+    Write-Error "Garmin SDK directory not found at $SdkPath. Install the Connect IQ SDK first or pass -SdkPath."
+    exit 1
+}
 $sdk = Get-ChildItem -Path $SdkPath -Directory | Sort-Object Name -Descending | Select-Object -First 1
 if (-not $sdk) {
     Write-Error "No Garmin SDK found in $SdkPath. Install the Connect IQ SDK first."
     exit 1
 }
 $monkeybrains = Join-Path $sdk.FullName "bin\monkeybrains.jar"
+if (-not (Test-Path $monkeybrains)) {
+    Write-Error "monkeybrains.jar not found in SDK $($sdk.FullName). Check the Connect IQ SDK installation."
+    exit 1
+}
 Write-Host "Using SDK: $($sdk.Name)" -ForegroundColor Cyan
 
 # --- Find developer key ---
