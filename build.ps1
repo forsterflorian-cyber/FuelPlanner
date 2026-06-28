@@ -67,12 +67,21 @@ if ($JavaPath -ne "") {
     }
     $javaExe = (Resolve-Path $JavaPath).Path
 } else {
-    $javaCmd = Get-Command java -ErrorAction SilentlyContinue
-    if ($javaCmd -eq $null) {
-        Write-Error "No java executable found in PATH. Install Java 11+ and retry."
-        exit 1
+    if ($env:JAVA_HOME) {
+        $javaHomeCandidate = Join-Path $env:JAVA_HOME "bin\java.exe"
+        if (Test-Path $javaHomeCandidate) {
+            $javaExe = (Resolve-Path $javaHomeCandidate).Path
+        }
     }
-    $javaExe = $javaCmd.Source
+
+    if ($javaExe -eq $null) {
+        $javaCmd = Get-Command java -ErrorAction SilentlyContinue
+        if ($javaCmd -eq $null) {
+            Write-Error "No java executable found in JAVA_HOME or PATH. Install Java 11+ and retry."
+            exit 1
+        }
+        $javaExe = $javaCmd.Source
+    }
 }
 
 $javaVersionOutput = & $javaExe -version 2>&1

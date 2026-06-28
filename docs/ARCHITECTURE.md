@@ -115,7 +115,7 @@ function onSettingsChanged()    // Handle external settings changes
 **Reminder Modes**:
 1. **MODE_AUTO (0)**: Deficit-based with fixed g/h target
 2. **MODE_FIXED (1)**: Fixed interval from last intake
-3. **MODE_CALORIE_AUTO (2)**: Target derived from watch calorie data
+3. **MODE_CALORIE_AUTO (2)**: Target derived from device calorie data
 
 **Key Calculations**:
 ```monkeyc

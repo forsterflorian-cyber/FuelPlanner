@@ -36,7 +36,7 @@ class FuelModel {
     // Reminder modes (class-level const — class prototype, not per-instance heap)
     public const MODE_AUTO         = FuelReminderModes.AUTO;         // deficit-based with fixed g/h target
     public const MODE_FIXED        = FuelReminderModes.FIXED;        // fixed interval from last intake
-    public const MODE_CALORIE_AUTO = FuelReminderModes.CALORIE_AUTO; // target derived from watch calorie data
+    public const MODE_CALORIE_AUTO = FuelReminderModes.CALORIE_AUTO; // target derived from device calorie data
     public const RING_TONE_GREEN   = 0;
     public const RING_TONE_YELLOW  = 1;
     public const RING_TONE_RED     = 2;

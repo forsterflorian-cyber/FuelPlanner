@@ -53,6 +53,9 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private const CONTENT_MIN_TOP_PX = 14;
     private const CONTENT_MIN_BOTTOM_PX = 18;
     private const RATE_ROW_MIN_HEIGHT_PX = 12;
+    private const COMPACT_MAX_WIDTH_PX = 180;
+    private const COMPACT_MAX_HEIGHT_PX = 150;
+    private const COMPACT_SHORT_HEIGHT_PX = 78;
 
     //Eating overlay config
     private var _overlayEndTime as Number = 0;
@@ -139,13 +142,22 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         var dimColor  = isDark ? COLOR_DIM    : Graphics.COLOR_DK_GRAY;
 
         var touchEnabled = isTouchEnabled();
+        var compactLayout = isCompactFieldLayout(w, h);
 
         if (_showRecoveryLayout) {
+            if (compactLayout) {
+                drawCompactRecoveryLayout(dc, w, h, cx);
+                return;
+            }
             drawRecoveryLayout(dc, w, h, cx);
             return;
         }
 
         if (!_model.isSessionActive()) {
+            if (compactLayout) {
+                drawCompactNoSession(dc, w, h, cx, textColor, dimColor);
+                return;
+            }
             drawNoSession(dc, cx, h, textColor, dimColor);
             return;
         }
@@ -193,6 +205,13 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             return false;
         }
         return FuelPlannerUtils.isTimerStateStoppedOrOff(info);
+    }
+
+    private function isCompactFieldLayout(w as Number, h as Number) as Boolean {
+        if (w <= COMPACT_MAX_WIDTH_PX || h <= COMPACT_MAX_HEIGHT_PX) {
+            return true;
+        }
+        return w < 240 && h < 190;
     }
 
 
@@ -285,6 +304,33 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         dc.drawText(cx, y + titleH + gap, noteFont, noteText, Graphics.TEXT_JUSTIFY_CENTER);
     }
 
+    private function drawCompactNoSession(dc as Dc, w as Number, h as Number,
+                                          cx as Number, textColor as Number,
+                                          dimColor as Number) as Void {
+        var contentW = getCompactContentWidth(w);
+        var titleText = FuelPlannerUtils.loadString(Rez.Strings.AppName, "FuelPlanner");
+        var noteText = FuelPlannerUtils.loadString(Rez.Strings.LabelWaiting, "Start activity");
+        var titleFont = getBestFontForBox(dc, titleText, contentW, getScaledValue(h, 0.38f, 12, 30), false);
+        var noteFont = getBestFontForBox(dc, noteText, contentW, getScaledValue(h, 0.22f, 10, 18), false);
+        var gap = getCompactRowGap(h);
+        var titleH = dc.getTextDimensions(titleText, titleFont)[1];
+        var noteH = h >= COMPACT_SHORT_HEIGHT_PX ? dc.getTextDimensions(noteText, noteFont)[1] : 0;
+        var totalHeight = titleH + noteH;
+        if (noteH > 0) {
+            totalHeight += gap;
+        }
+        var y = (h - totalHeight) / 2;
+        if (y < 0) { y = 0; }
+
+        dc.setColor(textColor, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(cx, y, titleFont, titleText, Graphics.TEXT_JUSTIFY_CENTER);
+
+        if (noteH > 0) {
+            dc.setColor(dimColor, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(cx, y + titleH + gap, noteFont, noteText, Graphics.TEXT_JUSTIFY_CENTER);
+        }
+    }
+
     private function drawRecoveryLayout(dc as Dc, w as Number, h as Number,
                                         cx as Number) as Void {
         var recoveryDeficit = _model.getRecoveryDeficit();
@@ -341,10 +387,53 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         }
     }
 
+    private function drawCompactRecoveryLayout(dc as Dc, w as Number, h as Number,
+                                               cx as Number) as Void {
+        var recoveryDeficit = _model.getRecoveryDeficit();
+        var showRecoveryHint = false;
+        if (recoveryDeficit != null) {
+            showRecoveryHint = recoveryDeficit > RECOVERY_MIN_G;
+        }
+        var panelColor = showRecoveryHint ? COLOR_RECOVERY : COLOR_GOOD;
+        var titleText = showRecoveryHint ? FuelPlannerUtils.loadString(Rez.Strings.LabelRecovery, "Recovery") : "OK";
+        var valueText = "";
+        if (showRecoveryHint && recoveryDeficit != null) {
+            valueText = "+" + recoveryDeficit.format("%d") + UNIT_G;
+        }
+
+        dc.setColor(panelColor, panelColor);
+        dc.fillRectangle(0, 0, w, h);
+
+        var contentW = getCompactContentWidth(w);
+        var titleFont = getBestFontForBox(dc, titleText, contentW, getScaledValue(h, 0.30f, 12, 28), false);
+        var valueFont = getBestFontForBox(dc, valueText, contentW, getScaledValue(h, 0.42f, 16, 40), true);
+        var gap = getCompactRowGap(h);
+        var titleH = dc.getTextDimensions(titleText, titleFont)[1];
+        var valueH = (valueText != "") ? dc.getTextDimensions(valueText, valueFont)[1] : 0;
+        var totalHeight = titleH + valueH;
+        if (valueH > 0) {
+            totalHeight += gap;
+        }
+        var y = (h - totalHeight) / 2;
+        if (y < 0) { y = 0; }
+
+        dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(cx, y, titleFont, titleText, Graphics.TEXT_JUSTIFY_CENTER);
+
+        if (valueText != "") {
+            dc.drawText(cx, y + titleH + gap, valueFont, valueText, Graphics.TEXT_JUSTIFY_CENTER);
+        }
+    }
+
     //! Main layout - simplified for memory optimization
     private function drawMainLayout(dc as Dc, w as Number, h as Number,
                                     cx as Number, textColor as Number,
                                     dimColor as Number, touchEnabled as Boolean) as Void {
+        if (isCompactFieldLayout(w, h)) {
+            drawCompactMainLayout(dc, w, h, cx, textColor, dimColor, touchEnabled);
+            return;
+        }
+
         var sideInset = getContentSideInset(w);
         var contentW = w - (sideInset * 2);
         if (contentW < 40) {
@@ -447,6 +536,69 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         drawOuterRing(dc, w, h);
     }
 
+    private function drawCompactMainLayout(dc as Dc, w as Number, h as Number,
+                                           cx as Number, textColor as Number,
+                                           dimColor as Number,
+                                           touchEnabled as Boolean) as Void {
+        var contentW = getCompactContentWidth(w);
+        var contentTop = getScaledValue(h, 0.06f, 2, 8);
+        var contentH = h - (contentTop * 2);
+        if (contentH < 20) {
+            contentH = h;
+            contentTop = 0;
+        }
+        var gap = getCompactRowGap(h);
+
+        var statusText = buildCompactStatusText(touchEnabled);
+        var statusColor = getStatusColor();
+        var numStr = buildTotalsText();
+        var deficitG10 = _model.getDeficitG10();
+        var deficitText = buildCompactDeficitTextFromG10(deficitG10);
+        var deficitColor = getDeficitColor(deficitG10);
+
+        var showStatus = true;
+        var showDeficit = h >= COMPACT_SHORT_HEIGHT_PX;
+        var statusFont = getBestFontForBox(dc, statusText, contentW, getScaledValue(contentH, 0.22f, 10, 22), false);
+        var primaryFont = getBestFontForBox(dc, numStr, contentW, getScaledValue(contentH, 0.48f, 18, 44), true);
+        var deficitFont = getBestFontForBox(dc, deficitText, contentW, getScaledValue(contentH, 0.22f, 10, 20), false);
+
+        var statusH = dc.getTextDimensions(statusText, statusFont)[1];
+        var primaryH = dc.getTextDimensions(numStr, primaryFont)[1];
+        var deficitH = showDeficit ? dc.getTextDimensions(deficitText, deficitFont)[1] : 0;
+        var totalHeight = primaryH;
+        if (showStatus) { totalHeight += statusH + gap; }
+        if (showDeficit) { totalHeight += deficitH + gap; }
+
+        if (totalHeight > contentH && showDeficit) {
+            showDeficit = false;
+            deficitH = 0;
+            totalHeight = primaryH + statusH + gap;
+        }
+        if (totalHeight > contentH && showStatus && !_model.isPaused() && !_model.isReminderDue()) {
+            showStatus = false;
+            statusH = 0;
+            totalHeight = primaryH;
+        }
+
+        var y = contentTop + ((contentH - totalHeight) / 2);
+        if (y < contentTop) { y = contentTop; }
+
+        if (showStatus) {
+            dc.setColor(statusColor, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(cx, y, statusFont, statusText, Graphics.TEXT_JUSTIFY_CENTER);
+            y += statusH + gap;
+        }
+
+        dc.setColor(textColor, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(cx, y, primaryFont, numStr, Graphics.TEXT_JUSTIFY_CENTER);
+
+        if (showDeficit) {
+            y += primaryH + gap;
+            dc.setColor(deficitColor, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(cx, y, deficitFont, deficitText, Graphics.TEXT_JUSTIFY_CENTER);
+        }
+    }
+
     private function drawOuterRing(dc as Dc, w as Number, h as Number) as Void {
         var diameter = (w < h) ? w : h;
         if (diameter < 96) {
@@ -472,6 +624,19 @@ class FuelPlannerFieldView extends WatchUi.DataField {
 
     private function getRowGap(h as Number) as Number {
         return getScaledValue(h, CONTENT_GAP_RATIO, ROW_GAP_PX, 12);
+    }
+
+    private function getCompactRowGap(h as Number) as Number {
+        return getScaledValue(h, 0.025f, 2, 6);
+    }
+
+    private function getCompactContentWidth(w as Number) as Number {
+        var inset = getScaledValue(w, 0.05f, 4, 12);
+        var contentW = w - (inset * 2);
+        if (contentW < 20) {
+            return 20;
+        }
+        return contentW;
     }
 
     private function getBestFontForBox(dc as Dc, text as String,
@@ -547,6 +712,23 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         return COLOR_GOOD;
     }
 
+    private function getStatusColor() as Number {
+        if (_model.isPaused()) {
+            return COLOR_WARNING;
+        }
+        if (_model.isReminderDue()) {
+            return COLOR_ALERT;
+        }
+        return COLOR_GOOD;
+    }
+
+    private function getDeficitColor(deficitG10 as Number) as Number {
+        if (deficitG10 > 5) {
+            return COLOR_WARNING;
+        }
+        return COLOR_GOOD;
+    }
+
     private function getContentSideInset(w as Number) as Number {
         var inset = getScaledValue(w, CONTENT_SIDE_RATIO, CONTENT_MIN_SIDE_PX, 44);
         var ringInset = getRingStrokeWidth(w) + getRingPadding(w) + ROUND_EDGE_PADDING_PX;
@@ -586,6 +768,25 @@ class FuelPlannerFieldView extends WatchUi.DataField {
                FuelPlannerUtils.loadString(Rez.Strings.UnitGramsPerHour, "g/h");
     }
 
+    private function buildTotalsText() as String {
+        var consumedG = (_model.getConsumedTotalG10() + 5) / 10;
+        var targetG = (_model.getTargetTotalG10() + 5) / 10;
+        return consumedG.format("%d") + "/" + targetG.format("%d");
+    }
+
+    private function buildCompactStatusText(touchEnabled as Boolean) as String {
+        if (_model.isPaused()) {
+            return FuelPlannerUtils.loadString(Rez.Strings.LabelPaused, "PAUSED");
+        }
+        if (_model.isReminderDue()) {
+            if (touchEnabled) {
+                return "+" + _model.getDoseG().format("%d") + UNIT_G;
+            }
+            return "AUTO";
+        }
+        return formatDuration(_model.getDisplayNextDueInSec());
+    }
+
     private function buildDeficitText() as String {
         return buildDeficitTextFromG10(_model.getDeficitG10());
     }
@@ -598,6 +799,16 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             return FuelPlannerUtils.loadString(Rez.Strings.LabelAhead, "Ahead") + " " + (((-deficitG10) + 5) / 10).format("%d") + UNIT_G;
         }
         return FuelPlannerUtils.loadString(Rez.Strings.LabelOnTarget, "On target");
+    }
+
+    private function buildCompactDeficitTextFromG10(deficitG10 as Number) as String {
+        if (deficitG10 > 5) {
+            return "+" + ((deficitG10 + 5) / 10).format("%d") + UNIT_G;
+        }
+        if (deficitG10 < -5) {
+            return "-" + (((-deficitG10) + 5) / 10).format("%d") + UNIT_G;
+        }
+        return "OK";
     }
 
     private function buildReminderReasonText() as String {

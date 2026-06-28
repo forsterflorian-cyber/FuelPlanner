@@ -19,7 +19,7 @@ It tracks intake against a target, shows the current deficit, and reminds the at
 
 - `Auto`: uses the configured carb target and live session state
 - `Fixed`: uses a fixed interval from the last logged intake
-- `Calorie Auto`: derives the target from watch calorie data and a configurable carb fraction
+- `Calorie Auto`: derives the target from device calorie data and a configurable carb fraction
 
 ## Supported Devices
 
@@ -27,8 +27,11 @@ FuelPlanner currently ships as a single package for these devices:
 
 - Forerunner: `fr255`, `fr255m`, `fr255s`, `fr255sm`, `fr265`, `fr265s`, `fr57042mm`, `fr57047mm`, `fr745`, `fr945`, `fr945lte`, `fr955`, `fr965`, `fr970`
 - Fenix / Epix: `epix2`, `epix2pro42mm`, `epix2pro47mm`, `epix2pro51mm`, `fenix7`, `fenix7pro`, `fenix7pronowifi`, `fenix7s`, `fenix7spro`, `fenix7x`, `fenix7xpro`, `fenix7xpronowifi`, `fenix843mm`, `fenix847mm`, `fenix8pro47mm`, `fenix8solar47mm`, `fenix8solar51mm`
+- Edge: `edge1030`, `edge1030bontrager`, `edge1030plus`, `edge1040`, `edge1050`, `edge520plus`, `edge530`, `edge540`, `edge550`, `edge820`, `edge830`, `edge840`, `edge850`, `edgeexplore`, `edgeexplore2`, `edgemtb`
 - Instinct: `instinct3amoled45mm`, `instinct3amoled50mm`
 - Venu: `venu3`, `venu3s`
+
+Edge 1000 and Edge 520 are below the app's Connect IQ 3.0 minimum. Edge 130 and Edge 130 Plus are not listed because the current data field package exceeds their 32 KB data field memory limit.
 
 ## Installation
 
@@ -103,7 +106,7 @@ FuelPlanner/
 
 - Store package: `artifacts/FuelPlanner-DataField.iq`
 - Test bundle example: `artifacts/FuelPlannerTests-fr955.prg`
-- Accepted waiver: launcher icon scaling warnings on `60px`, `65px`, and `70px` targets
+- Accepted waiver: launcher icon scaling warnings on `35px`, `36px`, `54px`, `56px`, `60px`, `65px`, `68px`, and `70px` targets
 
 ## License
 

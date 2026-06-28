@@ -5,12 +5,16 @@ All notable public-facing changes to FuelPlanner are recorded here.
 ## [Unreleased] - 2026-03-10
 
 [DE]
+- Unterstuetzung fuer kompatible Edge Radcomputer ergaenzt.
+- Kompakte Anzeige fuer kleine rechteckige Datenfeld-Slots hinzugefuegt.
 - Lebenszyklus fuer Start, Stop und Session-Uebergaenge stabilisiert.
 - Timing der Erinnerungen rund um Startverzoegerung, Snooze und Pausen korrigiert.
 - Pause/Fortsetzen bei Timer-Stalls und Reloads robuster gemacht.
 - Session-Wiederherstellung nach Neustarts und kurzzeitig fehlenden Timer-Ticks verbessert.
 
 [EN]
+- Added support for compatible Edge cycling computers.
+- Added a compact view for small rectangular data field slots.
 - Stabilized lifecycle handling for session start, stop, and handoff cases.
 - Fixed reminder timing around start delay, snooze, and pause handling.
 - Improved pause/resume robustness during timer stalls and reloads.

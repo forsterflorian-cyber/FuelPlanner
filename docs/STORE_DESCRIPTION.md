@@ -2,7 +2,7 @@
 
 ## Deutsch
 
-FuelPlanner ist ein Garmin Connect IQ Datenfeld fuer gezielte Kohlenhydratzufuhr waehrend Ausdaueraktivitaeten.
+FuelPlanner ist ein Garmin Connect IQ Datenfeld fuer gezielte Kohlenhydratzufuhr waehrend Ausdaueraktivitaeten auf kompatiblen Garmin Uhren und Edge Radcomputern.
 
 Statt nach Gefuehl zu essen, zeigt dir FuelPlanner, wann du wirklich nachlegen solltest. So vermeidest du Leistungseinbrueche und haeltst deine Energie konstant.
 
@@ -13,10 +13,10 @@ So funktioniert es:
 * Erinnerung abwarten
 * Auf Touch-Geraeten direkt bestaetigen oder auf Nicht-Touch-Geraeten automatisch als Planwert uebernehmen lassen
 
-Bedienung auf der Uhr:
+Bedienung auf dem Geraet:
 
-* Touch Geraete: mittig tippen = Aufnahme buchen
-* Touch Geraete: unten tippen = letzte Aufnahme rueckgaengig machen (Undo)
+* Touch-Geraete: mittig tippen = Aufnahme buchen
+* Touch-Geraete: unten tippen = letzte Aufnahme rueckgaengig machen (Undo)
 * Bei aktiver Erinnerung: oben tippen = Snooze
 * Geraete ohne Touch: Aufnahme wird nach Erinnerung automatisch als Schaetzung/Planwert gebucht (Auto-Flow)
 * Geraete ohne Touch: kein manuelles Eingreifen notwendig
@@ -30,7 +30,7 @@ Laufen, Radfahren, lange Einheiten und Wettkaempfe
 
 ## English
 
-FuelPlanner is a Garmin Connect IQ data field for precise carbohydrate fueling during endurance activities.
+FuelPlanner is a Garmin Connect IQ data field for precise carbohydrate fueling during endurance activities on compatible Garmin watches and Edge cycling computers.
 
 Instead of guessing when to eat, FuelPlanner tells you when you actually need to fuel. This helps prevent energy drops and keeps your performance stable.
 
