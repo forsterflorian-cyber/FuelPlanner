@@ -9,8 +9,8 @@ It tracks intake against a target, shows the current deficit, and reminds the at
 - Configurable dose size
 - Configurable start delay and snooze
 - Reminder modes: `Auto`, `Fixed`, `Calorie Auto`
-- Pause-aware session handling
-- Frozen post-activity recovery snapshot after stop/restart
+- Pause-aware session handling, including Garmin `STOPPED` as a resumable pause
+- Frozen post-activity recovery snapshot after timer reset or terminal `OFF`
 - Touch logging and undo on touch-capable devices
 - Automatic estimate flow on non-touch devices
 - FIT record and session fields written to the FIT file for compatible analysis tools
@@ -33,13 +33,22 @@ FuelPlanner currently ships as a single package for these devices:
 
 Edge 1000 and Edge 520 are below the app's Connect IQ 3.0 minimum. Edge 130 and Edge 130 Plus are not listed because the current data field package exceeds their 32 KB data field memory limit.
 
+Edge 820 and Edge Explore are touch-capable and use the same manual intake, snooze, and undo flow as other touch products. Connect IQ 3.2 is required only for Garmin's native full-screen `DataFieldAlert`; FuelPlanner's in-field reminder overlay remains available when that native control is unavailable.
+
 ## Installation
 
 1. Add FuelPlanner as a Connect IQ data field to a supported activity.
 2. Start an activity such as Run, Bike, or Hike.
-3. On touch-capable devices, tap the center zone to log intake and the bottom zone to undo the last intake.
+3. On touch-capable devices, use the center zone to log intake and the lower band to undo when no reminder is active.
 4. On non-touch devices, FuelPlanner applies the configured dose automatically when a reminder becomes due.
-5. Use the top zone or menu action to snooze reminders when needed.
+5. During an active reminder or alert overlay, touch routing is modal: the visible top snooze band snoozes, and any valid tap below it records the intake. Undo becomes available again after the reminder is dismissed.
+
+## Lifecycle and Recovery
+
+- `PAUSED` and Garmin `STOPPED` timer states pause the FuelPlanner session. The session remains persisted and resumes with the activity timer.
+- Timer `RESET` and terminal `OFF` end the FuelPlanner session. A normal stop does not finalize it.
+- Finalization attempts a verified final active aggregate, then persists a verified recovery snapshot before active-session cleanup. A confirmed recovery snapshot takes precedence if interrupted cleanup leaves both records behind.
+- If recovery persistence fails after the final active aggregate commits, that `FINISHED` aggregate remains for retry on the next load. If the final active write also fails, storage retains the latest previously verified coherent active aggregate, which may predate finalization.
 
 ## Settings
 
@@ -50,7 +59,7 @@ Edge 1000 and Edge 520 are below the app's Connect IQ 3.0 minimum. Edge 130 and 
 - `Fixed Interval`: reminder interval used in `Fixed`
 - `Start Delay`: delay before reminders begin
 - `Snooze Time`: reminder snooze duration
-- `Native Full-Screen Alerts`: available only on devices that support Garmin `DataFieldAlert`
+- `Native Full-Screen Alerts`: available only on Connect IQ 3.2+ devices that support Garmin `DataFieldAlert`
 
 ## FIT Data
 
@@ -104,9 +113,18 @@ FuelPlanner/
 
 ## Release
 
+- Current version: `1.0.0`
 - Store package: `artifacts/FuelPlanner-DataField.iq`
 - Test bundle example: `artifacts/FuelPlannerTests-fr955.prg`
 - Accepted waiver: launcher icon scaling warnings on `35px`, `36px`, `54px`, `56px`, `60px`, `65px`, `68px`, and `70px` targets
+
+Release validation is reported in three separate categories:
+
+- **Compile**: compiler/package results for the declared product matrix
+- **Simulator**: automated tests and interactive layout/behavior checks, with the simulated products named
+- **Physical device**: explicitly named hardware checks; compile or simulator success is never presented as on-device validation
+
+The repository does not currently claim physical-device validation for version `1.0.0`. See `docs/CHANGELOG.md`, `docs/RELEASE_NOTES_1.0.0.md`, and `docs/RELEASE_TEMPLATE.md` for release details and the validation checklist.
 
 ## License
 

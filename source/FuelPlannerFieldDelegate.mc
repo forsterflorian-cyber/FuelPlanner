@@ -15,39 +15,49 @@ class FuelPlannerFieldDelegate extends WatchUi.InputDelegate {
     }
 
     function onTap(clickEvent as WatchUi.ClickEvent) as Boolean {
-        if (!_model.isSessionActive()) {
-            return true;
-        }
-
         var coords = clickEvent.getCoordinates();
         if (coords == null || coords.size() < 2) {
             return true;
         }
 
-        var x = coords[0];
-        var y = coords[1];
+        return routeTap(coords[0], coords[1]);
+    }
+
+    //! Route already-extracted coordinates. Keeping event decoding separate
+    //! makes the three field actions deterministic and directly testable.
+    function routeTap(x as Number, y as Number) as Boolean {
+        if (!_model.isSessionActive() || !_model.isTouchInputEnabled()) {
+            return true;
+        }
+
         var fieldWidth = _view.getFieldWidth();
         var fieldHeight = _view.getFieldHeight();
-
-        var snoozeBand = fieldHeight / 5;
-        var intakeTop = fieldHeight / 6;
-        if (intakeTop <= snoozeBand) {
-            intakeTop = snoozeBand + 1;
+        if (fieldWidth <= 0 || fieldHeight <= 0 ||
+            x < 0 || x >= fieldWidth || y < 0 || y >= fieldHeight) {
+            return true;
         }
-        var intakeBottom = fieldHeight - intakeTop;
-        var intakeLeft = fieldWidth / 6;
-        var intakeRight = fieldWidth - intakeLeft;
 
-        // Keep the top snooze action available for the full lifetime of the
-        // reminder overlay, even if the model's due edge changes meanwhile.
-        if ((_model.isReminderDue() || _view.isReminderOverlayActive()) &&
-            y <= snoozeBand) {
-            _model.snoozeReminder();
-            _reminder.triggerSnooze();
+        var reminderActionVisible = _model.isReminderDue() ||
+                                    _view.isReminderOverlayActive();
+        var snoozeBand = _view.getSnoozeTapBottom();
+
+        if (reminderActionVisible) {
+            if (y <= snoozeBand) {
+                _model.snoozeReminder();
+                _reminder.triggerSnooze();
+            } else {
+                _model.recordDefaultIntake();
+                _reminder.triggerConfirmation();
+            }
             _view.dismissOverlay();
             WatchUi.requestUpdate();
             return true;
         }
+
+        var intakeTop = fieldHeight / 6;
+        var intakeBottom = fieldHeight - intakeTop;
+        var intakeLeft = fieldWidth / 6;
+        var intakeRight = fieldWidth - intakeLeft;
 
         if (x >= intakeLeft && x <= intakeRight &&
             y >= intakeTop && y <= intakeBottom) {

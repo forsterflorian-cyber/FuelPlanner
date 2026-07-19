@@ -690,4 +690,169 @@ class FuelModelTests {
 
         return true;
     }
+
+    (:test)
+    static function timerSourceSwitchAfterPauseKeepsActiveElapsed(logger as Test.Logger) as Boolean {
+        var clock = new MockClock(7000);
+        var props = new MockPropertiesBackend();
+        props.setValue("carbsTargetGph", 60);
+        props.setValue("doseG", 25);
+        props.setValue("startDelayMin", 0);
+
+        var model = buildModel(clock, props);
+        var info = new MockActivityInfo(7000);
+        info.timerState = Activity.TIMER_STATE_ON;
+        info.setTimerSeconds(600);
+        info.setElapsedSeconds(600);
+        model.compute(info);
+
+        model.onTimerPause();
+        info.timerState = Activity.TIMER_STATE_PAUSED;
+        model.compute(info);
+        clock.advance(300);
+        info.setElapsedSeconds(900);
+        model.compute(info);
+
+        model.onTimerResume();
+        clock.advance(1);
+        info.timerState = Activity.TIMER_STATE_ON;
+        info.setTimerSeconds(601);
+        info.setElapsedSeconds(901);
+        model.compute(info);
+
+        // timerTime can disappear on a later sample. elapsedTime includes the
+        // pause, so the calibrated source handoff must keep the active clock.
+        clock.advance(1);
+        info.clearTimerTime();
+        info.setElapsedSeconds(902);
+        model.compute(info);
+
+        logger.debug("sourceSwitchElapsed=" + model.getElapsedActiveSec().format("%d"));
+        Test.assertEqual(602, model.getElapsedActiveSec());
+        Test.assertEqual(100, model.getTargetTotalG10());
+        return true;
+    }
+
+    (:test)
+    static function pausedElapsedFallbackReloadResumesBeforeFirstCompute(logger as Test.Logger) as Boolean {
+        var storageBackend = new MockStorageBackend();
+        var props = new MockPropertiesBackend();
+        props.setValue("carbsTargetGph", 60);
+        props.setValue("doseG", 25);
+        props.setValue("startDelayMin", 0);
+        var firstClock = new MockClock(8000);
+        var firstStorage = new StorageManager(storageBackend, props);
+        var firstModel = new FuelModel(firstStorage, firstClock);
+        firstModel.setTouchForTest(true);
+        var info = new MockActivityInfo(8000);
+        info.timerState = Activity.TIMER_STATE_ON;
+        info.clearTimerTime();
+        info.setElapsedSeconds(60);
+        firstModel.compute(info);
+
+        firstModel.onTimerPause();
+        info.timerState = Activity.TIMER_STATE_PAUSED;
+        firstModel.compute(info);
+        firstClock.advance(300);
+        info.setElapsedSeconds(360);
+        firstModel.compute(info);
+        firstModel.saveSession();
+
+        var restoredClock = new MockClock(8300);
+        var restoredStorage = new StorageManager(storageBackend, props);
+        var restoredModel = new FuelModel(restoredStorage, restoredClock);
+        restoredModel.setTouchForTest(true);
+        restoredModel.loadSession();
+
+        // Garmin may deliver resume before the first Activity.Info sample.
+        restoredModel.onTimerResume();
+        restoredClock.advance(1);
+        info.timerState = Activity.TIMER_STATE_ON;
+        info.setElapsedSeconds(361);
+        restoredModel.compute(info);
+
+        logger.debug("reloadBeforeComputeElapsed=" +
+                     restoredModel.getElapsedActiveSec().format("%d"));
+        Test.assertMessage(!restoredModel.isPaused(),
+                           "Resume callback should restore the active state.");
+        Test.assertEqual(61, restoredModel.getElapsedActiveSec());
+        Test.assertEqual(10, restoredModel.getTargetTotalG10());
+        return true;
+    }
+
+    (:test)
+    static function sourceLossWhilePausedDoesNotDoubleCountPause(logger as Test.Logger) as Boolean {
+        var clock = new MockClock(9000);
+        var props = new MockPropertiesBackend();
+        props.setValue("carbsTargetGph", 60);
+        props.setValue("doseG", 25);
+        props.setValue("startDelayMin", 0);
+        var model = buildModel(clock, props);
+        var info = new MockActivityInfo(9000);
+        info.timerState = Activity.TIMER_STATE_ON;
+        info.setTimerSeconds(600);
+        info.setElapsedSeconds(600);
+        model.compute(info);
+
+        model.recordReminderTriggered();
+        model.onTimerPause();
+        info.timerState = Activity.TIMER_STATE_PAUSED;
+        model.compute(info);
+        clock.advance(300);
+        info.clearTimerTime();
+        info.setElapsedSeconds(900);
+        model.compute(info);
+
+        model.onTimerResume();
+        clock.advance(1);
+        info.timerState = Activity.TIMER_STATE_ON;
+        info.setElapsedSeconds(901);
+        model.compute(info);
+
+        Test.assertEqual(601, model.getElapsedActiveSec());
+        Test.assertEqual(100, model.getTargetTotalG10());
+        Test.assertMessage(model.getDisplayNextDueInSec() >= 299,
+                           "Source calibration must preserve the paused snooze window.");
+        return true;
+    }
+
+    (:test)
+    static function returningTimerSourceCannotReduceActiveElapsed(logger as Test.Logger) as Boolean {
+        var clock = new MockClock(10000);
+        var props = new MockPropertiesBackend();
+        props.setValue("carbsTargetGph", 60);
+        props.setValue("doseG", 25);
+        props.setValue("startDelayMin", 0);
+        var model = buildModel(clock, props);
+        var info = new MockActivityInfo(10000);
+        info.timerState = Activity.TIMER_STATE_ON;
+        info.clearTimerTime();
+        info.setElapsedSeconds(600);
+        model.compute(info);
+
+        clock.advance(1);
+        info.setTimerSeconds(590);
+        info.setElapsedSeconds(601);
+        model.compute(info);
+        Test.assertEqual(601, model.getElapsedActiveSec());
+
+        clock.advance(1);
+        info.setTimerSeconds(591);
+        info.setElapsedSeconds(602);
+        model.compute(info);
+        Test.assertEqual(602, model.getElapsedActiveSec());
+
+        clock.advance(1);
+        info.clearTimerTime();
+        info.setElapsedSeconds(603);
+        model.compute(info);
+        Test.assertEqual(603, model.getElapsedActiveSec());
+
+        clock.advance(1);
+        info.setElapsedSeconds(604);
+        model.compute(info);
+        Test.assertEqual(604, model.getElapsedActiveSec());
+        Test.assertEqual(100, model.getTargetTotalG10());
+        return true;
+    }
 }

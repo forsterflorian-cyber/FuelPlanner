@@ -98,13 +98,24 @@ class MockStorageBackend extends StorageBackend {
     private var _deleteCount as Number = 0;
     private var _throwNextSetKey as String? = null;
     private var _dropNextSetKey as String? = null;
+    private var _throwNextGetKey as String? = null;
+    private var _throwNextDeleteKey as String? = null;
+    private var _dropNextDeleteKey as String? = null;
 
     function initialize() {
         StorageBackend.initialize();
     }
 
     function getValue(key as String) as Lang.Object? {
+        if (_throwNextGetKey != null && key.equals(_throwNextGetKey)) {
+            _throwNextGetKey = null;
+            throw new Lang.InvalidValueException("Injected storage read failure");
+        }
         return _values[key];
+    }
+
+    function throwOnNextGet(key as String) as Void {
+        _throwNextGetKey = key;
     }
 
     function setValue(key as String, value as Lang.Object?) as Void {
@@ -129,9 +140,25 @@ class MockStorageBackend extends StorageBackend {
 
     function deleteValue(key as String) as Void {
         _deleteCount += 1;
+        if (_throwNextDeleteKey != null && key.equals(_throwNextDeleteKey)) {
+            _throwNextDeleteKey = null;
+            throw new Lang.InvalidValueException("Injected storage delete failure");
+        }
+        if (_dropNextDeleteKey != null && key.equals(_dropNextDeleteKey)) {
+            _dropNextDeleteKey = null;
+            return;
+        }
         try {
             _values.remove(key);
         } catch (e) {}
+    }
+
+    function throwOnNextDelete(key as String) as Void {
+        _throwNextDeleteKey = key;
+    }
+
+    function dropOnNextDelete(key as String) as Void {
+        _dropNextDeleteKey = key;
     }
 
     function getDeleteCount() as Number {

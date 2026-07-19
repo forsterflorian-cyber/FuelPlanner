@@ -397,8 +397,8 @@ class ClearConfirmDelegate extends WatchUi.ConfirmationDelegate {
 
     function onResponse(response as WatchUi.Confirm) as Boolean {
         if (response == WatchUi.CONFIRM_YES) {
-            _storage.clearSession();
-            if (_model != null) {
+            var cleared = _storage.clearSession();
+            if (cleared && _model != null) {
                 (_model as FuelModel).clearSessionState();
             }
         }

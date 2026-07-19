@@ -1,8 +1,8 @@
-# FuelPlaner Architecture
+# FuelPlanner Architecture
 
 ## Overview
 
-FuelPlaner is a Garmin Connect IQ Data Field that provides intelligent carbohydrate fueling reminders during endurance activities. The architecture follows a clean separation of concerns with a Model-View-Delegate pattern adapted for the Connect IQ platform.
+FuelPlanner is a Garmin Connect IQ Data Field that provides intelligent carbohydrate fueling reminders during endurance activities. The architecture follows a clean separation of concerns with a Model-View-Delegate pattern adapted for the Connect IQ platform.
 
 ## System Architecture
 
@@ -97,20 +97,30 @@ function onSettingsChanged()    // Handle external settings changes
          │ startNewSession()
          ▼
     ┌──────────┐
-    │ PRIMING  │◄─────────────────────┐
-    └────┬─────┘                      │
-         │ timer confirmed            │
-         ▼                            │
-    ┌──────────┐    pause()    ┌──────┴─────┐
-    │  ACTIVE  │──────────────►│   PAUSED   │
-    └────┬─────┘               └──────┬─────┘
-         │                            │ resume()
-         │ stop()                     │
-         ▼                            │
-    ┌──────────┐                      │
-    │ FINISHED │◄─────────────────────┘
-    └──────────┘
+    │ PRIMING  │
+    └────┬─────┘
+         │ timer confirmed
+         ▼
+    ┌──────────┐  pause()/STOPPED  ┌──────────┐
+    │  ACTIVE  │──────────────────►│  PAUSED  │
+    └────┬─────┘◄──────────────────└────┬─────┘
+         │          start()/resume()     │
+         │                               │
+         └───────────┬───────────────────┘
+                     │ reset()/terminal OFF
+                     ▼
+               ┌──────────┐
+               │ FINISHED │  transient persisted handoff state
+               └────┬─────┘
+                    │ verified recovery snapshot
+                    ▼
+               ┌──────────┐
+               │  IDLE +  │
+               │ RECOVERY │
+               └──────────┘
 ```
+
+Garmin `TIMER_STATE_STOPPED` is intentionally treated like `PAUSED`: it is resumable and does not create a final recovery result. Only timer reset or terminal `OFF` finalizes a session. `FINISHED` is a persistence handoff marker rather than a long-lived interactive state. The recovery view is `IDLE` plus a frozen snapshot, not another active-session state.
 
 **Reminder Modes**:
 1. **MODE_AUTO (0)**: Deficit-based with fixed g/h target
@@ -163,12 +173,14 @@ nextDueSec = ceil((doseG10 - deficitG10) * 3600 / carbsRateGph10)
 │                  Local Device                        │
 │  ┌────────────────────────────────────────────────┐ │
 │  │  Storage (device-specific, not synced)         │ │
-│  │  - sess_id, start_ts, consum10, last_int       │ │
-│  │  - is_paused, elapsed_s, pause_off_s           │ │
-│  │  - start_ts_ok, int_cnt, last_rem              │ │
+│  │  - versioned aggregate active-session snapshot │ │
+│  │  - versioned aggregate recovery snapshot       │ │
+│  │  - legacy scalar keys for migration/cleanup    │ │
 │  └────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────┘
 ```
+
+The aggregate snapshots keep related values in one storage generation. Recovery handoff first attempts and verifies the final active state, then writes and verifies the recovery aggregate, and only then clears the active state. If cleanup is interrupted and both records remain, the matching confirmed recovery record takes precedence. If recovery fails after the `FINISHED` active aggregate commits, that aggregate remains so handoff can be retried after reload. If the final active write also fails, storage still retains the latest previously verified coherent active generation, which may predate finalization and reload as active.
 
 ### 4. ReminderManager (Haptic Feedback)
 
@@ -229,40 +241,57 @@ States:
 
 **File**: `source/FuelPlannerFieldDelegate.mc`
 
-**Tap Zones**:
+**Normal Tap Routing** (no reminder or overlay):
 ```
 ┌─────────────────────────────────────────────┐
-│           Snooze Zone (top 20%)             │
+│            Inactive upper margin             │
+│    ┌───────────────────────────────────┐    │
+│    │                                   │    │
+│    │     Intake (center rectangle)     │    │
+│    │                                   │    │
+│    └───────────────────────────────────┘    │
 ├─────────────────────────────────────────────┤
-│                                             │
-│                                             │
-│           Intake Zone (center 60%)          │
-│                                             │
-│                                             │
-├─────────────────────────────────────────────┤
-│          Undo Zone (bottom 20%)             │
+│       Undo lower band (when available)       │
 └─────────────────────────────────────────────┘
 ```
 
-The top zone snoozes only while a reminder is due. The bottom zone performs an undo only when the model exposes an undoable intake; otherwise edge taps are ignored.
+The normal intake rectangle uses one-sixth insets from each edge. The lower sixth performs an undo only when the model exposes an undoable intake; other margin taps are ignored.
+
+**Reminder/Overlay Tap Routing**:
+```
+┌─────────────────────────────────────────────┐
+│       Snooze (visible dynamic top band)      │
+├─────────────────────────────────────────────┤
+│                                             │
+│        Record intake (all remaining area)    │
+│                                             │
+└─────────────────────────────────────────────┘
+```
+
+Reminder routing is modal: the top band snoozes and every valid tap below it records the planned intake, including taps in the normal undo area. The view and delegate share the same boundary. Full layouts use approximately the top fifth; compact layouts use a larger bounded band so the visible target remains usable. Undo routing returns after the reminder or overlay is dismissed.
+
+FuelPlanner enables these tap routes when the device reports that touch is available. Edge 820 and Edge Explore therefore use the same manual touch flow as newer touch products. Connect IQ 3.2 is the threshold for native `DataFieldAlert`, not for `InputDelegate.onTap`; devices without the native alert continue to use FuelPlanner's in-field reminder overlay.
 
 ## Data Flow
 
 ### Session Lifecycle
 
 ```
-1. User starts activity
-   └─► FuelPlannerApp.getInitialView()
+1. Application starts
+   └─► FuelPlannerApp.onStart()
+       ├─► Create StorageManager, FuelModel, and ReminderManager
        └─► FuelModel.loadSession()
-           └─► StorageManager.hasActiveSession()
-               ├─► Yes: Restore state
-               └─► No: Wait for activity
+           └─► StorageManager.loadActiveSessionSnapshot()
+               ├─► Active aggregate: restore session state
+               ├─► No active aggregate + recovery: load frozen recovery
+               └─► Neither: wait for activity
 
 2. Timer starts
    └─► FuelPlannerFieldView.compute(info)
        └─► FuelModel.compute(info)
            └─► FuelModel.startNewSession(activityStartTs)
-               └─► StorageManager.saveSession()
+               └─► FuelModel.saveSession()
+                   └─► StorageManager.saveActiveSessionSnapshot()
 
 3. Each tick (1 Hz)
    └─► FuelModel.compute(info)
@@ -277,18 +306,25 @@ The top zone snoozes only while a reminder is due. The bottom zone performs an u
    └─► FuelPlannerFieldView.compute()
        └─► ReminderManager.triggerReminder()
        └─► FuelModel.recordReminderTriggered()
-       └─► StorageManager.saveSession()
+       └─► FuelModel.saveSession()
+           └─► StorageManager.saveActiveSessionSnapshot()
 
 5. User records intake
    └─► FuelPlannerFieldDelegate.onTap()
        └─► FuelModel.recordIntake(grams)
-           └─► StorageManager.saveSession()
+           └─► FuelModel.saveSession()
+               └─► StorageManager.saveActiveSessionSnapshot()
 
-6. Activity ends
-   └─► FuelModel.compute(info)
-       └─► FuelModel.markSessionFinished()
-           ├─► StorageManager.clearActiveSession()
-           └─► StorageManager.setRecovery... snapshot values
+6. Timer is reset or reaches terminal OFF
+   └─► FuelModel.markSessionFinished()
+       ├─► Attempt and verify final versioned active-session record
+       ├─► Write and read back versioned recovery snapshot
+       ├─► Clear active state only after recovery is confirmed
+       └─► Display the frozen recovery result
+
+7. Timer is paused or STOPPED
+   └─► FuelModel pauses and persists the active session
+       └─► A later start/resume continues the same session
 ```
 
 ## Compile-Time Optimization
@@ -303,7 +339,7 @@ standard shipped product path
 
 ## Memory Management
 
-Connect IQ devices have limited heap (typically 32-128 KB). FuelPlaner minimizes memory usage:
+Connect IQ devices have limited heap. FuelPlanner minimizes memory usage:
 
 1. **Module-level constants**: Stored in bytecode, not heap
 2. **Lazy initialization**: Vibe profiles created on first use
@@ -311,17 +347,7 @@ Connect IQ devices have limited heap (typically 32-128 KB). FuelPlaner minimizes
 4. **Bounded hot-path string work**: Shared string loading and short formatted labels
 5. **Minimal object allocation**: Reuse existing objects
 
-**Memory Budget** (estimated):
-```
-FuelModel:           ~2 KB
-StorageManager:      ~0.5 KB
-ReminderManager:     ~0.3 KB
-FieldView:           ~1.5 KB
-FieldDelegate:       ~0.2 KB
-Strings/Resources:   ~2 KB
-─────────────────────────
-Total:               ~6.5 KB
-```
+Simulator memory checks are useful for regressions, but they are not a measurement of the physical FR955 data-field heap. Release reporting therefore keeps simulator memory results separate from physical-device profiling.
 
 ## Error Handling Strategy
 
@@ -378,6 +404,14 @@ Examples:
 └─────────────────────────────────────────────┘
 ```
 
+Validation results are always reported separately:
+
+1. **Compile**: compiler and package results for named products or the full manifest matrix
+2. **Simulator**: automated tests plus named layout and interaction checks
+3. **Physical device**: named hardware, firmware, lifecycle, touch, haptic, FIT, and memory observations
+
+Compile and simulator success do not imply physical-device validation. Version 1.0.0 currently carries no physical-device validation claim in this repository.
+
 ## Future Architecture Considerations
 
 ### Planned Improvements
@@ -414,5 +448,5 @@ The architecture supports:
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2026-03-21
+**Document Version**: 1.1
+**Last Updated**: 2026-07-19

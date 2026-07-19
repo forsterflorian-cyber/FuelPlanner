@@ -64,6 +64,7 @@
             <iq:product id="venu3s"/>
         </iq:products>
         <iq:permissions>
+            <iq:uses-permission id="DataFieldAlert"/>
             <iq:uses-permission id="FitContributor"/>
         </iq:permissions>
         <iq:languages>

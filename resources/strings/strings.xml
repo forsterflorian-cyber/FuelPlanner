@@ -31,6 +31,10 @@
     <string id="LabelFuelShort">FUEL</string>
     <string id="LabelNext">Next</string>
     <string id="LabelAutoFlowStatus">AUTO-FLOW</string>
+    <string id="LabelAuto">Auto</string>
+    <string id="LabelAutoShort">AUTO</string>
+    <string id="LabelOkShort">OK</string>
+    <string id="LabelSnoozeAction">SNOOZE</string>
 
     <!-- Field View: deficit row -->
     <string id="LabelBehind">Behind</string>
@@ -64,6 +68,8 @@
     <!-- Units -->
     <string id="UnitGrams">g</string>
     <string id="UnitGramsPerHour">g/h</string>
+    <string id="UnitHoursShort">h</string>
+    <string id="UnitCountSuffix">x</string>
     <string id="UnitMinutes">min</string>
 
     <!-- FIT chart labels -->

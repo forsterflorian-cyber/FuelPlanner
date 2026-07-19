@@ -31,6 +31,10 @@
     <string id="LabelFuelShort">VOEDING</string>
     <string id="LabelNext">Volgende</string>
     <string id="LabelAutoFlowStatus">AUTO-FLOW</string>
+    <string id="LabelAuto">Auto</string>
+    <string id="LabelAutoShort">AUTO</string>
+    <string id="LabelOkShort">OK</string>
+    <string id="LabelSnoozeAction">SLUIMER</string>
 
     <!-- Field View: deficit row -->
     <string id="LabelBehind">Achter</string>
@@ -64,6 +68,8 @@
     <!-- Units -->
     <string id="UnitGrams">g</string>
     <string id="UnitGramsPerHour">g/u</string>
+    <string id="UnitHoursShort">u</string>
+    <string id="UnitCountSuffix">x</string>
     <string id="UnitMinutes">min</string>
 
     <!-- FIT chart labels -->

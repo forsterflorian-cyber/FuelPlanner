@@ -64,8 +64,12 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     // Timed overlays
     private var _overlayEndTime as Number = 0;
     private var _autoConfirmationEndTime as Number = 0;
+    private var _overlayPendingAfterNativeAlert as Boolean = false;
+    private var _nativeAlertViewHidden as Boolean = false;
+    private var _nativeAlertRequestTime as Number = 0;
     private const OVERLAY_DURATION_MS = 3000;
     private const AUTO_CONFIRMATION_DURATION_MS = 1500;
+    private const NATIVE_ALERT_GRACE_MS = 250;
 
     // Strings used in the once-per-second draw path are loaded once. This
     // avoids repeated resource lookups without adding a dictionary in memory.
@@ -73,6 +77,10 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private var _labelPaused as String = "PAUSED";
     private var _labelFuelNow as String = "FUEL NOW";
     private var _labelFuelShort as String = "FUEL";
+    private var _labelSnooze as String = "SNOOZE";
+    private var _labelAuto as String = "Auto";
+    private var _labelAutoShort as String = "AUTO";
+    private var _labelOkShort as String = "OK";
     private var _labelNext as String = "Next";
     private var _labelAutoFlow as String = "AUTO-FLOW";
     private var _labelBehind as String = "Behind";
@@ -82,6 +90,8 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private var _labelRateAutoSuffix as String = "% carbs";
     private var _labelRateAutoNoData as String = "Auto (no cal data)";
     private var _unitGramsPerHour as String = "g/h";
+    private var _unitHoursShort as String = "h";
+    private var _unitCountSuffix as String = "x";
     private var _labelWaiting as String = "Start activity to begin";
     private var _labelWaitStartCompact as String = "WAIT / START";
     private var _labelStarting as String = "STARTING";
@@ -113,6 +123,25 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     function onLayout(dc as Dc) as Void {
         _lastFieldWidth = dc.getWidth();
         _lastFieldHeight = dc.getHeight();
+    }
+
+    // A native DataFieldAlert temporarily pushes this view out of the
+    // foreground. Start the interactive overlay only after it returns so the
+    // native alert cannot consume the user's snooze window.
+    function onShow() as Void {
+        if (_overlayPendingAfterNativeAlert && _nativeAlertViewHidden) {
+            clearPendingNativeAlert();
+            if (_model.isSessionActive() && !_model.isPaused() &&
+                !_model.isStoppedSession()) {
+                armReminderOverlay();
+            }
+        }
+    }
+
+    function onHide() as Void {
+        if (_overlayPendingAfterNativeAlert) {
+            _nativeAlertViewHidden = true;
+        }
     }
 
 
@@ -154,10 +183,22 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     function dismissOverlay() as Void {
         _overlayEndTime = 0;
         _autoConfirmationEndTime = 0;
+        clearPendingNativeAlert();
     }
 
     function isReminderOverlayActive() as Boolean {
-        return _overlayEndTime > System.getTimer();
+        return _overlayEndTime > getOverlayTimerMs();
+    }
+
+    //! Shared with the input delegate so the visible compact snooze band and
+    //! its touch target always use the same boundary.
+    function getSnoozeTapBottom() as Number {
+        return getSnoozeTapBottomForSize(getFieldWidth(), getFieldHeight());
+    }
+
+    // Kept overridable for deterministic overlay-lifetime tests.
+    function getOverlayTimerMs() as Number {
+        return System.getTimer();
     }
 
     //! Called every second with activity info
@@ -171,7 +212,8 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             _autoConfirmationEndTime = 0;
         } else if (autoIntakeTriggered) {
             _overlayEndTime = 0;
-            _autoConfirmationEndTime = System.getTimer() + AUTO_CONFIRMATION_DURATION_MS;
+            clearPendingNativeAlert();
+            _autoConfirmationEndTime = getOverlayTimerMs() + AUTO_CONFIRMATION_DURATION_MS;
             _reminder.triggerAutoIntake();
         }
 
@@ -191,7 +233,8 @@ class FuelPlannerFieldView extends WatchUi.DataField {
 
     function onUpdate(dc as Dc) as Void {
         var bgColor = getBackgroundColor();
-        var now = System.getTimer();
+        var now = getOverlayTimerMs();
+        armSuppressedNativeAlertFallback(now);
         var w  = dc.getWidth();
         var h  = dc.getHeight();
         _showRecoveryLayout = _model.isStoppedSession();
@@ -201,7 +244,11 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         dc.clear();
         // Reminder wins if both events arrive in the same update.
         if (now < _overlayEndTime) {
-            drawReminderOverlay(dc);
+            if (isCompactFieldLayout(w, h)) {
+                drawCompactReminderOverlay(dc, w, h);
+            } else {
+                drawFullReminderOverlay(dc, w, h);
+            }
             return;
         }
         if (now < _autoConfirmationEndTime) {
@@ -284,11 +331,31 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         return w < 240 && h < 190;
     }
 
+    private function getSnoozeTapBottomForSize(w as Number, h as Number) as Number {
+        if (h <= 1) {
+            return 0;
+        }
 
-    //! Draw a reminder that adapts down to single-row data fields.
-    private function drawReminderOverlay(dc as Dc) as Void {
-        var w = dc.getWidth();
-        var h = dc.getHeight();
+        var band = h / 5;
+        if (isCompactFieldLayout(w, h)) {
+            band = (h * 3) / 8;
+            if (h >= 48 && band < 24) {
+                band = 24;
+            }
+            var maxBand = h / 2;
+            if (band > maxBand) {
+                band = maxBand;
+            }
+        }
+
+        if (band < 1) { return 1; }
+        if (band >= h) { return h - 1; }
+        return band;
+    }
+
+
+    private function drawFullReminderOverlay(dc as Dc, w as Number,
+                                             h as Number) as Void {
         var contentInset = getScaledValue(w, 0.08f, 12, 30);
         var contentW = w - (contentInset * 2);
         if (contentW < 40) {
@@ -301,24 +368,23 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
 
         var doseText = _model.getDoseG().format("%d") + UNIT_G;
-        if (isCompactFieldLayout(w, h)) {
-            drawCompactReminderContent(dc, w, h, contentW, doseText);
-            drawOverlayFrame(dc, w, h, 2);
-            return;
-        }
+        var snoozeBottom = getSnoozeTapBottomForSize(w, h);
+        drawSnoozeActionBand(dc, w, contentW, snoozeBottom);
+        var fuelTop = snoozeBottom + 1;
+        var fuelH = h - fuelTop;
 
         var reasonText = buildReminderReasonText();
-        var titleFont = getBestFontForBox(dc, _labelFuelNow, contentW, getScaledValue(h, 0.20f, 24, 56), false);
-        var doseFont = getBestFontForBox(dc, doseText, contentW, getScaledValue(h, 0.14f, 18, 40), true);
-        var reasonFont = getBestFontForBox(dc, reasonText, contentW, getScaledValue(h, 0.09f, 12, 22), false);
-        var gap = getRowGap(h);
+        var titleFont = getBestFontForBox(dc, _labelFuelNow, contentW, getScaledValue(fuelH, 0.20f, 20, 48), false);
+        var doseFont = getBestFontForBox(dc, doseText, contentW, getScaledValue(fuelH, 0.14f, 18, 36), true);
+        var reasonFont = getBestFontForBox(dc, reasonText, contentW, getScaledValue(fuelH, 0.09f, 12, 20), false);
+        var gap = getRowGap(fuelH);
         var titleH = Graphics.getFontHeight(titleFont);
         var doseH = Graphics.getFontHeight(doseFont);
         var reasonH = Graphics.getFontHeight(reasonFont);
         var totalHeight = titleH + gap + doseH + gap + reasonH;
-        var y = (h - totalHeight) / 2;
-        if (y < 0) {
-            y = 0;
+        var y = fuelTop + ((fuelH - totalHeight) / 2);
+        if (y < fuelTop) {
+            y = fuelTop;
         }
 
         dc.drawText(w / 2, y, titleFont, _labelFuelNow, Graphics.TEXT_JUSTIFY_CENTER);
@@ -328,43 +394,67 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         drawOverlayFrame(dc, w, h, 4);
     }
 
-    private function drawCompactReminderContent(dc as Dc, w as Number, h as Number,
-                                                contentW as Number, doseText as String) as Void {
-        if (h < COMPACT_SHORT_HEIGHT_PX) {
-            var summaryText = _labelFuelShort + " +" + doseText;
-            var summaryFont = getBestFontForBox(dc, summaryText, contentW, h - 4, false);
-            var summaryH = Graphics.getFontHeight(summaryFont);
-            dc.drawText(w / 2, (h - summaryH) / 2, summaryFont, summaryText,
-                        Graphics.TEXT_JUSTIFY_CENTER);
+    //! Draw a reminder that stays readable in single-row data fields without
+    //! adding another call frame to the constrained compact render path.
+    private function drawCompactReminderOverlay(dc as Dc, w as Number,
+                                                h as Number) as Void {
+        var contentInset = getScaledValue(w, 0.08f, 12, 30);
+        var contentW = w - (contentInset * 2);
+        if (contentW < 40) {
+            contentW = 40;
+        }
+
+        dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_RED);
+        dc.fillRectangle(0, 0, w, h);
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
+
+        var snoozeBottom = getSnoozeTapBottomForSize(w, h);
+        var snoozeH = snoozeBottom + 1;
+        var fuelTop = snoozeH;
+        var fuelH = h - fuelTop;
+        drawSnoozeActionBand(dc, w, contentW, snoozeBottom);
+
+        if (fuelH <= 0) {
             return;
         }
 
-        var showReason = h >= 120;
+        var doseText = _model.getDoseG().format("%d") + UNIT_G;
+        var summaryText = _labelFuelShort + " +" + doseText;
+        var showReason = fuelH >= 70;
         var reasonText = showReason ? buildReminderReasonText() : "";
-        var titleFont = getBestFontForBox(dc, _labelFuelShort, contentW,
-                                          getScaledValue(h, 0.23f, 12, 30), false);
-        var doseFont = getBestFontForBox(dc, doseText, contentW,
-                                         getScaledValue(h, 0.34f, 18, 42), true);
+        var summaryFont = getBestFontForBox(dc, summaryText, contentW,
+                                            showReason ? (fuelH * 2) / 5 : fuelH - 4,
+                                            false);
         var reasonFont = getBestFontForBox(dc, reasonText, contentW,
-                                           getScaledValue(h, 0.16f, 10, 20), false);
-        var gap = getCompactRowGap(h);
-        var titleH = Graphics.getFontHeight(titleFont);
-        var doseH = Graphics.getFontHeight(doseFont);
+                                           fuelH / 4, false);
+        var summaryH = Graphics.getFontHeight(summaryFont);
         var reasonH = showReason ? Graphics.getFontHeight(reasonFont) : 0;
-        var totalHeight = titleH + gap + doseH;
+        var gap = showReason ? getCompactRowGap(h) : 0;
+        var totalH = summaryH + reasonH + gap;
+        var summaryY = fuelTop + ((fuelH - totalH) / 2);
+        if (summaryY < fuelTop) { summaryY = fuelTop; }
+        dc.drawText(w / 2, summaryY, summaryFont, summaryText,
+                    Graphics.TEXT_JUSTIFY_CENTER);
         if (showReason) {
-            totalHeight += gap + reasonH;
+            dc.drawText(w / 2, summaryY + summaryH + gap, reasonFont,
+                        reasonText, Graphics.TEXT_JUSTIFY_CENTER);
         }
-        var y = (h - totalHeight) / 2;
-        if (y < 1) { y = 1; }
+        drawOverlayFrame(dc, w, h, 2);
+    }
 
-        dc.drawText(w / 2, y, titleFont, _labelFuelShort, Graphics.TEXT_JUSTIFY_CENTER);
-        y += titleH + gap;
-        dc.drawText(w / 2, y, doseFont, doseText, Graphics.TEXT_JUSTIFY_CENTER);
-        if (showReason) {
-            dc.drawText(w / 2, y + doseH + gap, reasonFont, reasonText,
-                        Graphics.TEXT_JUSTIFY_CENTER);
-        }
+    private function drawSnoozeActionBand(dc as Dc, w as Number,
+                                           contentW as Number,
+                                           snoozeBottom as Number) as Void {
+        var snoozeH = snoozeBottom + 1;
+        dc.setColor(Graphics.COLOR_DK_RED, Graphics.COLOR_DK_RED);
+        dc.fillRectangle(0, 0, w, snoozeH);
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
+        var snoozeFont = getBestFontForBox(dc, _labelSnooze, contentW,
+                                           snoozeH - 4, false);
+        var snoozeTextH = Graphics.getFontHeight(snoozeFont);
+        dc.drawText(w / 2, (snoozeH - snoozeTextH) / 2, snoozeFont,
+                    _labelSnooze, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawLine(0, snoozeBottom, w, snoozeBottom);
     }
 
     private function drawOverlayFrame(dc as Dc, w as Number, h as Number,
@@ -388,7 +478,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_TRANSPARENT);
 
         if (h < COMPACT_SHORT_HEIGHT_PX) {
-            var summaryText = "AUTO " + doseText;
+            var summaryText = _labelAutoShort + " " + doseText;
             var summaryFont = getBestFontForBox(dc, summaryText, contentW, h - 2, false);
             var summaryH = Graphics.getFontHeight(summaryFont);
             dc.drawText(w / 2, (h - summaryH) / 2, summaryFont, summaryText,
@@ -412,13 +502,14 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     }
 
     private function presentReminderNotification() as Void {
-        _overlayEndTime = System.getTimer() + OVERLAY_DURATION_MS;
         if (!_model.isDataFieldAlertEnabled()) {
+            armReminderOverlay();
             return;
         }
 
         if (!(WatchUi.DataField has :showAlert)) {
             FuelPlannerLog.logError("Alert", "DataField.showAlert unavailable on this device");
+            armReminderOverlay();
             return;
         }
 
@@ -426,11 +517,67 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         var doseText = _model.getDoseG().format("%d") + UNIT_G;
         var reasonText = buildReminderReasonText();
 
+        _overlayEndTime = 0;
+        _overlayPendingAfterNativeAlert = true;
+        _nativeAlertViewHidden = false;
+        _nativeAlertRequestTime = getOverlayTimerMs();
         try {
             showAlert(new FuelPlannerReminderAlert(titleText, doseText, reasonText));
         } catch (e) {
+            clearPendingNativeAlert();
+            armReminderOverlay();
             FuelPlannerLog.logError("Alert", "Failed to show DataFieldAlert");
         }
+    }
+
+    private function armSuppressedNativeAlertFallback(now as Number) as Void {
+        if (!_overlayPendingAfterNativeAlert || _nativeAlertViewHidden) {
+            return;
+        }
+        var elapsed = now - _nativeAlertRequestTime;
+        if (elapsed < 0) {
+            elapsed = NATIVE_ALERT_GRACE_MS;
+        }
+        if (elapsed < NATIVE_ALERT_GRACE_MS) {
+            return;
+        }
+
+        clearPendingNativeAlert();
+        if (_model.isSessionActive() && !_model.isPaused() &&
+            !_model.isStoppedSession()) {
+            armReminderOverlay();
+        }
+    }
+
+    private function clearPendingNativeAlert() as Void {
+        _overlayPendingAfterNativeAlert = false;
+        _nativeAlertViewHidden = false;
+        _nativeAlertRequestTime = 0;
+    }
+
+    private function armReminderOverlay() as Void {
+        _overlayEndTime = getOverlayTimerMs() + OVERLAY_DURATION_MS;
+        _autoConfirmationEndTime = 0;
+    }
+
+    (:testsupport)
+    function deferReminderOverlayForTest() as Void {
+        _overlayEndTime = 0;
+        _overlayPendingAfterNativeAlert = true;
+        _nativeAlertViewHidden = false;
+        _nativeAlertRequestTime = getOverlayTimerMs();
+    }
+
+    (:testsupport)
+    function armReminderOverlayForTest() as Void {
+        clearPendingNativeAlert();
+        armReminderOverlay();
+    }
+
+    (:testsupport)
+    function setFieldSizeForTest(w as Number, h as Number) as Void {
+        _lastFieldWidth = w;
+        _lastFieldHeight = h;
     }
     //! Waiting screen before activity starts
     private function drawNoSession(dc as Dc, cx as Number, h as Number,
@@ -575,7 +722,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             showRecoveryHint = recoveryDeficit > RECOVERY_MIN_G;
         }
         var panelColor = showRecoveryHint ? COLOR_RECOVERY : COLOR_GOOD_DARK_BG;
-        var titleText = showRecoveryHint ? FuelPlannerUtils.loadString(Rez.Strings.LabelRecovery, "Recovery") : "OK";
+        var titleText = showRecoveryHint ? FuelPlannerUtils.loadString(Rez.Strings.LabelRecovery, "Recovery") : _labelOkShort;
         var valueText = "";
         if (showRecoveryHint && recoveryDeficit != null) {
             valueText = "+" + recoveryDeficit.format("%d") + UNIT_G;
@@ -658,7 +805,9 @@ class FuelPlannerFieldView extends WatchUi.DataField {
 
         // Time row
         var elapsedMin = _model.getElapsedActiveSec() / 60;
-        var timeText = (elapsedMin / 60).format("%d") + "h" + (elapsedMin % 60).format("%02d") + SEP_PIPE + _model.getIntakeCount().format("%d") + "x";
+        var timeText = (elapsedMin / 60).format("%d") + _unitHoursShort +
+                       (elapsedMin % 60).format("%02d") + SEP_PIPE +
+                       _model.getIntakeCount().format("%d") + _unitCountSuffix;
         var rateText = buildRateLabel();
         var showRateRow = contentH >= 150;
 
@@ -967,7 +1116,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private function buildRateLabel() as String {
         if (_model.isCalorieModeActive()) {
             if (_model.isCaloriesAvailable()) {
-                return "Auto " + _model.getCarbFractionPct().format("%d") +
+                return _labelAuto + " " + _model.getCarbFractionPct().format("%d") +
                        _labelRateAutoSuffix;
             }
             return _labelRateAutoNoData;
@@ -991,7 +1140,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
             if (touchEnabled) {
                 return "+" + _model.getDoseG().format("%d") + UNIT_G;
             }
-            return "AUTO";
+            return _labelAutoShort;
         }
         return formatDuration(_model.getDisplayNextDueInSec());
     }
@@ -1017,7 +1166,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         if (deficitG10 < -5) {
             return "-" + (((-deficitG10) + 5) / 10).format("%d") + UNIT_G;
         }
-        return "OK";
+        return _labelOkShort;
     }
 
     private function buildReminderReasonText() as String {
@@ -1039,6 +1188,10 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         _labelPaused = FuelPlannerUtils.loadString(Rez.Strings.LabelPaused, "PAUSED");
         _labelFuelNow = FuelPlannerUtils.loadString(Rez.Strings.LabelFuelNow, "FUEL NOW");
         _labelFuelShort = FuelPlannerUtils.loadString(Rez.Strings.LabelFuelShort, "FUEL");
+        _labelSnooze = FuelPlannerUtils.loadString(Rez.Strings.LabelSnoozeAction, "SNOOZE");
+        _labelAuto = FuelPlannerUtils.loadString(Rez.Strings.LabelAuto, "Auto");
+        _labelAutoShort = FuelPlannerUtils.loadString(Rez.Strings.LabelAutoShort, "AUTO");
+        _labelOkShort = FuelPlannerUtils.loadString(Rez.Strings.LabelOkShort, "OK");
         _labelNext = FuelPlannerUtils.loadString(Rez.Strings.LabelNext, "Next");
         _labelAutoFlow = FuelPlannerUtils.loadString(Rez.Strings.LabelAutoFlowStatus, "AUTO-FLOW");
         _labelBehind = FuelPlannerUtils.loadString(Rez.Strings.LabelBehind, "Behind");
@@ -1048,6 +1201,8 @@ class FuelPlannerFieldView extends WatchUi.DataField {
         _labelRateAutoSuffix = FuelPlannerUtils.loadString(Rez.Strings.LabelRateAutoCarbsSuffix, "% carbs");
         _labelRateAutoNoData = FuelPlannerUtils.loadString(Rez.Strings.LabelRateAutoNoData, "Auto (no cal data)");
         _unitGramsPerHour = FuelPlannerUtils.loadString(Rez.Strings.UnitGramsPerHour, "g/h");
+        _unitHoursShort = FuelPlannerUtils.loadString(Rez.Strings.UnitHoursShort, "h");
+        _unitCountSuffix = FuelPlannerUtils.loadString(Rez.Strings.UnitCountSuffix, "x");
         _labelWaiting = FuelPlannerUtils.loadString(Rez.Strings.LabelWaiting, "Start activity to begin");
         _labelWaitStartCompact = FuelPlannerUtils.loadString(Rez.Strings.LabelWaitStartCompact, "WAIT / START");
         _labelStarting = FuelPlannerUtils.loadString(Rez.Strings.LabelStarting, "STARTING");
@@ -1060,7 +1215,7 @@ class FuelPlannerFieldView extends WatchUi.DataField {
     private function formatDuration(seconds as Number) as String {
         if (seconds < 0) { seconds = 0; }
         if (seconds > 5999) {
-            return (seconds / 3600).format("%d") + "h" +
+            return (seconds / 3600).format("%d") + _unitHoursShort +
                    ((seconds % 3600) / 60).format("%02d");
         }
         return (seconds / 60).format("%d") + ":" + (seconds % 60).format("%02d");
