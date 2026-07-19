@@ -38,7 +38,10 @@ class FuelPlannerFieldDelegate extends WatchUi.InputDelegate {
         var intakeLeft = fieldWidth / 6;
         var intakeRight = fieldWidth - intakeLeft;
 
-        if (_model.isReminderDue() && y <= snoozeBand) {
+        // Keep the top snooze action available for the full lifetime of the
+        // reminder overlay, even if the model's due edge changes meanwhile.
+        if ((_model.isReminderDue() || _view.isReminderOverlayActive()) &&
+            y <= snoozeBand) {
             _model.snoozeReminder();
             _reminder.triggerSnooze();
             _view.dismissOverlay();

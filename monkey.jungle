@@ -4,4 +4,6 @@ project.optimization = 3z
 base.sourcePath = source
 
 # Single supported package: build the standard code path only.
-base.excludeAnnotations = test;testsupport;debug
+# Keep :debug code available for direct simulator PRG builds; release/package
+# builds exclude it automatically.
+base.excludeAnnotations = test;testsupport

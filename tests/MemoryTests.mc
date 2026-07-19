@@ -1,8 +1,12 @@
 using Toybox.Test;
+import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.System;
 
 const MEMORY_CACHE_TOLERANCE_BYTES = 512;
+const FR955_RENDER_WIDTH = 260;
+const FR955_FULL_RENDER_HEIGHT = 260;
+const FR955_COMPACT_RENDER_HEIGHT = 64;
 
 class ForcedReminderManager extends ReminderManager {
     private var _triggerCount as Number = 0;
@@ -100,21 +104,34 @@ class MemoryTests {
         view.computeWithMock(info);
     }
 
-    static function buildFrameSnapshot(model as FuelModel, frameIndex as Number) as Dictionary {
-        var statusText = buildFuelStatusLine("frame_" + frameIndex.format("%d"), model);
-        var metrics = [
-            model.getElapsedActiveSec(),
-            model.getTargetTotalG10(),
-            model.getConsumedTotalG10(),
-            model.getDeficitG10(),
-            model.getNextDueInSec()
-        ];
-        return {
-            "statusText" => statusText,
-            "tone" => model.getRingTone(),
-            "behindText" => model.getDeficitG10().format("%d"),
-            "metrics" => metrics
-        };
+    static function createRenderSurface(width as Number,
+                                        height as Number) as Graphics.BufferedBitmap {
+        return Graphics.createBufferedBitmap({
+            :width => width,
+            :height => height,
+            :palette => [
+                Graphics.COLOR_BLACK,
+                Graphics.COLOR_WHITE,
+                Graphics.COLOR_RED,
+                Graphics.COLOR_YELLOW,
+                Graphics.COLOR_GREEN,
+                Graphics.COLOR_DK_GREEN,
+                Graphics.COLOR_DK_RED,
+                Graphics.COLOR_ORANGE,
+                Graphics.COLOR_LT_GRAY,
+                Graphics.COLOR_DK_GRAY
+            ]
+        }).get() as Graphics.BufferedBitmap;
+    }
+
+    static function renderViewOnSurface(view as TestFuelPlannerFieldView,
+                                        surface as Graphics.BufferedBitmap,
+                                        expectedWidth as Number,
+                                        expectedHeight as Number) as Boolean {
+        var dc = surface.getDc();
+        view.onLayout(dc);
+        view.onUpdate(dc);
+        return dc.getWidth() == expectedWidth && dc.getHeight() == expectedHeight;
     }
 
     static function warmMemoryPaths() as Void {
@@ -217,17 +234,36 @@ class MemoryTests {
             peak["totalMemory"] as Number
         );
 
-        var frameSnapshot = buildFrameSnapshot(model, 0);
+        var fullSurface = createRenderSurface(FR955_RENDER_WIDTH, FR955_FULL_RENDER_HEIGHT);
+        var fullSurfaceReady = renderViewOnSurface(
+            view,
+            fullSurface,
+            FR955_RENDER_WIDTH,
+            FR955_FULL_RENDER_HEIGHT
+        );
         peak = updatePeak(
-            printMemoryStats("peak_after_render_snapshot"),
+            printMemoryStats("peak_after_full_render"),
+            peak["peakUsed"] as Number,
+            peak["totalMemory"] as Number
+        );
+
+        var compactSurface = createRenderSurface(FR955_RENDER_WIDTH, FR955_COMPACT_RENDER_HEIGHT);
+        var compactSurfaceReady = renderViewOnSurface(
+            view,
+            compactSurface,
+            FR955_RENDER_WIDTH,
+            FR955_COMPACT_RENDER_HEIGHT
+        );
+        peak = updatePeak(
+            printMemoryStats("peak_after_compact_render"),
             peak["peakUsed"] as Number,
             peak["totalMemory"] as Number
         );
         System.println(
-            "peak_render_snapshot tone=" + (frameSnapshot["tone"] as Number).format("%d") +
-            " metricsCount=" + ((frameSnapshot["metrics"] as Array<Number>).size()).format("%d")
+            "peak_render fullReady=" + boolToAscii(fullSurfaceReady) +
+            " compactReady=" + boolToAscii(compactSurfaceReady) +
+            " tone=" + model.getRingTone().format("%d")
         );
-        frameSnapshot = null;
 
         System.println(
             "peak_summary triggerCount=" + reminder.getTriggerCount().format("%d") +
@@ -235,7 +271,7 @@ class MemoryTests {
         );
 
         return {
-            "surfaceReady" => true,
+            "surfaceReady" => fullSurfaceReady && compactSurfaceReady,
             "peakUsed" => peak["peakUsed"],
             "totalMemory" => peak["totalMemory"],
             "triggerCount" => reminder.getTriggerCount()
@@ -257,6 +293,20 @@ class MemoryTests {
 
         invokeViewCompute(view, info);
 
+        var fullSurface = createRenderSurface(FR955_RENDER_WIDTH, FR955_FULL_RENDER_HEIGHT);
+        var compactSurface = createRenderSurface(FR955_RENDER_WIDTH, FR955_COMPACT_RENDER_HEIGHT);
+        var renderDc = fullSurface.getDc();
+        view.onLayout(renderDc);
+        view.onUpdate(renderDc);
+        var surfacesReady = renderDc.getWidth() == FR955_RENDER_WIDTH &&
+                            renderDc.getHeight() == FR955_FULL_RENDER_HEIGHT;
+        renderDc = compactSurface.getDc();
+        view.onLayout(renderDc);
+        view.onUpdate(renderDc);
+        surfacesReady = renderDc.getWidth() == FR955_RENDER_WIDTH &&
+                        renderDc.getHeight() == FR955_COMPACT_RENDER_HEIGHT &&
+                        surfacesReady;
+
         var baselineStats = sampleSettledMemory("render_baseline", 6);
         var peak = updatePeak(
             baselineStats,
@@ -268,14 +318,32 @@ class MemoryTests {
             clock.advance(5);
             info.setTimerSeconds(905 + (i * 5));
             invokeViewCompute(view, info);
-            var frameSnapshot = buildFrameSnapshot(model, i);
+            var frameWidth = FR955_RENDER_WIDTH;
+            var frameHeight = FR955_FULL_RENDER_HEIGHT;
+            if ((i % 2) == 0) {
+                renderDc = fullSurface.getDc();
+                view.onLayout(renderDc);
+                view.onUpdate(renderDc);
+                surfacesReady = renderDc.getWidth() == FR955_RENDER_WIDTH &&
+                                renderDc.getHeight() == FR955_FULL_RENDER_HEIGHT &&
+                                surfacesReady;
+            } else {
+                frameHeight = FR955_COMPACT_RENDER_HEIGHT;
+                renderDc = compactSurface.getDc();
+                view.onLayout(renderDc);
+                view.onUpdate(renderDc);
+                surfacesReady = renderDc.getWidth() == FR955_RENDER_WIDTH &&
+                                renderDc.getHeight() == FR955_COMPACT_RENDER_HEIGHT &&
+                                surfacesReady;
+            }
 
             if ((i % 10) == 0 || i == 39) {
                 printFuelStatus("render_frame_" + i.format("%d"), model);
                 System.println(
-                    "render_snapshot_" + i.format("%d") +
-                    " tone=" + (frameSnapshot["tone"] as Number).format("%d") +
-                    " metricsCount=" + ((frameSnapshot["metrics"] as Array<Number>).size()).format("%d")
+                    "render_frame_" + i.format("%d") +
+                    " width=" + frameWidth.format("%d") +
+                    " height=" + frameHeight.format("%d") +
+                    " tone=" + model.getRingTone().format("%d")
                 );
                 peak = updatePeak(
                     printMemoryStats("render_mem_" + i.format("%d")),
@@ -283,7 +351,6 @@ class MemoryTests {
                     peak["totalMemory"] as Number
                 );
             }
-            frameSnapshot = null;
         }
 
         var afterStats = sampleSettledMemory("render_after", 6);
@@ -294,7 +361,7 @@ class MemoryTests {
         );
 
         return {
-            "surfaceReady" => true,
+            "surfaceReady" => surfacesReady,
             "baselineUsed" => baselineStats["usedMemory"],
             "afterUsed" => afterStats["usedMemory"],
             "peakUsed" => peak["peakUsed"]
@@ -375,7 +442,7 @@ class MemoryTests {
             " peakUsed=" + (renderResult["peakUsed"] as Number).format("%d")
         );
 
-        Test.assertMessage(delta <= MEMORY_CACHE_TOLERANCE_BYTES, "Frame snapshot temporaries must settle within the observed simulator cache floor of 512 bytes.");
+        Test.assertMessage(delta <= MEMORY_CACHE_TOLERANCE_BYTES, "Rendered frame temporaries must settle within the observed simulator cache floor of 512 bytes.");
         return true;
     }
 }

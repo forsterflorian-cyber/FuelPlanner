@@ -28,6 +28,7 @@
     <!-- Field View: status row -->
     <string id="LabelPaused">PAUSED</string>
     <string id="LabelFuelNow">FUEL NOW!</string>
+    <string id="LabelFuelShort">FUEL</string>
     <string id="LabelNext">Next</string>
     <string id="LabelAutoFlowStatus">AUTO-FLOW</string>
 
@@ -48,6 +49,11 @@
 
     <!-- Field View: idle screen -->
     <string id="LabelWaiting">Start activity to begin</string>
+    <string id="LabelWaitStartCompact">WAIT / START</string>
+    <string id="LabelStarting">STARTING</string>
+    <string id="LabelWaitingForTimer">Waiting for timer data</string>
+    <string id="LabelTimerStale">TIMER STALE</string>
+    <string id="LabelNoTimerCompact">NO TIMER</string>
 
     <string id="LabelMenuTitle">Settings</string>
     <string id="LabelClearSession">Clear Session</string>

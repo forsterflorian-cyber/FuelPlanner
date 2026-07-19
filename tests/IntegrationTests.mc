@@ -73,15 +73,73 @@ class IntegrationTests {
         Test.assertMessage(deficitG10 == -150, "Deficit should be -150 (surplus 15g)");
         logger.debug("deficitAfterIntakeG10=" + deficitG10.format("%d"));
 
-        // Phase 7: End activity
+        // Phase 7: A manual stop pauses the session but does not end it.
+        model.onTimerStop();
         info.timerState = Activity.TIMER_STATE_STOPPED;
         model.compute(info);
 
-        Test.assertMessage(!model.isSessionActive(), "Session should be finished");
-        Test.assertMessage(!storage.hasActiveSession(), "Stopped sessions should clear the active session payload.");
-        Test.assertMessage(storage.hasRecoverySnapshot(), "Stopped sessions should persist a recovery snapshot.");
-        Test.assertMessage(model.isStoppedSession(), "Stopped sessions should remain visible through the recovery layout.");
+        Test.assertMessage(model.isSessionActive(), "A stopped timer must keep the current fueling session active.");
+        Test.assertMessage(model.isPaused(), "A stopped timer should present the session as paused.");
+        Test.assertMessage(storage.hasActiveSession(), "Manual stop must retain the active session payload.");
+        Test.assertMessage(!storage.hasRecoverySnapshot(), "Manual stop must not create a recovery snapshot.");
 
+        // Phase 8: Reset is the terminal activity event.
+        model.onTimerReset();
+
+        Test.assertMessage(!model.isSessionActive(), "Timer reset should finish the session.");
+        Test.assertMessage(!storage.hasActiveSession(), "A committed reset should clear the active session payload.");
+        Test.assertMessage(storage.hasRecoverySnapshot(), "Timer reset should persist a recovery snapshot.");
+        Test.assertMessage(model.isStoppedSession(), "Reset sessions should remain visible through the recovery layout.");
+
+        return true;
+    }
+
+    (:test)
+    static function manualStopResumeKeepsFuelingSession(logger as Test.Logger) as Boolean {
+        var clock = new MockClock(15000);
+        var props = new MockPropertiesBackend();
+        props.setValue("carbsTargetGph", 60);
+        props.setValue("doseG", 25);
+        props.setValue("startDelayMin", 0);
+
+        var sys = buildFullSystem(clock, props);
+        var model = sys["model"] as FuelModel;
+        var storage = sys["storage"] as StorageManager;
+        var info = new MockActivityInfo(15000);
+        info.timerState = Activity.TIMER_STATE_ON;
+        info.setTimerSeconds(1200);
+        model.compute(info);
+        model.recordIntake(25);
+
+        var sessionIdBeforeStop = storage.getSessionId();
+        var elapsedBeforeStop = model.getElapsedActiveSec();
+
+        model.onTimerStop();
+        info.timerState = Activity.TIMER_STATE_STOPPED;
+        model.compute(info);
+
+        Test.assertMessage(model.isSessionActive(), "STOPPED must not split the fueling session.");
+        Test.assertMessage(model.isPaused(), "STOPPED must pause the fueling session.");
+        Test.assertMessage(storage.hasActiveSession(), "STOPPED must keep active storage intact.");
+        Test.assertMessage(!storage.hasRecoverySnapshot(), "STOPPED must not write terminal recovery state.");
+        Test.assertEqual(sessionIdBeforeStop, storage.getSessionId());
+        Test.assertEqual(250, model.getConsumedTotalG10());
+        Test.assertEqual(1, model.getIntakeCount());
+        Test.assertEqual(elapsedBeforeStop, model.getElapsedActiveSec());
+
+        clock.advance(30);
+        model.onTimerResume();
+        info.timerState = Activity.TIMER_STATE_ON;
+        info.advanceTimerSeconds(1);
+        model.compute(info);
+
+        logger.debug("manualResumeElapsed=" + model.getElapsedActiveSec().format("%d"));
+        Test.assertMessage(model.isSessionActive(), "Resume must continue the existing fueling session.");
+        Test.assertMessage(!model.isPaused(), "Resume must leave paused state.");
+        Test.assertEqual(sessionIdBeforeStop, storage.getSessionId());
+        Test.assertEqual(250, model.getConsumedTotalG10());
+        Test.assertEqual(1, model.getIntakeCount());
+        Test.assertEqual(elapsedBeforeStop + 1, model.getElapsedActiveSec());
         return true;
     }
 
@@ -117,6 +175,7 @@ class IntegrationTests {
         logger.debug("deficitBeforePauseG10=" + deficitBeforePause.format("%d"));
 
         // Pause
+        model.onTimerPause();
         info.timerState = Activity.TIMER_STATE_PAUSED;
         model.compute(info);
 
@@ -133,18 +192,22 @@ class IntegrationTests {
         Test.assertEqual(deficitWhilePaused, deficitAfterPauseTime);
 
         // Resume
-        info.timerState = null;
+        model.onTimerResume();
+        info.timerState = Activity.TIMER_STATE_ON;
         clock.advance(1);
-        info.advanceTimerSeconds(301);
+        info.advanceTimerSeconds(1);
         model.compute(info);
 
         Test.assertMessage(!model.isPaused(), "Should not be paused after resume");
-        Test.assertEqual(elapsedBeforePause, model.getElapsedActiveSec());
+        Test.assertEqual(elapsedBeforePause + 1, model.getElapsedActiveSec());
 
-        // Stop
+        // Stop is non-terminal; reset finishes the activity.
+        model.onTimerStop();
         info.timerState = Activity.TIMER_STATE_STOPPED;
         model.compute(info);
+        Test.assertMessage(model.isSessionActive(), "Manual stop should keep the session active.");
 
+        model.onTimerReset();
         Test.assertMessage(!model.isSessionActive(), "Session should be finished");
 
         return true;
@@ -291,7 +354,7 @@ class IntegrationTests {
     }
 
     (:test)
-    static function stoppedSessionRecoveryAfterRestart(logger as Test.Logger) as Boolean {
+    static function resetSessionRecoveryAfterRestart(logger as Test.Logger) as Boolean {
         var clock = new MockClock(55000);
         var props = new MockPropertiesBackend();
         props.setValue("carbsTargetGph", 60);
@@ -318,17 +381,19 @@ class IntegrationTests {
             model1.compute(info);
         }
 
+        model1.onTimerStop();
         info.timerState = Activity.TIMER_STATE_STOPPED;
         model1.compute(info);
-        model1.saveSession();
+        Test.assertMessage(model1.isSessionActive(), "Manual stop must stay recoverable as the active session.");
+        model1.onTimerReset();
 
         var model2 = new FuelModel(storage, clock);
         model2.setTouchForTest(true);
         model2.loadSession();
 
-        Test.assertMessage(model2.isStoppedSession(), "Stopped session should restore as stopped after restart.");
-        Test.assertMessage(!model2.isSessionActive(), "Stopped session should not restore as active.");
-        Test.assertMessage(model2.getRecoveryDeficit() != null, "Stopped session should keep recovery metrics available after restart.");
+        Test.assertMessage(model2.isStoppedSession(), "Reset session should restore in recovery after restart.");
+        Test.assertMessage(!model2.isSessionActive(), "Reset session should not restore as active.");
+        Test.assertMessage(model2.getRecoveryDeficit() != null, "Reset session should keep recovery metrics available after restart.");
         return true;
     }
 

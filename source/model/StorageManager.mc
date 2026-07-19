@@ -56,6 +56,13 @@ class StorageManager {
     private const KEY_RECOVERY_CONSUMED_G10 = "snap_con10";
     private const KEY_RECOVERY_ELAPSED_SEC = "snap_elapsed";
     private const KEY_RECOVERY_INTAKE_COUNT = "snap_count";
+    private const KEY_RECOVERY_SNAPSHOT_V2 = "recovery_v2";
+    private const SNAPSHOT_KEY_VERSION = "v";
+    private const SNAPSHOT_KEY_TARGET = "t";
+    private const SNAPSHOT_KEY_CONSUMED = "c";
+    private const SNAPSHOT_KEY_ELAPSED = "e";
+    private const SNAPSHOT_KEY_COUNT = "n";
+    private const RECOVERY_SNAPSHOT_VERSION = 2;
 
     // Legacy keys kept only so reset paths can clean up older installs.
     private const LEGACY_KEY_INTAKE_LOG = "int_log";
@@ -92,6 +99,8 @@ class StorageManager {
     private var _propertiesBackend as PropertiesBackend;
     private var _writeFailureCount as Number = 0;
     private var _lastWriteFailureKey as String = "";
+    private var _recoverySnapshotCache as Dictionary? = null;
+    private var _recoverySnapshotCacheLoaded as Boolean = false;
 
     function initialize(storageBackend as StorageBackend?,
                         propertiesBackend as PropertiesBackend?) {
@@ -178,12 +187,14 @@ class StorageManager {
     }
 
     private function setClampedProperty(key as String, value as Number,
-                                        min as Number, max as Number) as Void {
+                                        min as Number, max as Number) as Boolean {
         try {
             _propertiesBackend.setValue(key, roundToInt(clamp(value, min, max)));
+            return true;
         } catch (e) {
             recordWriteFailure(key, "set property");
         }
+        return false;
     }
 
     private function deleteStorageValue(key as String) as Void {
@@ -192,6 +203,125 @@ class StorageManager {
         } catch (e) {
             recordWriteFailure(key, "delete value");
         }
+    }
+
+    private function getDictionaryNumber(value as Dictionary, key as String) as Number? {
+        var entry = value[key];
+        if (entry instanceof Number) {
+            return entry;
+        }
+        return null;
+    }
+
+    private function isValidRecoverySnapshot(snapshot as Dictionary) as Boolean {
+        var version = getDictionaryNumber(snapshot, SNAPSHOT_KEY_VERSION);
+        if (version == null || version != RECOVERY_SNAPSHOT_VERSION) {
+            return false;
+        }
+
+        var target = getDictionaryNumber(snapshot, SNAPSHOT_KEY_TARGET);
+        if (target == null || target < 0) {
+            return false;
+        }
+
+        var consumed = getDictionaryNumber(snapshot, SNAPSHOT_KEY_CONSUMED);
+        if (consumed == null || consumed < 0) {
+            return false;
+        }
+
+        var elapsed = getDictionaryNumber(snapshot, SNAPSHOT_KEY_ELAPSED);
+        if (elapsed == null || elapsed <= 0) {
+            return false;
+        }
+
+        var count = getDictionaryNumber(snapshot, SNAPSHOT_KEY_COUNT);
+        if (count == null || count < 0) {
+            return false;
+        }
+        return true;
+    }
+
+    private function recoverySnapshotMatches(snapshot as Dictionary,
+                                             targetG10 as Number,
+                                             consumedG10 as Number,
+                                             elapsedSec as Number,
+                                             intakeCount as Number) as Boolean {
+        var target = getDictionaryNumber(snapshot, SNAPSHOT_KEY_TARGET);
+        if (target == null || target != nonNegative(targetG10)) {
+            return false;
+        }
+        var consumed = getDictionaryNumber(snapshot, SNAPSHOT_KEY_CONSUMED);
+        if (consumed == null || consumed != nonNegative(consumedG10)) {
+            return false;
+        }
+        var elapsed = getDictionaryNumber(snapshot, SNAPSHOT_KEY_ELAPSED);
+        if (elapsed == null || elapsed != nonNegative(elapsedSec)) {
+            return false;
+        }
+        var count = getDictionaryNumber(snapshot, SNAPSHOT_KEY_COUNT);
+        if (count == null) {
+            return false;
+        }
+        return count == nonNegative(intakeCount);
+    }
+
+    private function loadRecoverySnapshotV2() as Dictionary? {
+        if (_recoverySnapshotCacheLoaded) {
+            return _recoverySnapshotCache;
+        }
+
+        _recoverySnapshotCacheLoaded = true;
+        var value = getStorageValue(KEY_RECOVERY_SNAPSHOT_V2);
+        if (!(value instanceof Dictionary)) {
+            _recoverySnapshotCache = null;
+            return null;
+        }
+
+        var snapshot = value as Dictionary;
+        if (!isValidRecoverySnapshot(snapshot)) {
+            _recoverySnapshotCache = null;
+            return null;
+        }
+
+        _recoverySnapshotCache = snapshot;
+        return snapshot;
+    }
+
+    function saveRecoverySnapshot(targetG10 as Number, consumedG10 as Number,
+                                  elapsedSec as Number, intakeCount as Number) as Boolean {
+        if (elapsedSec <= 0) {
+            return false;
+        }
+        var snapshot = {
+            SNAPSHOT_KEY_VERSION => RECOVERY_SNAPSHOT_VERSION,
+            SNAPSHOT_KEY_TARGET => nonNegative(targetG10),
+            SNAPSHOT_KEY_CONSUMED => nonNegative(consumedG10),
+            SNAPSHOT_KEY_ELAPSED => nonNegative(elapsedSec),
+            SNAPSHOT_KEY_COUNT => nonNegative(intakeCount)
+        };
+        if (!setStorageValue(KEY_RECOVERY_SNAPSHOT_V2, snapshot)) {
+            return false;
+        }
+
+        try {
+            var storedValue = _storageBackend.getValue(KEY_RECOVERY_SNAPSHOT_V2);
+            if (storedValue instanceof Dictionary) {
+                var storedSnapshot = storedValue as Dictionary;
+                if (isValidRecoverySnapshot(storedSnapshot) &&
+                    recoverySnapshotMatches(storedSnapshot, targetG10, consumedG10,
+                                            elapsedSec, intakeCount)) {
+                    _recoverySnapshotCache = storedSnapshot;
+                    _recoverySnapshotCacheLoaded = true;
+                    return true;
+                }
+            }
+        } catch (e) {
+            recordWriteFailure(KEY_RECOVERY_SNAPSHOT_V2, "verify snapshot");
+            return false;
+        }
+
+        recordWriteFailure(KEY_RECOVERY_SNAPSHOT_V2, "verify snapshot");
+        return false;
     }
 
     // ========== Settings from Properties (synced via Garmin Connect) ==========
@@ -205,8 +335,8 @@ class StorageManager {
         );
     }
 
-    function setCarbsTargetGph(value as Number) as Void {
-        setClampedProperty("carbsTargetGph", value, MIN_CARBS_TARGET_GPH, MAX_CARBS_TARGET_GPH);
+    function setCarbsTargetGph(value as Number) as Boolean {
+        return setClampedProperty("carbsTargetGph", value, MIN_CARBS_TARGET_GPH, MAX_CARBS_TARGET_GPH);
     }
 
     function getDoseG() as Number {
@@ -218,8 +348,8 @@ class StorageManager {
         );
     }
 
-    function setDoseG(value as Number) as Void {
-        setClampedProperty("doseG", value, MIN_DOSE_G, MAX_DOSE_G);
+    function setDoseG(value as Number) as Boolean {
+        return setClampedProperty("doseG", value, MIN_DOSE_G, MAX_DOSE_G);
     }
 
     function getReminderMode() as Number {
@@ -231,8 +361,8 @@ class StorageManager {
         );
     }
 
-    function setReminderMode(value as Number) as Void {
-        setClampedProperty("reminderMode", value, MIN_REMINDER_MODE, MAX_REMINDER_MODE);
+    function setReminderMode(value as Number) as Boolean {
+        return setClampedProperty("reminderMode", value, MIN_REMINDER_MODE, MAX_REMINDER_MODE);
     }
 
     function getFixedIntervalMin() as Number {
@@ -244,8 +374,8 @@ class StorageManager {
         );
     }
 
-    function setFixedIntervalMin(value as Number) as Void {
-        setClampedProperty("fixedIntervalMin", value, MIN_FIXED_INTERVAL_MIN, MAX_FIXED_INTERVAL_MIN);
+    function setFixedIntervalMin(value as Number) as Boolean {
+        return setClampedProperty("fixedIntervalMin", value, MIN_FIXED_INTERVAL_MIN, MAX_FIXED_INTERVAL_MIN);
     }
 
     function getStartDelayMin() as Number {
@@ -257,8 +387,8 @@ class StorageManager {
         );
     }
 
-    function setStartDelayMin(value as Number) as Void {
-        setClampedProperty("startDelayMin", value, MIN_START_DELAY_MIN, MAX_START_DELAY_MIN);
+    function setStartDelayMin(value as Number) as Boolean {
+        return setClampedProperty("startDelayMin", value, MIN_START_DELAY_MIN, MAX_START_DELAY_MIN);
     }
 
     function getMaxSnoozeMin() as Number {
@@ -270,8 +400,8 @@ class StorageManager {
         );
     }
 
-    function setMaxSnoozeMin(value as Number) as Void {
-        setClampedProperty("maxSnoozeMin", value, MIN_MAX_SNOOZE_MIN, MAX_MAX_SNOOZE_MIN);
+    function setMaxSnoozeMin(value as Number) as Boolean {
+        return setClampedProperty("maxSnoozeMin", value, MIN_MAX_SNOOZE_MIN, MAX_MAX_SNOOZE_MIN);
     }
 
     function getDataFieldAlertEnabled() as Number {
@@ -283,8 +413,8 @@ class StorageManager {
         );
     }
 
-    function setDataFieldAlertEnabled(value as Number) as Void {
-        setClampedProperty(
+    function setDataFieldAlertEnabled(value as Number) as Boolean {
+        return setClampedProperty(
             "dataFieldAlertEnabled",
             value,
             MIN_DATA_FIELD_ALERT_ENABLED,
@@ -301,8 +431,8 @@ class StorageManager {
         );
     }
 
-    function setCarbFractionPct(value as Number) as Void {
-        setClampedProperty("carbFractionPct", value, MIN_CARB_FRACTION_PCT, MAX_CARB_FRACTION_PCT);
+    function setCarbFractionPct(value as Number) as Boolean {
+        return setClampedProperty("carbFractionPct", value, MIN_CARB_FRACTION_PCT, MAX_CARB_FRACTION_PCT);
     }
 
 
@@ -531,6 +661,13 @@ class StorageManager {
     }
 
     function getRecoveryTargetG10() as Number {
+        var snapshot = loadRecoverySnapshotV2();
+        if (snapshot != null) {
+            var snapshotValue = getDictionaryNumber(snapshot as Dictionary, SNAPSHOT_KEY_TARGET);
+            if (snapshotValue != null) {
+                return nonNegative(snapshotValue);
+            }
+        }
         var value = getStorageValue(KEY_RECOVERY_TARGET_G10);
         if (value instanceof Number) {
             return nonNegative(value);
@@ -539,10 +676,20 @@ class StorageManager {
     }
 
     function setRecoveryTargetG10(value as Number) as Void {
+        deleteStorageValue(KEY_RECOVERY_SNAPSHOT_V2);
+        _recoverySnapshotCache = null;
+        _recoverySnapshotCacheLoaded = true;
         setStorageValue(KEY_RECOVERY_TARGET_G10, nonNegative(value));
     }
 
     function getRecoveryConsumedG10() as Number {
+        var snapshot = loadRecoverySnapshotV2();
+        if (snapshot != null) {
+            var snapshotValue = getDictionaryNumber(snapshot as Dictionary, SNAPSHOT_KEY_CONSUMED);
+            if (snapshotValue != null) {
+                return nonNegative(snapshotValue);
+            }
+        }
         var value = getStorageValue(KEY_RECOVERY_CONSUMED_G10);
         if (value instanceof Number) {
             return nonNegative(value);
@@ -551,10 +698,20 @@ class StorageManager {
     }
 
     function setRecoveryConsumedG10(value as Number) as Void {
+        deleteStorageValue(KEY_RECOVERY_SNAPSHOT_V2);
+        _recoverySnapshotCache = null;
+        _recoverySnapshotCacheLoaded = true;
         setStorageValue(KEY_RECOVERY_CONSUMED_G10, nonNegative(value));
     }
 
     function getRecoveryElapsedSec() as Number {
+        var snapshot = loadRecoverySnapshotV2();
+        if (snapshot != null) {
+            var snapshotValue = getDictionaryNumber(snapshot as Dictionary, SNAPSHOT_KEY_ELAPSED);
+            if (snapshotValue != null) {
+                return nonNegative(snapshotValue);
+            }
+        }
         var value = getStorageValue(KEY_RECOVERY_ELAPSED_SEC);
         if (value instanceof Number) {
             return nonNegative(value);
@@ -563,10 +720,20 @@ class StorageManager {
     }
 
     function setRecoveryElapsedSec(value as Number) as Void {
+        deleteStorageValue(KEY_RECOVERY_SNAPSHOT_V2);
+        _recoverySnapshotCache = null;
+        _recoverySnapshotCacheLoaded = true;
         setStorageValue(KEY_RECOVERY_ELAPSED_SEC, nonNegative(value));
     }
 
     function getRecoveryIntakeCount() as Number {
+        var snapshot = loadRecoverySnapshotV2();
+        if (snapshot != null) {
+            var snapshotValue = getDictionaryNumber(snapshot as Dictionary, SNAPSHOT_KEY_COUNT);
+            if (snapshotValue != null) {
+                return nonNegative(snapshotValue);
+            }
+        }
         var value = getStorageValue(KEY_RECOVERY_INTAKE_COUNT);
         if (value instanceof Number) {
             return nonNegative(value);
@@ -575,18 +742,24 @@ class StorageManager {
     }
 
     function setRecoveryIntakeCount(value as Number) as Void {
+        deleteStorageValue(KEY_RECOVERY_SNAPSHOT_V2);
+        _recoverySnapshotCache = null;
+        _recoverySnapshotCacheLoaded = true;
         setStorageValue(KEY_RECOVERY_INTAKE_COUNT, nonNegative(value));
     }
 
     function hasRecoverySnapshot() as Boolean {
-        return getRecoveryElapsedSec() > 0;
+        return loadRecoverySnapshotV2() != null || getRecoveryElapsedSec() > 0;
     }
 
     function clearRecoverySnapshot() as Void {
+        deleteStorageValue(KEY_RECOVERY_SNAPSHOT_V2);
         deleteStorageValue(KEY_RECOVERY_TARGET_G10);
         deleteStorageValue(KEY_RECOVERY_CONSUMED_G10);
         deleteStorageValue(KEY_RECOVERY_ELAPSED_SEC);
         deleteStorageValue(KEY_RECOVERY_INTAKE_COUNT);
+        _recoverySnapshotCache = null;
+        _recoverySnapshotCacheLoaded = true;
     }
 
     // ========== Session Management ==========

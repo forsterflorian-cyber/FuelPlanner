@@ -49,6 +49,163 @@ class FuelModelTests {
     }
 
     (:test)
+    static function authoritativeTimerTimeDoesNotSubtractPauseTwice(logger as Test.Logger) as Boolean {
+        var clock = new MockClock(1000);
+        var props = new MockPropertiesBackend();
+        props.setValue("carbsTargetGph", 60);
+        props.setValue("doseG", 25);
+        props.setValue("startDelayMin", 0);
+        var model = buildModel(clock, props);
+        var info = new MockActivityInfo(1000);
+        info.timerState = Activity.TIMER_STATE_ON;
+        info.setTimerSeconds(600);
+        info.setElapsedSeconds(600);
+        model.compute(info);
+
+        model.onTimerPause();
+        info.timerState = Activity.TIMER_STATE_PAUSED;
+        model.compute(info);
+        clock.advance(300);
+        info.setElapsedSeconds(900);
+        model.compute(info);
+
+        model.onTimerResume();
+        clock.advance(1);
+        info.timerState = Activity.TIMER_STATE_ON;
+        info.setTimerSeconds(601);
+        info.setElapsedSeconds(901);
+        model.compute(info);
+
+        logger.debug("authoritativeTimerElapsed=" + model.getElapsedActiveSec().format("%d"));
+        Test.assertMessage(!model.isPaused(), "Timer resume should restore active state.");
+        Test.assertEqual(601, model.getElapsedActiveSec());
+        Test.assertEqual(100, model.getTargetTotalG10());
+        return true;
+    }
+
+    (:test)
+    static function elapsedTimeFallbackSubtractsOnlyPausedDuration(logger as Test.Logger) as Boolean {
+        var clock = new MockClock(2000);
+        var props = new MockPropertiesBackend();
+        props.setValue("carbsTargetGph", 60);
+        props.setValue("doseG", 25);
+        props.setValue("startDelayMin", 0);
+        var model = buildModel(clock, props);
+        var info = new MockActivityInfo(2000);
+        info.timerState = Activity.TIMER_STATE_ON;
+        info.clearTimerTime();
+        info.setElapsedSeconds(600);
+        model.compute(info);
+
+        model.onTimerPause();
+        info.timerState = Activity.TIMER_STATE_PAUSED;
+        model.compute(info);
+        clock.advance(300);
+        info.setElapsedSeconds(900);
+        model.compute(info);
+
+        model.onTimerResume();
+        clock.advance(1);
+        info.timerState = Activity.TIMER_STATE_ON;
+        info.setElapsedSeconds(901);
+        model.compute(info);
+
+        logger.debug("elapsedFallbackActive=" + model.getElapsedActiveSec().format("%d"));
+        Test.assertMessage(!model.isPaused(), "Elapsed fallback should resume after the timer callback.");
+        Test.assertEqual(601, model.getElapsedActiveSec());
+        Test.assertEqual(100, model.getTargetTotalG10());
+        return true;
+    }
+
+    (:test)
+    static function timerStartCallbackStartsLowTimerWithoutStartTime(logger as Test.Logger) as Boolean {
+        var clock = new MockClock(3000);
+        var props = new MockPropertiesBackend();
+        props.setValue("carbsTargetGph", 60);
+        props.setValue("doseG", 25);
+        props.setValue("startDelayMin", 0);
+        var model = buildModel(clock, props);
+        var oldInfo = new MockActivityInfo(3000);
+        oldInfo.setTimerSeconds(600);
+        model.compute(oldInfo);
+        model.recordIntake(25);
+        model.onTimerReset();
+        Test.assertMessage(model.isStoppedSession(), "The old activity should provide recovery before the next start.");
+
+        clock.setNow(4000);
+        var newInfo = new MockActivityInfo(null);
+        newInfo.timerState = Activity.TIMER_STATE_ON;
+        newInfo.setTimerSeconds(1);
+        model.onTimerStart();
+        model.compute(newInfo);
+
+        Test.assertMessage(model.isSessionActive(), "onTimerStart must start a fresh session without Activity.Info.startTime.");
+        Test.assertMessage(model.isPriming(), "A one-second unconfirmed timer should enter the explicit priming state.");
+        Test.assertMessage(model.hasValidTimerData(), "The low positive timer sample is valid timer data.");
+        Test.assertMessage(!model.isStoppedSession(), "Fresh activity state must replace the old recovery layout.");
+        Test.assertEqual(0, model.getConsumedTotalG10());
+        Test.assertEqual(0, model.getIntakeCount());
+        return true;
+    }
+
+    (:test)
+    static function resetFinalizesAfterNullTimerGap(logger as Test.Logger) as Boolean {
+        var clock = new MockClock(5000);
+        var props = new MockPropertiesBackend();
+        props.setValue("carbsTargetGph", 60);
+        props.setValue("doseG", 25);
+        props.setValue("startDelayMin", 0);
+        var model = buildModel(clock, props);
+        var info = new MockActivityInfo(5000);
+        info.setTimerSeconds(900);
+        model.compute(info);
+        model.recordIntake(20);
+
+        var missingTimerInfo = new MockActivityInfo(5000);
+        model.compute(missingTimerInfo);
+        Test.assertMessage(model.isSessionActive(), "A null timer sample must preserve active session state.");
+        Test.assertMessage(!model.hasValidTimerData(), "A null timer sample must expose the waiting/invalid state.");
+        Test.assertEqual(900, model.getElapsedActiveSec());
+
+        model.onTimerReset();
+        Test.assertMessage(!model.isSessionActive(), "Reset must finalize even when the latest timer sample was null.");
+        Test.assertMessage(model.isStoppedSession(), "Reset after a timer gap must retain recovery metrics.");
+        Test.assertEqual(900, model.getElapsedActiveSec());
+        Test.assertEqual(200, model.getConsumedTotalG10());
+        Test.assertEqual(1, model.getIntakeCount());
+        return true;
+    }
+
+    (:test)
+    static function offStateWithNullTimerFinalizesOnce(logger as Test.Logger) as Boolean {
+        var clock = new MockClock(6000);
+        var props = new MockPropertiesBackend();
+        props.setValue("carbsTargetGph", 60);
+        props.setValue("doseG", 25);
+        props.setValue("startDelayMin", 0);
+        var model = buildModel(clock, props);
+        var info = new MockActivityInfo(6000);
+        info.setTimerSeconds(1800);
+        model.compute(info);
+        model.recordIntake(25);
+
+        var offInfo = new MockActivityInfo(6000);
+        offInfo.timerState = Activity.TIMER_STATE_OFF;
+        model.compute(offInfo);
+        var recoveryAfterOff = model.getRecoveryDeficit();
+
+        Test.assertMessage(!model.isSessionActive(), "OFF is a terminal fallback even when timer values are unavailable.");
+        Test.assertMessage(model.isStoppedSession(), "OFF fallback must preserve recovery state.");
+        Test.assertEqual(1800, model.getElapsedActiveSec());
+        Test.assertEqual(250, model.getConsumedTotalG10());
+
+        model.onTimerReset();
+        Test.assertEqual(recoveryAfterOff, model.getRecoveryDeficit());
+        Test.assertEqual(1800, model.getElapsedActiveSec());
+        return true;
+    }
+
+    (:test)
     static function calorieAutoUsesKcalFormula(logger as Test.Logger) as Boolean {
         var deficitG10 = FuelModel.calculateDeficit(
             0,
@@ -430,9 +587,12 @@ class FuelModelTests {
         model.recordIntake(25);
         Test.assertMessage(model.isUndoAvailable(), "Undo should be available after the first-session intake.");
 
+        model.onTimerStop();
         info.timerState = Activity.TIMER_STATE_STOPPED;
         model.compute(info);
-        Test.assertMessage(model.isStoppedSession(), "Stopped first session should leave a recovery snapshot.");
+        Test.assertMessage(model.isSessionActive(), "Manual stop must not finish the first session.");
+        model.onTimerReset();
+        Test.assertMessage(model.isStoppedSession(), "Timer reset should leave a recovery snapshot.");
 
         clock.setNow(1006);
         var nextInfo = new MockActivityInfo(1006);
@@ -516,8 +676,8 @@ class FuelModelTests {
         var elapsedBeforeGlitch = model.getElapsedActiveSec();
         logger.debug("elapsedBeforeGlitch=" + elapsedBeforeGlitch.format("%d"));
 
-        // Simulate a timer glitch: timer jumps back by 25 seconds for 5 ticks
-        // This should NOT trigger a session reset with new thresholds (30 sec, 6 ticks)
+        // Simulate a timer glitch: timer jumps back by 25 seconds for 5 ticks.
+        // The 30-second reset delta must reject it regardless of confirmation ticks.
         for (var i = 0; i < 5; i += 1) {
             clock.advance(1);
             info.setTimerSeconds(580); // 25 seconds behind

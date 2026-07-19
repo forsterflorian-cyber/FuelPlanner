@@ -62,11 +62,26 @@ class MockActivityInfo {
         elapsedTime = seconds * 1000;
     }
 
+    function clearTimerTime() as Void {
+        timerTime = null;
+    }
+
+    function clearElapsedTime() as Void {
+        elapsedTime = null;
+    }
+
     function advanceTimerSeconds(seconds as Number) as Void {
         if (timerTime == null) {
             timerTime = 0;
         }
         timerTime += seconds * 1000;
+    }
+
+    function advanceElapsedSeconds(seconds as Number) as Void {
+        if (elapsedTime == null) {
+            elapsedTime = 0;
+        }
+        elapsedTime += seconds * 1000;
     }
 
     function setCalories(value as Number) as Void {
@@ -81,6 +96,8 @@ class MockActivityInfo {
 class MockStorageBackend extends StorageBackend {
     private var _values as Dictionary = {};
     private var _deleteCount as Number = 0;
+    private var _throwNextSetKey as String? = null;
+    private var _dropNextSetKey as String? = null;
 
     function initialize() {
         StorageBackend.initialize();
@@ -91,7 +108,23 @@ class MockStorageBackend extends StorageBackend {
     }
 
     function setValue(key as String, value as Lang.Object?) as Void {
+        if (_throwNextSetKey != null && key.equals(_throwNextSetKey)) {
+            _throwNextSetKey = null;
+            throw new Lang.InvalidValueException("Injected storage write failure");
+        }
+        if (_dropNextSetKey != null && key.equals(_dropNextSetKey)) {
+            _dropNextSetKey = null;
+            return;
+        }
         _values[key] = value;
+    }
+
+    function throwOnNextSet(key as String) as Void {
+        _throwNextSetKey = key;
+    }
+
+    function dropOnNextSet(key as String) as Void {
+        _dropNextSetKey = key;
     }
 
     function deleteValue(key as String) as Void {
@@ -108,6 +141,8 @@ class MockStorageBackend extends StorageBackend {
 
 class MockPropertiesBackend extends PropertiesBackend {
     private var _values as Dictionary = {};
+    private var _throwNextSetKey as String? = null;
+    private var _dropNextSetKey as String? = null;
 
     function initialize() {
         PropertiesBackend.initialize();
@@ -118,7 +153,23 @@ class MockPropertiesBackend extends PropertiesBackend {
     }
 
     function setValue(key as String, value as Lang.Object?) as Void {
+        if (_throwNextSetKey != null && key.equals(_throwNextSetKey)) {
+            _throwNextSetKey = null;
+            throw new Lang.InvalidValueException("Injected property write failure");
+        }
+        if (_dropNextSetKey != null && key.equals(_dropNextSetKey)) {
+            _dropNextSetKey = null;
+            return;
+        }
         _values[key] = value;
+    }
+
+    function throwOnNextSet(key as String) as Void {
+        _throwNextSetKey = key;
+    }
+
+    function dropOnNextSet(key as String) as Void {
+        _dropNextSetKey = key;
     }
 }
 

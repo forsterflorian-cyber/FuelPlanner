@@ -7,15 +7,12 @@ import FuelPlannerLog;
 //! Vermeidet Code-Duplikation zwischen Model-, View- und Menu-Code
 module FuelPlannerUtils {
 
-    //! Prüft ob der Timer gestoppt oder ausgeschaltet ist
-    function isTimerStateStoppedOrOff(info as Activity.Info) as Boolean {
+    //! A stopped timer still belongs to an active recording. Only OFF is
+    //! terminal; DataField.onTimerReset() remains the authoritative end event.
+    function isTimerStateOff(info as Activity.Info) as Boolean {
         try {
             if (!(info has :timerState)) {
                 return false;
-            }
-            if (Activity has :TIMER_STATE_STOPPED &&
-                info.timerState == Activity.TIMER_STATE_STOPPED) {
-                return true;
             }
             if (Activity has :TIMER_STATE_OFF &&
                 info.timerState == Activity.TIMER_STATE_OFF) {

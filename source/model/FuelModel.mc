@@ -10,8 +10,9 @@ import FuelReminderModes;
 // Module-level constants: stored in bytecode, not per-instance heap
 module FuelModelConsts {
     const FIT_UPDATE_INTERVAL_MS          = 5000;
-    const TIMER_BACKTRACK_RESET_DELTA_SEC = 30;  // Erhöht von 10: Verhindert falsche Session-Resets bei GPS-Aussetzern
-    const TIMER_BACKTRACK_CONFIRM_TICKS   = 6;   // Erhöht von 4: Erfordert längeren konstanten Reset für Session-Neustart
+    const TIMER_BACKTRACK_RESET_DELTA_SEC = 30;
+    const TIMER_BACKTRACK_CONFIRM_TICKS   = 4;
+    const TIMER_RESET_LOW_WINDOW_SEC      = 8;
     const MAX_ELAPSED_ACTIVE_SEC          = 604800; // 7 days
     const MAX_TOTAL_G10                   = 200000; // 20,000 g
     const MAX_NEXT_DUE_SEC                = 359999; // 99h 59m 59s
@@ -116,6 +117,9 @@ class FuelModel {
     private var _pausedTimerOffsetS as Number = 0;
     private var _pauseStartTimerS   as Number? = null;
     private var _timerBacktrackCount as Number = 0;
+    private var _usingElapsedTimeFallback as Boolean = false;
+    private var _timerStartEventPending as Boolean = false;
+    private var _hasValidTimerData as Boolean = false;
 
     // For undo functionality
     private var _undoAvailable      as Boolean = false;
@@ -264,10 +268,21 @@ class FuelModel {
             var persistedSessionState = _storage.getSessionState();
             if (persistedSessionState == STATE_FINISHED) {
                 calculateTargetAndDeficit();
-                storeRecoverySnapshot(_targetTotalG, _consumedTotalG, _elapsedActiveSec, _intakeCount);
-                _storage.clearActiveSession();
-                clearSessionState();
-                loadRecoverySnapshot();
+                var snapshotSaved = storeRecoverySnapshot(
+                    _targetTotalG,
+                    _consumedTotalG,
+                    _elapsedActiveSec,
+                    _intakeCount
+                );
+                if (snapshotSaved) {
+                    _storage.clearActiveSession();
+                }
+                applyRecoverySnapshot(
+                    _targetTotalG,
+                    _consumedTotalG,
+                    _elapsedActiveSec,
+                    _intakeCount
+                );
                 return;
             }
 
@@ -326,16 +341,13 @@ class FuelModel {
     private function storeRecoverySnapshot(targetG10 as Number,
                                            consumedG10 as Number,
                                            elapsedSec as Number,
-                                           intakeCount as Number) as Void {
-        _recoverySnapshotAvailable = elapsedSec > 0;
-        _recoverySnapshotTargetG10 = targetG10;
-        _recoverySnapshotConsumedG10 = consumedG10;
-        _recoverySnapshotElapsedSec = elapsedSec;
-        _recoverySnapshotIntakeCount = intakeCount;
-        _storage.setRecoveryTargetG10(targetG10);
-        _storage.setRecoveryConsumedG10(consumedG10);
-        _storage.setRecoveryElapsedSec(elapsedSec);
-        _storage.setRecoveryIntakeCount(intakeCount);
+                                           intakeCount as Number) as Boolean {
+        return _storage.saveRecoverySnapshot(
+            targetG10,
+            consumedG10,
+            elapsedSec,
+            intakeCount
+        );
     }
 
     private function loadRecoverySnapshot() as Void {
@@ -345,12 +357,23 @@ class FuelModel {
             return;
         }
 
-        _recoverySnapshotAvailable = true;
-        _recoverySnapshotTargetG10 = _storage.getRecoveryTargetG10();
-        _recoverySnapshotConsumedG10 = _storage.getRecoveryConsumedG10();
-        _recoverySnapshotElapsedSec = elapsedSec;
-        _recoverySnapshotIntakeCount = _storage.getRecoveryIntakeCount();
+        applyRecoverySnapshot(
+            _storage.getRecoveryTargetG10(),
+            _storage.getRecoveryConsumedG10(),
+            elapsedSec,
+            _storage.getRecoveryIntakeCount()
+        );
+    }
 
+    private function applyRecoverySnapshot(targetG10 as Number,
+                                           consumedG10 as Number,
+                                           elapsedSec as Number,
+                                           intakeCount as Number) as Void {
+        _recoverySnapshotAvailable = elapsedSec > 0;
+        _recoverySnapshotTargetG10 = clampNonNegativeTotalG10(targetG10);
+        _recoverySnapshotConsumedG10 = clampNonNegativeTotalG10(consumedG10);
+        _recoverySnapshotElapsedSec = clampElapsedActiveSec(elapsedSec);
+        _recoverySnapshotIntakeCount = (intakeCount > 0) ? intakeCount : 0;
         setSessionState(STATE_IDLE);
         _sessionRecoverable = false;
         _sessionFinishHandled = true;
@@ -401,6 +424,7 @@ class FuelModel {
         _pauseStartTimerS    = null;
         _pauseStartClockTs   = null;
         _timerBacktrackCount = 0;
+        _timerStartEventPending = false;
 
         _elapsedActiveSec       = 0;
         _targetTotalG           = 0;
@@ -433,8 +457,7 @@ class FuelModel {
 
     private function reconcileSessionState(activityStartTs as Number?,
                                            timerSec as Number,
-                                           timerStatePaused as Boolean,
-                                           timerStateStoppedOrOff as Boolean) as Void {
+                                           timerStatePaused as Boolean) as Void {
         if (_sessionState == STATE_IDLE) {
             if (!isStoppedSession()) {
                 resetDisplayValues();
@@ -445,15 +468,11 @@ class FuelModel {
             return;
         }
 
-        if (timerStateStoppedOrOff) {
-            if (!_sessionFinishHandled) {
-                markSessionFinished();
-            }
-            return;
-        }
-
         if (timerStatePaused) {
-            setSessionState(STATE_PAUSED);
+            if (_sessionState != STATE_PAUSED) {
+                setSessionState(STATE_PAUSED);
+                saveSession();
+            }
             return;
         }
         // Fallback-started session: hold in priming briefly until the timer
@@ -461,11 +480,17 @@ class FuelModel {
         if (!_isStartTimestampConfirmed &&
             activityStartTs == null &&
             timerSec < FuelModelConsts.PRIMING_CONFIRM_SEC) {
-            setSessionState(STATE_PRIMING);
+            if (_sessionState != STATE_PRIMING) {
+                setSessionState(STATE_PRIMING);
+                saveSession();
+            }
             return;
         }
 
-        setSessionState(STATE_ACTIVE);
+        if (_sessionState != STATE_ACTIVE) {
+            setSessionState(STATE_ACTIVE);
+            saveSession();
+        }
     }
 
     function clearSessionState() as Void {
@@ -484,6 +509,8 @@ class FuelModel {
         _latestCaloriesKcal = 0;
         _latestEnergyExpKcalMin = 0.0f;
         _caloriesAvailable = false;
+        _timerStartEventPending = false;
+        _hasValidTimerData = false;
         clearRecoverySnapshotState();
         resetDisplayValues();
     }
@@ -497,43 +524,77 @@ class FuelModel {
         _forceNextFitFieldUpdate = true;
         updateFitFields();
         flushFitSessionSummary();
-        storeRecoverySnapshot(_targetTotalG, _consumedTotalG, _elapsedActiveSec, _intakeCount);
-        _storage.clearActiveSession();
-        setSessionState(STATE_IDLE);
-        _sessionRecoverable = false;
-        _pauseStartTimerS = null;
-        _pauseStartClockTs = null;
-        _lastReminderTimestamp = 0;
-        _isReminderDue = false;
-        _autoIntakeLocked = false;
-        _autoIntakeEventPending = false;
-        clearUndoState();
-        _startTimestamp = 0;
-        _lastIntakeTimestamp = 0;
-        _sessionId = 0;
-        _isStartTimestampConfirmed = false;
-        _sessionFinishHandled = true;
-        loadRecoverySnapshot();
+
+        // Persist a final active-session record first. If the aggregate
+        // recovery write fails, this remains the recoverable source of truth
+        // and loadSession() will retry the conversion on the next launch.
+        setSessionState(STATE_FINISHED);
+        _sessionRecoverable = true;
+        saveSession();
+
+        var finalTargetG10 = _targetTotalG;
+        var finalConsumedG10 = _consumedTotalG;
+        var finalElapsedSec = _elapsedActiveSec;
+        var finalIntakeCount = _intakeCount;
+        var snapshotSaved = storeRecoverySnapshot(
+            finalTargetG10,
+            finalConsumedG10,
+            finalElapsedSec,
+            finalIntakeCount
+        );
+        if (snapshotSaved) {
+            _storage.clearActiveSession();
+        }
+
+        applyRecoverySnapshot(
+            finalTargetG10,
+            finalConsumedG10,
+            finalElapsedSec,
+            finalIntakeCount
+        );
+        _timerStartEventPending = false;
+        _hasValidTimerData = false;
     }
 
     //! Main compute function — call every tick (1 Hz)
     function compute(info) as Void {
         if (info == null) {
+            _hasValidTimerData = false;
+            return;
+        }
+
+        var timerStateOff = isTimerStateOff(info);
+        var timerStatePaused = isTimerStatePaused(info);
+        if (timerStateOff) {
+            _hasValidTimerData = false;
+            _timerStartEventPending = false;
+            if (_sessionState != STATE_IDLE && !_sessionFinishHandled) {
+                markSessionFinished();
+            }
             return;
         }
 
         var timerTime = getTimerTime(info);
 
         if (timerTime == null) {
+            _hasValidTimerData = false;
             if (_sessionState == STATE_IDLE) {
                 resetDisplayValues();
                 return;
+            }
+            if (timerStatePaused && _sessionState != STATE_PAUSED) {
+                if (_pauseStartClockTs == null) {
+                    _pauseStartClockTs = getCurrentTimestamp();
+                }
+                setSessionState(STATE_PAUSED);
+                saveSession();
             }
             _isReminderDue = false;
             _autoIntakeLocked = false;
             _autoIntakeEventPending = false;
             return;
         }
+        _hasValidTimerData = true;
 
         var timerSec = timerTime / 1000;
         if (timerSec < 0) {
@@ -541,16 +602,23 @@ class FuelModel {
         }
 
         var activityStartTs = getActivityStartTimestamp(info);
-        var timerStateStoppedOrOff = isTimerStateStoppedOrOff(info);
-        handleActivityStartDetection(activityStartTs, timerSec, timerStateStoppedOrOff);
-        handleTimerState(info, timerTime, timerSec);
+        handleActivityStartDetection(activityStartTs, timerSec, timerStatePaused);
+        handleTimerState(info, timerTime, timerSec, timerStatePaused);
         handleSessionStates(info);
     }
 
     //! Detect new activity or timer reset
     private function handleActivityStartDetection(activityStartTs as Number?,
                                                   timerSec as Number,
-                                                  timerStateStoppedOrOff as Boolean) as Void {
+                                                  timerStatePaused as Boolean) as Void {
+        if (_timerStartEventPending) {
+            _timerStartEventPending = false;
+            if (!_sessionActive) {
+                startNewSession(activityStartTs);
+                return;
+            }
+        }
+
         if (activityStartTs != null) {
             _timerBacktrackCount = 0;
             if (_sessionActive) {
@@ -569,7 +637,7 @@ class FuelModel {
                     saveSession();
                 }
             } else if (isStoppedSession()) {
-                if (!timerStateStoppedOrOff &&
+                if (!timerStatePaused &&
                     _startTimestamp != activityStartTs &&
                     timerSec > 0) {
                     startNewSession(activityStartTs);
@@ -581,7 +649,7 @@ class FuelModel {
             if (_sessionActive && isLikelyTimerReset(timerSec)) {
                 startNewSession(null);
             } else if (isStoppedSession()) {
-                if (!timerStateStoppedOrOff &&
+                if (!timerStatePaused &&
                     timerSec > 0 &&
                     isLikelyTimerReset(timerSec)) {
                     startNewSession(null);
@@ -594,9 +662,14 @@ class FuelModel {
     }
 
     //! Handle timer state and update elapsed time
-    private function handleTimerState(info as Activity.Info?, timerTime as Number, timerSec as Number) as Void {
-        var timerStatePaused = isTimerStatePaused(info);
-        var effectiveTimerSec = getEffectiveTimerSec(timerSec, timerStatePaused);
+    private function handleTimerState(info as Activity.Info?, timerTime as Number,
+                                      timerSec as Number,
+                                      timerStatePaused as Boolean) as Void {
+        var effectiveTimerSec = getEffectiveTimerSec(
+            timerSec,
+            timerStatePaused,
+            _usingElapsedTimeFallback
+        );
         if (!timerStatePaused &&
             _elapsedActiveSec > 0 &&
             effectiveTimerSec + FuelModelConsts.TIMER_BACKTRACK_RESET_DELTA_SEC < _elapsedActiveSec) {
@@ -604,10 +677,9 @@ class FuelModel {
         }
         _elapsedActiveSec = clampElapsedActiveSec(effectiveTimerSec);
 
-        var timerStateStoppedOrOff = isTimerStateStoppedOrOff(info);
         var pauseDetected = detectPause(timerTime, timerStatePaused);
         var activityStartTs = getActivityStartTimestamp(info);
-        reconcileSessionState(activityStartTs, timerSec, timerStatePaused || pauseDetected, timerStateStoppedOrOff);
+        reconcileSessionState(activityStartTs, timerSec, timerStatePaused || pauseDetected);
     }
 
     //! Handle session state-specific logic
@@ -752,9 +824,11 @@ class FuelModel {
             return false;
         }
 
-        // Nur als Reset werten, wenn Timer wirklich auf 0 oder nahe 0 ist
-        // Verhindert falsche Resets bei GPS-Aussetzern oder Gerätesleep
-        if (rawTimerSec > 5) {
+        // A reset candidate must stay close to zero for several consecutive
+        // samples. The window is deliberately wider than the confirmation
+        // count so a missing zero-second sample cannot make confirmation
+        // mathematically impossible.
+        if (rawTimerSec > FuelModelConsts.TIMER_RESET_LOW_WINDOW_SEC) {
             _timerBacktrackCount = 0;
             return false;
         }
@@ -881,6 +955,7 @@ class FuelModel {
             if (info has :timerTime) {
                 var timerTime = getNonNegativeNumberOrNull(info.timerTime);
                 if (timerTime != null) {
+                    _usingElapsedTimeFallback = false;
                     return timerTime;
                 }
             }
@@ -891,10 +966,12 @@ class FuelModel {
             if (info has :elapsedTime) {
                 var elapsedTime = getNonNegativeNumberOrNull(info.elapsedTime);
                 if (elapsedTime != null) {
+                    _usingElapsedTimeFallback = true;
                     return elapsedTime;
                 }
             }
         } catch (e) {}
+        _usingElapsedTimeFallback = false;
         return null;
     }
 
@@ -918,21 +995,45 @@ class FuelModel {
                 info.timerState == Activity.TIMER_STATE_PAUSED) {
                 return true;
             }
+            if (info has :timerState &&
+                Activity has :TIMER_STATE_STOPPED &&
+                info.timerState == Activity.TIMER_STATE_STOPPED) {
+                return true;
+            }
         } catch (e) {}
         return false;
     }
 
 
-    private function isTimerStateStoppedOrOff(info) as Boolean {
-        return FuelPlannerUtils.isTimerStateStoppedOrOff(info);
+    private function isTimerStateOff(info) as Boolean {
+        return FuelPlannerUtils.isTimerStateOff(info);
     }
 
 
     private function getEffectiveTimerSec(rawTimerSec as Number,
-                                          timerStatePaused as Boolean) as Number {
+                                          timerStatePaused as Boolean,
+                                          usingElapsedTimeFallback as Boolean) as Number {
+        // Activity.Info.timerTime is already the activity timer. Only the
+        // elapsedTime fallback needs an accumulated pause offset.
+        if (!usingElapsedTimeFallback) {
+            _pauseStartTimerS = null;
+            if (timerStatePaused && _elapsedActiveSec > 0) {
+                return _elapsedActiveSec;
+            }
+            return rawTimerSec;
+        }
+
         if (timerStatePaused) {
             if (_pauseStartTimerS == null) {
-                _pauseStartTimerS = rawTimerSec;
+                // elapsedTime may keep advancing while the timer is stopped.
+                // Anchor the pause to the last observed sample so the first
+                // stopped tick cannot be counted as active time.
+                var lastObservedSec = _lastTimerTime / 1000;
+                if (_lastTimerTime > 0 && lastObservedSec <= rawTimerSec) {
+                    _pauseStartTimerS = lastObservedSec;
+                } else {
+                    _pauseStartTimerS = rawTimerSec;
+                }
             }
 
             var pauseStartForFreeze = (_pauseStartTimerS != null) ? _pauseStartTimerS : rawTimerSec;
@@ -945,7 +1046,14 @@ class FuelModel {
 
         if (_pauseStartTimerS != null) {
             var pauseStartForDelta = (_pauseStartTimerS != null) ? _pauseStartTimerS : rawTimerSec;
-            var pausedDuration = rawTimerSec - pauseStartForDelta;
+            var pauseEndSec = rawTimerSec;
+            var lastObservedSec = _lastTimerTime / 1000;
+            if (_lastTimerTime > 0 &&
+                lastObservedSec > pauseStartForDelta &&
+                lastObservedSec <= rawTimerSec) {
+                pauseEndSec = lastObservedSec;
+            }
+            var pausedDuration = pauseEndSec - pauseStartForDelta;
             if (pausedDuration > 0) {
                 _pausedTimerOffsetS += pausedDuration;
             }
@@ -1330,60 +1438,7 @@ class FuelModel {
         return _storage.MIN_DOSE_G * 10;
     }
 
-    private function getPlannedIntakeCycleSec() as Number {
-        if (_reminderMode == MODE_FIXED) {
-            var safeIntervalMin = (_fixedIntervalMin > 0)
-                ? _fixedIntervalMin
-                : _storage.MIN_FIXED_INTERVAL_MIN;
-            return clampNextDueSec(safeIntervalMin * 60);
-        }
-
-        var safeDoseG10 = getSafeDoseG10();
-        if (_reminderMode == MODE_CALORIE_AUTO && _latestEnergyExpKcalMin > 0.0f) {
-            var rateNumerator = _latestEnergyExpKcalMin * _carbFractionPct.toFloat();
-            if (rateNumerator > 0.0f) {
-                return clampNextDueSec(((safeDoseG10.toFloat() * 2400.0f) / rateNumerator).toNumber());
-            }
-        }
-
-        var safeCarbsRateGph10 = (_carbsTargetGph > 0)
-            ? _carbsTargetGph * 10
-            : _storage.MIN_CARBS_TARGET_GPH * 10;
-        if (safeCarbsRateGph10 <= 0) {
-            return 0;
-        }
-        return clampNextDueSec(((safeDoseG10 * 3600) + safeCarbsRateGph10 - 1) / safeCarbsRateGph10);
-    }
-
-    private function getRingWarningLeadSec(cycleSec as Number) as Number {
-        if (cycleSec <= 0) {
-            return 0;
-        }
-
-        var warningLeadSec = cycleSec / 4;
-        if (warningLeadSec < RING_WARNING_MIN_SEC) {
-            warningLeadSec = RING_WARNING_MIN_SEC;
-        }
-        if (warningLeadSec > RING_WARNING_MAX_SEC) {
-            warningLeadSec = RING_WARNING_MAX_SEC;
-        }
-        if (warningLeadSec >= cycleSec) {
-            warningLeadSec = cycleSec / 2;
-            if (warningLeadSec < 1) {
-                warningLeadSec = 1;
-            }
-        }
-        return warningLeadSec;
-    }
-
-    private function getRoundedPositiveDeficitG10() as Number {
-        if (_deficitG <= 5) {
-            return 0;
-        }
-        return ((_deficitG + 5) / 10) * 10;
-    }
-
-    function getRingAlertTone() as Number {
+    function getRingTone() as Number {
         if (!_sessionActive) {
             return RING_TONE_GREEN;
         }
@@ -1391,8 +1446,12 @@ class FuelModel {
             return RING_TONE_GREEN;
         }
 
-        var safeDoseG10 = getSafeDoseG10();
-        var roundedDeficitG10 = getRoundedPositiveDeficitG10();
+        var safeDoseG10 = (_doseG > 0)
+            ? _doseG * 10
+            : _storage.MIN_DOSE_G * 10;
+        var roundedDeficitG10 = (_deficitG > 5)
+            ? ((_deficitG + 5) / 10) * 10
+            : 0;
         if (_reminderMode != MODE_FIXED) {
             if (roundedDeficitG10 >= safeDoseG10) {
                 return RING_TONE_RED;
@@ -1410,7 +1469,46 @@ class FuelModel {
             }
         }
 
-        var warningLeadSec = getRingWarningLeadSec(getPlannedIntakeCycleSec());
+        var cycleSec = 0;
+        if (_reminderMode == MODE_FIXED) {
+            var safeIntervalMin = (_fixedIntervalMin > 0)
+                ? _fixedIntervalMin
+                : _storage.MIN_FIXED_INTERVAL_MIN;
+            cycleSec = safeIntervalMin * 60;
+        } else if (_reminderMode == MODE_CALORIE_AUTO &&
+                   _latestEnergyExpKcalMin > 0.0f) {
+            var rateNumerator = _latestEnergyExpKcalMin * _carbFractionPct.toFloat();
+            if (rateNumerator > 0.0f) {
+                cycleSec = ((safeDoseG10.toFloat() * 2400.0f) /
+                            rateNumerator).toNumber();
+            }
+        } else {
+            var safeCarbsRateGph10 = (_carbsTargetGph > 0)
+                ? _carbsTargetGph * 10
+                : _storage.MIN_CARBS_TARGET_GPH * 10;
+            if (safeCarbsRateGph10 > 0) {
+                cycleSec = ((safeDoseG10 * 3600) + safeCarbsRateGph10 - 1) /
+                           safeCarbsRateGph10;
+            }
+        }
+        if (cycleSec < 0) { cycleSec = 0; }
+        if (cycleSec > FuelModelConsts.MAX_NEXT_DUE_SEC) {
+            cycleSec = FuelModelConsts.MAX_NEXT_DUE_SEC;
+        }
+
+        var warningLeadSec = cycleSec / 4;
+        if (warningLeadSec < RING_WARNING_MIN_SEC) {
+            warningLeadSec = RING_WARNING_MIN_SEC;
+        }
+        if (warningLeadSec > RING_WARNING_MAX_SEC) {
+            warningLeadSec = RING_WARNING_MAX_SEC;
+        }
+        if (warningLeadSec >= cycleSec) {
+            warningLeadSec = cycleSec / 2;
+            if (warningLeadSec < 1 && cycleSec > 0) {
+                warningLeadSec = 1;
+            }
+        }
         if (warningLeadSec > 0 && _nextDueInSec <= warningLeadSec) {
             return RING_TONE_YELLOW;
         }
@@ -1543,6 +1641,75 @@ class FuelModel {
         saveSession();
     }
 
+    function onTimerStart() as Void {
+        _isTouch = detectTouchScreen();
+        if (_sessionState == STATE_PAUSED) {
+            resumeSessionFromTimerEvent();
+            return;
+        }
+        if (!_sessionActive) {
+            _timerStartEventPending = true;
+        }
+    }
+
+    function onTimerStop() as Void {
+        pauseSessionFromTimerEvent();
+    }
+
+    function onTimerPause() as Void {
+        pauseSessionFromTimerEvent();
+    }
+
+    function onTimerResume() as Void {
+        _isTouch = detectTouchScreen();
+        resumeSessionFromTimerEvent();
+    }
+
+    function onTimerReset() as Void {
+        _timerStartEventPending = false;
+        _hasValidTimerData = false;
+        if (_sessionState != STATE_IDLE && !_sessionFinishHandled) {
+            markSessionFinished();
+        }
+    }
+
+    private function pauseSessionFromTimerEvent() as Void {
+        if (!_sessionActive || _sessionState == STATE_PAUSED) {
+            return;
+        }
+        if (_usingElapsedTimeFallback && _pauseStartTimerS == null) {
+            _pauseStartTimerS = _elapsedActiveSec + _pausedTimerOffsetS;
+        }
+        if (_pauseStartClockTs == null) {
+            _pauseStartClockTs = getCurrentTimestamp();
+        }
+        setSessionState(STATE_PAUSED);
+        _isReminderDue = false;
+        _autoIntakeLocked = false;
+        _autoIntakeEventPending = false;
+        saveSession();
+    }
+
+    private function resumeSessionFromTimerEvent() as Void {
+        if (_sessionState != STATE_PAUSED) {
+            return;
+        }
+        if (_pauseStartClockTs != null) {
+            var pausedClockDuration = getCurrentTimestamp() - _pauseStartClockTs;
+            shiftReminderReferenceTimestamps(pausedClockDuration);
+            if (_usingElapsedTimeFallback && pausedClockDuration > 0) {
+                _pausedTimerOffsetS += pausedClockDuration;
+                _pauseStartTimerS = null;
+            }
+        }
+        _pauseStartClockTs = null;
+        if (!_usingElapsedTimeFallback) {
+            _pauseStartTimerS = null;
+        }
+        setSessionState(STATE_ACTIVE);
+        saveSession();
+    }
+
 
     // grams is always an integer Number, so * 10 is exact — no Float needed
     private function gramsToG10(grams as Number) as Number {
@@ -1553,13 +1720,15 @@ class FuelModel {
 
     function isSessionActive()      as Boolean { return _sessionActive; }
     function isPaused()             as Boolean { return _isPaused; }
+    function isPriming()            as Boolean { return _sessionState == STATE_PRIMING; }
+    function hasValidTimerData()    as Boolean { return _hasValidTimerData; }
+    function isTouchInputEnabled()  as Boolean { return _isTouch; }
     function getElapsedActiveSec()  as Number  { return _elapsedActiveSec; }
     function getElapsedActiveHours()as Float   { return _elapsedActiveSec.toFloat() / 3600.0f; }
     function getConsumedTotalG10()  as Number  { return _consumedTotalG; }
     function getTargetTotalG10()    as Number  { return _targetTotalG; }
     function getDeficitG10()        as Number  { return _deficitG; }
     function getNextDueInSec()      as Number  { return _nextDueInSec; }
-    function getRingTone()          as Number  { return getRingAlertTone(); }
     function getDisplayNextDueInSec() as Number {
         if (_isReminderDue) {
             return 0;

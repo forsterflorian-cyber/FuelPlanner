@@ -119,9 +119,10 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
                 );
                 var modeCount = _storage.MAX_REMINDER_MODE - _storage.MIN_REMINDER_MODE + 1;
                 var newMode = (currentMode + 1) % modeCount;
-                _storage.setReminderMode(newMode);
-                item.setSubLabel(modeLabel(newMode, _storage.getFixedIntervalMin()));
-                refreshLiveModel();
+                if (_storage.setReminderMode(newMode)) {
+                    item.setSubLabel(modeLabel(newMode, _storage.getFixedIntervalMin()));
+                    refreshLiveModel();
+                }
                 break;
 
             case :carbFraction:
@@ -175,9 +176,10 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
 
             case :fullScreenAlerts:
                 var newAlertState = (_storage.getDataFieldAlertEnabled() == 0) ? 1 : 0;
-                _storage.setDataFieldAlertEnabled(newAlertState);
-                item.setSubLabel(toggleLabel(_storage.getDataFieldAlertEnabled()));
-                refreshLiveModel();
+                if (_storage.setDataFieldAlertEnabled(newAlertState)) {
+                    item.setSubLabel(toggleLabel(_storage.getDataFieldAlertEnabled()));
+                    refreshLiveModel();
+                }
                 break;
 
             case :presetRun:
@@ -221,10 +223,13 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
     }
 
     private function applyPreset(carbsGph as Number, doseG as Number) as Void {
-        _storage.setCarbsTargetGph(carbsGph);
-        _storage.setDoseG(doseG);
-        _storage.setReminderMode(FuelReminderModes.AUTO);
-        _storage.setStartDelayMin(15);
+        var carbsSaved = _storage.setCarbsTargetGph(carbsGph);
+        var doseSaved = _storage.setDoseG(doseG);
+        var modeSaved = _storage.setReminderMode(FuelReminderModes.AUTO);
+        var delaySaved = _storage.setStartDelayMin(15);
+        if (!carbsSaved || !doseSaved || !modeSaved || !delaySaved) {
+            FuelPlannerLog.logError("Settings", "Preset was only partially persisted");
+        }
 
         var safeCarbs = _storage.getCarbsTargetGph();
         var safeDose = _storage.getDoseG();
@@ -233,7 +238,10 @@ class FuelPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
         // Refresh affected items
         _fuelMenu.carbsItem.setSubLabel(safeCarbs.format("%d") + _suffixGph);
         _fuelMenu.doseItem.setSubLabel(safeDose.format("%d") + _suffixGrams);
-        _fuelMenu.modeItem.setSubLabel(modeLabel(0, _storage.getFixedIntervalMin()));
+        _fuelMenu.modeItem.setSubLabel(modeLabel(
+            _storage.getReminderMode(),
+            _storage.getFixedIntervalMin()
+        ));
         _fuelMenu.delayItem.setSubLabel(safeDelay.format("%d") + _suffixMinutes);
         refreshLiveModel();
     }
@@ -288,8 +296,10 @@ class NumberPickerDelegate extends WatchUi.Menu2InputDelegate {
         var value = clampSetting(selected as Number);
         var didPersist = false;
         try {
-            _setter.invoke(value);
-            didPersist = true;
+            var result = _setter.invoke(value);
+            if (result instanceof Boolean) {
+                didPersist = result;
+            }
         } catch (e) {
             FuelPlannerLog.logError("Settings", "Failed to persist picker value");
         }
@@ -357,14 +367,15 @@ class FixedIntervalDelegate extends WatchUi.Menu2InputDelegate {
             value = _storage.MAX_FIXED_INTERVAL_MIN;
         }
 
-        _storage.setFixedIntervalMin(value);
-        var storedValue = _storage.getFixedIntervalMin();
-        _item.setSubLabel(storedValue.format("%d") + " " + _strUnitMinutes);
-        _modeItem.setSubLabel(modeLabel(_storage.getReminderMode(), storedValue));
-        if (_model != null) {
-            (_model as FuelModel).onSettingsChanged();
+        if (_storage.setFixedIntervalMin(value)) {
+            var storedValue = _storage.getFixedIntervalMin();
+            _item.setSubLabel(storedValue.format("%d") + " " + _strUnitMinutes);
+            _modeItem.setSubLabel(modeLabel(_storage.getReminderMode(), storedValue));
+            if (_model != null) {
+                (_model as FuelModel).onSettingsChanged();
+            }
+            WatchUi.requestUpdate();
         }
-        WatchUi.requestUpdate();
         WatchUi.popView(WatchUi.SLIDE_RIGHT);
     }
 
